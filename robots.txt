@@ -3,4 +3,4 @@ Allow: /
 Disallow: /avis/
 Disallow: /print/
 
-Sitemap: https://chicken-amine.vercel.app/sitemap.xml
+Sitemap: https://chicken-amine-theta.vercel.app/sitemap.xml

@@ -189,12 +189,8 @@ async function main() {
       else check(units.length > 15, `${label}: French title animates letter by letter (${units.length} letters)`);
       const headerLogo = await page.$eval("#header-logo", (i) => getComputedStyle(i).opacity);
       check(headerLogo === "1", `${label}: logo has glided into the header`);
-      const typed = await page.evaluate(() => ({
-        chicken: [...document.querySelectorAll("#intro-chicken span")].map((x) => x.textContent).join(""),
-        amine: [...document.querySelectorAll("#intro-amine span")].map((x) => x.textContent).join(""),
-        sprig: getComputedStyle(document.querySelector(".intro__sprig")).opacity,
-      }));
-      check(typed.chicken === "Chicken" && typed.amine === "AMINE" && typed.sprig === "1", `${label}: intro typed « ${typed.chicken} ${typed.amine} » and showed the sprig`);
+      const layers = await page.$$eval(".intro__layer", (ls) => ls.map((l) => [l.classList[1].replace("intro__", ""), l.naturalWidth > 0, getComputedStyle(l).opacity]));
+      check(layers.length === 4 && layers.every(([, ok, op]) => ok && op === "1"), `${label}: intro built the logo from its layers (${layers.map(([n]) => n).join(", ")})`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
 
       // Language, title, description, canonical.
@@ -245,6 +241,9 @@ async function main() {
       }
       await page.waitForTimeout(600);
       check(!(await page.$("#sauce-dialog[open]")), `${label}: no sauce sheet for a drink`);
+      await addDish(page, "salades", "sal-nicoise");
+      await page.waitForTimeout(800);
+      check(!(await page.$("#sauce-dialog[open]")), `${label}: no sauce sheet for a salad`);
       await openCat(page, "plats");
       await page.click('.item[data-item="pl-sandwich-amine"] [data-add]');
       check(await page.isVisible('#options-body input[name="sauce"]'), `${label}: the options sheet also offers sauces`);
@@ -257,9 +256,22 @@ async function main() {
       const badge = await page.textContent('.item[data-item="tc-mixte"] .in-cart');
       check(badge.trim() === "2", `${label}: Tacos Mixte shows 2 in the order`);
       const lines = await page.evaluate(() => JSON.parse(localStorage.getItem("chickenamine.cart.v1")));
-      check(lines.length === 4 && lines.some((l) => l.id === "tc-mixte" && (l.sauces || []).join() === "algerienne,andalouse") && lines.some((l) => l.id === "tc-mixte" && !l.sauces), `${label}: cart saved in the browser with sauces on their own line (${lines.length} lines)`);
+      check(lines.length === 5 && lines.some((l) => l.id === "tc-mixte" && (l.sauces || []).join() === "algerienne,andalouse") && lines.some((l) => l.id === "tc-mixte" && !l.sauces), `${label}: cart saved in the browser with sauces on their own line (${lines.length} lines)`);
 
       await page.click("#cart-bar");
+      // The salad line: a bin at one, a minus above one, numbers that roll; then the bin removes it.
+      const salad = '#cart-lines .cart-line:has([data-line-inc^="sal-nicoise"])';
+      check(await page.$(`${salad} .stepper__bin`), `${label}: a dish at quantity 1 shows a bin instead of −`);
+      await page.click(`${salad} [data-line-inc]`);
+      await page.waitForTimeout(150);
+      const rolling = await page.$$eval(`${salad} .roll__ch--out`, (o) => o.length);
+      await page.waitForTimeout(700);
+      const two = await page.evaluate((sel) => ({ qty: document.querySelector(`${sel} output`).textContent, total: document.querySelector(`${sel} .cart-line__total`).textContent, bin: !!document.querySelector(`${sel} .stepper__bin`) }), salad);
+      check(rolling > 0 && two.qty === "2" && /^84 /.test(two.total) && !two.bin, `${label}: quantity and price roll to 2 · ${two.total}, the bin turns back into −`);
+      await page.click(`${salad} [data-line-dec]`);
+      await page.click(`${salad} .stepper__bin`);
+      await page.waitForTimeout(700);
+      check(!(await page.$(salad)), `${label}: the bin removes the dish`);
       const total = await page.textContent("#totals");
       check(/169/.test(total), `${label}: subtotal 2×47 + 10 + 65 = 169`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-cart.png` });
@@ -280,6 +292,7 @@ async function main() {
       await page.evaluate(() => { window.__opened = []; });
       await page.click("#send-btn");
       check(!(await sentMessage(page)), `${label}: delivery without a position is not sent`);
+      await page.waitForTimeout(700);
       const totalDelivery = await page.textContent("#totals");
       check(/199/.test(totalDelivery), `${label}: total with 30 DH delivery = 199`);
       // Tap the map 1 km east of the restaurant.

@@ -3,7 +3,7 @@ window.CONFIG = {
   name: "Chicken Amine",
   // Public address of the site, used for canonical links, the sitemap, share previews and the table-card QR code.
   // No domain yet: this is the Vercel address. Change it here when the domain is bought.
-  siteUrl: "https://chicken-amine.vercel.app",
+  siteUrl: "https://chicken-amine-theta.vercel.app",
   phone: "0634235350",
   phoneIntl: "+212634235350",
   // WhatsApp number in international format, digits only (orders are sent here).

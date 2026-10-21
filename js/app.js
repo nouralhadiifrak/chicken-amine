@@ -159,69 +159,62 @@
     if (reducedMotion.matches || !intro.animate) { finish(); return; }
 
     const stage = $("#intro-stage");
-    const rooster = $(".intro__rooster", intro);
-    const chicken = $("#intro-chicken");
-    const amine = $("#intro-amine");
-    const sprig = $(".intro__sprig", intro);
+    const layer = (n) => $(".intro__" + n, intro);
     const ease = "cubic-bezier(.2,.9,.25,1)";
+    const slide = "cubic-bezier(.22,1.25,.36,1)"; // slight overshoot as each word lands
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    const TYPE_MS = 62;
-
-    async function type(el, text, cls = () => "") {
-      el.classList.add("is-typing");
-      let i = 0;
-      for (const ch of text) {
-        const span = document.createElement("span");
-        span.textContent = ch;
-        span.className = cls(i++);
-        el.appendChild(span);
-        await wait(TYPE_MS);
-      }
-      el.classList.remove("is-typing");
-    }
+    const show = (el, frames, opts) => el.animate(frames, { easing: ease, fill: "forwards", ...opts }).finished;
+    // The rooster's centre in the logo is at 17% / 41%: these shifts put it in the middle of the screen.
+    const centre = "translate(33%, 9%)";
 
     (async () => {
-      await rooster.animate(
-        [{ opacity: 0, transform: "scale(.3) rotate(-14deg)" }, { opacity: 1, transform: "scale(1.1) rotate(5deg)", offset: 0.7 }, { opacity: 1, transform: "scale(1) rotate(0)" }],
-        { duration: 460, easing: ease, fill: "forwards" }
-      ).finished;
-      // The typed name uses the logo's script face; wait for it briefly so no fallback font flashes.
-      if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load('1em "Pacifico"'), wait(700)]).catch(() => {});
-      await type(chicken, "Chicken");
-      await type(amine, "AMINE", (i) => (i < 2 ? "g" : "y")); // logo colours: AM green, INE yellow
-      // The sprig above the name appears once "Amine" is typed.
-      await sprig.animate(
-        [{ opacity: 0, transform: "translateY(10px) scale(.2) rotate(-20deg)" }, { opacity: 1, transform: "translateY(-3px) scale(1.15) rotate(4deg)", offset: 0.65 }, { opacity: 1, transform: "none" }],
-        { duration: 420, easing: ease, fill: "forwards" }
-      ).finished;
-      await wait(180);
+      await Promise.all($$(".intro__layer", intro).map((img) => (img.decode ? img.decode().catch(() => {}) : null)));
 
-      // Swap the typed composition for the real logo at the same place, then glide it into the header.
-      const box = stage.getBoundingClientRect();
-      const logo = document.createElement("img");
-      logo.src = "/assets/logo.png";
-      logo.alt = "";
-      logo.className = "intro__final";
-      const w = Math.min(box.width, (box.height * 640) / 332);
-      Object.assign(logo.style, { width: w + "px", left: box.left + (box.width - w) / 2 + "px", top: box.top + box.height / 2 - (w * 332) / 640 / 2 + "px" });
-      intro.appendChild(logo);
-      stage.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
-      await logo.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, fill: "forwards" }).finished;
+      // 1. The rooster alone, in the middle.
+      await show(layer("rooster"), [
+        { opacity: 0, transform: `${centre} scale(.3) rotate(-14deg)` },
+        { opacity: 1, transform: `${centre} scale(1.12) rotate(5deg)`, offset: 0.7 },
+        { opacity: 1, transform: `${centre} scale(1) rotate(0)` },
+      ], { duration: 480 });
+      await wait(140);
 
-      const from = logo.getBoundingClientRect();
+      // 2. "hicken" slides in from the right while the rooster steps aside to its place.
+      show(layer("rooster"), [{ transform: `${centre}` }, { transform: "none" }], { duration: 560 });
+      await show(layer("hicken"), [
+        { opacity: 0, transform: "translateX(70vw) skewX(-12deg)" },
+        { opacity: 1, transform: "translateX(-2%) skewX(4deg)", offset: 0.75 },
+        { opacity: 1, transform: "none" },
+      ], { duration: 600, easing: slide });
+
+      // 3. "AMINE" slides in from the right.
+      await show(layer("amine"), [
+        { opacity: 0, transform: "translateX(70vw) skewX(-12deg)" },
+        { opacity: 1, transform: "translateX(-2%) skewX(4deg)", offset: 0.75 },
+        { opacity: 1, transform: "none" },
+      ], { duration: 560, easing: slide });
+
+      // 4. The flower above the name.
+      await show(layer("sprig"), [
+        { opacity: 0, transform: "translateY(4%) scale(.2) rotate(-20deg)" },
+        { opacity: 1, transform: "translateY(-1%) scale(1.15) rotate(4deg)", offset: 0.65 },
+        { opacity: 1, transform: "none" },
+      ], { duration: 440 });
+      await wait(220);
+
+      // 5. The finished logo glides into its place in the header.
+      const from = stage.getBoundingClientRect();
       const to = target.getBoundingClientRect();
-      const dx = to.left + to.width / 2 - (from.left + from.width / 2);
-      const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+      const k = to.width / from.width;
       target.style.opacity = "0";
       intro.animate([{ backgroundColor: "rgba(255,255,255,1)" }, { backgroundColor: "rgba(255,255,255,0)" }], { duration: 520, easing: ease, fill: "forwards" });
-      await logo.animate(
-        [{ transform: "translate(0,0) scale(1)" }, { transform: `translate(${dx}px, ${dy}px) scale(${to.width / from.width})` }],
-        { duration: 560, easing: ease, fill: "forwards" }
+      await stage.animate(
+        [{ transform: "none" }, { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${k})` }],
+        { duration: 600, easing: ease, fill: "forwards" }
       ).finished;
       finish();
     })().catch(finish);
     // Safety net: never keep the page covered.
-    setTimeout(finish, 4500);
+    setTimeout(finish, 5000);
   }
 
   /* ---------- Placeholder illustrations ---------- */
@@ -424,6 +417,8 @@
     });
   }
 
+  const BIN_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12.2A2 2 0 0 0 8.5 21h7a2 2 0 0 0 2-1.8L18.5 7M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7"/></svg>';
+
   function lineDetails(l) {
     const it = itemById.get(l.id);
     const sep = lang === "ar" ? ": " : " : ";
@@ -449,22 +444,37 @@
     $("#cart-bar-items").textContent = t("cart.items", { n });
     Kit.setMoney($("#cart-bar-total"), subtotal(), C.currency[lang]);
 
+    // Keep each line's shown numbers so the new ones roll from them.
+    const before = new Map($$("#cart-lines .cart-line").map((li) => [li.dataset.key, {
+      total: ($(".cart-line__total .roll", li) || {}).dataset?.v,
+      qty: $(".stepper output", li).dataset.v,
+    }]));
     $("#cart-lines").innerHTML = cart.map((l) => {
       const it = itemById.get(l.id);
       const key = esc(lineKey(l));
       const det = lineDetails(l);
-      return `<li class="cart-line">
+      // At one, the minus becomes a bin: the next tap removes the dish.
+      const dec = l.qty > 1
+        ? `<button type="button" data-line-dec="${key}" aria-label="${esc(t("menu.decrease", { name: L(it) }))}">−</button>`
+        : `<button type="button" class="stepper__bin" data-line-dec="${key}" aria-label="${esc(t("cart.remove") + " · " + L(it))}">${BIN_ICON}</button>`;
+      return `<li class="cart-line" data-key="${key}">
         <p class="cart-line__name">${rich(L(it))}</p>
         ${det.length ? `<p class="cart-line__opts">${det.map(rich).join(" · ")}</p>` : `<span></span>`}
         <div class="cart-line__side">
-          <span class="cart-line__total">${esc(money(lineTotal(l)))}</span>
+          <span class="cart-line__total"></span>
           <span class="stepper">
-            <button type="button" data-line-dec="${key}" aria-label="${esc(t("menu.decrease", { name: L(it) }))}">−</button>
-            <output>${l.qty}</output>
+            ${dec}
+            <output class="roll"></output>
             <button type="button" data-line-inc="${key}" aria-label="${esc(t("menu.increase", { name: L(it) }))}">+</button>
           </span>
         </div></li>`;
     }).join("");
+    $$("#cart-lines .cart-line").forEach((li) => {
+      const l = cart.find((x) => lineKey(x) === li.dataset.key);
+      const was = before.get(li.dataset.key) || {};
+      Kit.setMoney($(".cart-line__total", li), lineTotal(l), C.currency[lang], was.total);
+      Kit.roll($(".stepper output", li), l.qty, was.qty);
+    });
     $("#cart-empty").hidden = n > 0;
     renderTotals();
     $("#cart-next").disabled = n === 0;
@@ -476,10 +486,14 @@
   function deliveryFee() { return !$("#checkout-form").hidden && mode() === "delivery" ? C.delivery.fee : 0; }
   function renderTotals() {
     const sub = subtotal(), fee = deliveryFee();
-    let html = `<dt>${esc(t("cart.subtotal"))}</dt><dd>${esc(money(sub))}</dd>`;
-    if (fee) html += `<dt>${esc(t("cart.deliveryFee"))}</dt><dd>${esc(money(fee))}</dd>`;
-    html += `<dt class="is-total">${esc(t("cart.total"))}</dt><dd class="is-total">${esc(money(sub + fee))}</dd>`;
+    const shown = {};
+    $$("#totals [data-sum] .roll").forEach((r) => { shown[r.closest("[data-sum]").dataset.sum] = r.dataset.v; });
+    let html = `<dt>${esc(t("cart.subtotal"))}</dt><dd data-sum="sub"><span></span></dd>`;
+    if (fee) html += `<dt>${esc(t("cart.deliveryFee"))}</dt><dd data-sum="fee"><span></span></dd>`;
+    html += `<dt class="is-total">${esc(t("cart.total"))}</dt><dd class="is-total" data-sum="total"><span></span></dd>`;
     $("#totals").innerHTML = html;
+    const values = { sub, fee, total: sub + fee };
+    $$("#totals [data-sum]").forEach((dd) => Kit.setMoney(dd.firstChild, values[dd.dataset.sum], C.currency[lang], shown[dd.dataset.sum]));
   }
 
   /* ---------- Adding: emojis fly, the cart rocks, then the sauce choice ---------- */

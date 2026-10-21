@@ -40,7 +40,8 @@ Each category shows an illustration until it has a photo. Put the photo in `asse
 ### Sauces and emojis
 
 The sauce list is `SAUCES` in `js/menu-data.js` (`color` is the swatch shown on its pill); after a dish is added the customer may pick up to
-`MAX_SAUCES` (2). A category with `sauces: false` (drinks, juices, desserts) skips the sauce choice;
+`MAX_SAUCES` (2). Sauces are offered with sandwiches, tacos, burgers and fried chicken; a category with `sauces: false`
+(salads, pizzas, pasta, sauced plates, drinks, desserts) skips the sauce choice;
 an item can override it with its own `sauces: true/false`. The emojis that fly when a dish is added
 come from the category's `emoji`, or the item's own `emoji`.
 
@@ -55,6 +56,9 @@ Put the video in `assets/video/` and set `heroVideo` in `js/config.js`
 node tools/build-seo.js       # schema.org data in index.html, sitemap.xml, robots.txt, head tags
 python3 tools/table-card.py   # table card with its QR code (print/table-card.html and .pdf)
 ```
+
+The intro builds the logo from four layers in `assets/intro/`; after a logo change, recut them with
+`python3 tools/intro-layers.py` (needs `pip install pillow numpy scipy`).
 
 `tools/table-card.py` needs `pip install "qrcode[pil]"` and Chromium.
 
