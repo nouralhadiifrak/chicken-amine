@@ -193,8 +193,13 @@ async function main() {
       check(layers.length === 4 && layers.every(([, ok, op]) => ok && op === "1"), `${label}: intro built the logo from its layers (${layers.map(([n]) => n).join(", ")})`);
       const video = await page.$eval("#hero-media video", (v) => ({ src: v.currentSrc.split("/").pop(), paused: v.paused, poster: !!v.poster })).catch(() => null);
       check(video && /^hero\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: hero video plays (${video && video.src})`);
-      const band = await page.evaluate(() => ({ items: document.querySelectorAll("#cat-band .cat-band__row:first-child .cat-band__item").length, anim: getComputedStyle(document.querySelector("#cat-band-track")).animationName }));
-      check(band.items === 19 && /band/.test(band.anim), `${label}: moving band shows the ${band.items} categories (${band.anim})`);
+      const band = await page.evaluate(() => ({
+        items: document.querySelectorAll("#band-front .band__group:first-child [data-open-cat]").length,
+        front: getComputedStyle(document.querySelector("#band-front")).animationName,
+        back: [getComputedStyle(document.querySelector("#band-back")).animationName, getComputedStyle(document.querySelector("#band-back")).animationDirection],
+        info: document.querySelector("#band-back").textContent.length > 0,
+      }));
+      check(band.items === 19 && /band/.test(band.front) && /band/.test(band.back[0]) && band.back[1] === "reverse" && band.info, `${label}: two tilted bands cross in opposite directions, the front one lists the ${band.items} categories`);
       const look = await page.evaluate(() => ({ upper: getComputedStyle(document.querySelector(".hero__title")).textTransform, loc: getComputedStyle(document.querySelector("#location-btn")).backgroundColor }));
       check(look.upper === "uppercase" && look.loc === "rgb(225, 6, 15)", `${label}: hero title in capitals, « Voir la localisation » in red`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
@@ -221,7 +226,7 @@ async function main() {
       check(menuTop < 300, `${label}: "Commander" scrolls to the menu`);
 
       await testCategories(page, label);
-      await page.click('#cat-band .cat-band__row:first-child [data-open-cat="pizzas"]', { force: true });
+      await page.click('#band-front .band__group:first-child [data-open-cat="pizzas"]', { force: true });
       await page.waitForTimeout(600);
       check(await page.evaluate(() => document.querySelector("#menu-list .category")?.dataset.cat === "pizzas"), `${label}: tapping « Pizzas » in the band opens that category`);
 

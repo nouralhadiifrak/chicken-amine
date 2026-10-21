@@ -28,7 +28,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Baloo+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/css/style.css">
 
@@ -1384,7 +1384,11 @@
       </div>
     </section>
 
-    <div class="cat-band" id="cat-band" aria-label="Catégories du menu" data-i18n-label="menu.categories"><div class="cat-band__track" id="cat-band-track"></div></div>
+    <!-- Two tilted bands crossing between the hero and the menu: the categories in front, the essentials behind. -->
+    <div class="bands" id="cat-band">
+      <nav class="band band--front" aria-label="Catégories du menu" data-i18n-label="menu.categories"><div class="band__track" id="band-front"></div></nav>
+      <div class="band band--back" aria-hidden="true"><div class="band__track" id="band-back"></div></div>
+    </div>
 
     <section class="menu" id="menu" aria-labelledby="menu-title">
       <h2 class="section-title" id="menu-title" data-i18n="menu.title">Notre menu</h2>
