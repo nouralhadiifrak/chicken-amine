@@ -440,13 +440,14 @@
   function renderCart() {
     const n = count();
     const badge = $("#cart-count");
-    badge.textContent = n;
+    Kit.roll(badge, n);
     badge.hidden = n === 0;
     const bar = $("#cart-bar");
     bar.hidden = n === 0;
     document.body.classList.toggle("has-cart", n > 0);
     animateCart(false);
-    $("#cart-bar-meta").innerHTML = `${esc(t("cart.items", { n }))} · ${esc(money(subtotal()))}`;
+    $("#cart-bar-items").textContent = t("cart.items", { n });
+    Kit.setMoney($("#cart-bar-total"), subtotal(), C.currency[lang]);
 
     $("#cart-lines").innerHTML = cart.map((l) => {
       const it = itemById.get(l.id);
@@ -490,59 +491,21 @@
     if (/jouet/.test(d)) list.push("🧸");
     return list;
   }
-  function flyEmojis(fromEl, it) {
-    if (reducedMotion.matches || !fromEl || !document.body.animate) return;
-    const r = fromEl.getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.top + r.height / 2;
-    const list = emojisFor(it);
-    const layer = document.createElement("div");
-    layer.className = "emoji-layer";
-    layer.setAttribute("aria-hidden", "true");
-    document.body.appendChild(layer);
-    const anims = [];
-    // A burst around the button.
-    for (let i = 0; i < 8; i++) {
-      const e = document.createElement("span");
-      e.className = "emoji-fly";
-      e.textContent = list[i % list.length];
-      e.style.left = x + "px";
-      e.style.top = y + "px";
-      layer.appendChild(e);
-      const ang = (-160 + (140 * i) / 7 + (Math.random() * 14 - 7)) * (Math.PI / 180);
-      const dist = 70 + Math.random() * 60;
-      const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
-      anims.push(e.animate([
-        { transform: "translate(-50%,-50%) scale(.3) rotate(0deg)", opacity: 0 },
-        { transform: `translate(calc(-50% + ${dx * 0.7}px), calc(-50% + ${dy * 0.7}px)) scale(1.15) rotate(${dx / 3}deg)`, opacity: 1, offset: 0.45 },
-        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + 40}px)) scale(.9) rotate(${dx / 2}deg)`, opacity: 0 },
-      ], { duration: 780 + Math.random() * 220, easing: "cubic-bezier(.2,.8,.3,1)", fill: "forwards" }).finished);
-    }
-    // One flies into the cart.
-    const cartEl = !$("#cart-bar").hidden && innerWidth < 760 ? $("#cart-bar .cart-ico") : $("#cart-btn .cart-ico");
-    if (cartEl) {
-      const c = cartEl.getBoundingClientRect();
-      const e = document.createElement("span");
-      e.className = "emoji-fly emoji-fly--cart";
-      e.textContent = list[0];
-      e.style.left = x + "px";
-      e.style.top = y + "px";
-      layer.appendChild(e);
-      const tx = c.left + c.width / 2 - x, ty = c.top + c.height / 2 - y;
-      anims.push(e.animate([
-        { transform: "translate(-50%,-50%) scale(1)", opacity: 1 },
-        { transform: `translate(calc(-50% + ${tx * 0.45}px), calc(-50% + ${ty * 0.45 - 90}px)) scale(1.3)`, opacity: 1, offset: 0.45 },
-        { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(.4)`, opacity: 0.2 },
-      ], { duration: 720, easing: "cubic-bezier(.45,0,.2,1)", fill: "forwards" }).finished);
-    }
-    Promise.all(anims).catch(() => {}).then(() => layer.remove());
+  // The kit's spree of the dish's emojis; the cart rocks and pops as they peak.
+  function sprayEmojis(fromEl, it) {
+    // Adding re-renders the dish's controls, so start from the button now on the page.
+    if (!fromEl || !fromEl.isConnected) fromEl = $(`.item[data-item="${it.id}"] [data-add]`);
+    Kit.emojiSpree(fromEl, {
+      emoji: emojisFor(it),
+      onLand: () => { animateCart(true); Kit.bump($("#cart-btn")); },
+    });
   }
 
   function onAdd(id, btn) {
     const it = itemById.get(id);
     if (needsDialog(it)) { openOptions(id, btn); return; }
     addLine({ id, qty: 1 });
-    flyEmojis(btn, it);
-    animateCart(true);
+    sprayEmojis(btn, it);
     if (hasSauces(it)) openSauces({ id, qty: 1 });
   }
 
@@ -553,10 +516,10 @@
     const it = itemById.get(line.id);
     $("#sauce-title").textContent = t("sauce.title");
     $("#sauce-added").innerHTML = rich(t("sauce.added", { name: L(it), max: MAX_SAUCES }));
-    $("#sauce-list").innerHTML = SAUCES.map((s) => `<label class="opt"><input type="checkbox" name="sauce" value="${s.id}"><span>${rich(L(s))}</span></label>`).join("");
+    $("#sauce-list").innerHTML = SAUCES.map(saucePill).join("");
     updateSauceLimit();
-    // Let the emojis start before the sheet covers the page.
-    setTimeout(() => openDialog($("#sauce-dialog")), reducedMotion.matches ? 0 : 380);
+    // Let the emojis fly before the sheet covers the page.
+    setTimeout(() => openDialog($("#sauce-dialog")), reducedMotion.matches ? 0 : 650);
   }
   function updateSauceLimit() {
     const boxes = $$('#sauce-list input[name="sauce"]');
@@ -577,45 +540,69 @@
   }
 
   /* ---------- Options dialog (sizes, required choices; sauces too when the dish has them) ---------- */
-  let optionsItem = null, optionsFrom = null;
+  let optionsItem = null, optionsFrom = null, optionsQty = 1;
   function openOptions(id, fromEl) {
     const it = itemById.get(id);
     optionsItem = it;
     optionsFrom = fromEl || null;
     $("#options-title").innerHTML = rich(L(it));
+    optionsQty = 1;
+    const need = `<small>(${esc(t("options.required"))})</small>`;
     let html = "";
     if (it.prices) {
       const sizes = Object.keys(it.prices);
-      html += `<fieldset class="opt-group"><legend>${esc(t("options.size"))} <small>(${esc(t("options.required"))})</small></legend>
-        ${sizes.map((s, i) => `<label class="opt"><input type="radio" name="size" value="${esc(s)}" ${i === 0 ? "checked" : ""}><span>${esc(s)}</span><span class="opt__price">${esc(money(it.prices[s]))}</span></label>`).join("")}</fieldset>`;
+      html += `<fieldset class="field"><legend class="field__label">${esc(t("options.size"))} ${need}</legend><div class="pills">
+        ${sizes.map((s, i) => pill("radio", "size", s, `${esc(s)} · ${esc(money(it.prices[s]))}`, i === 0)).join("")}</div></fieldset>`;
     }
     (it.options || []).forEach((o) => {
-      html += `<fieldset class="opt-group" data-opt="${o.id}"><legend>${rich(L(o))} <small>(${esc(t("options.required"))})</small></legend>
-        ${o.choices.map((c) => `<label class="opt"><input type="radio" name="opt-${o.id}" value="${c.id}"><span>${rich(L(c))}</span></label>`).join("")}</fieldset>`;
+      html += `<fieldset class="field" data-opt="${o.id}"><legend class="field__label">${rich(L(o))} ${need}</legend><div class="pills">
+        ${o.choices.map((c) => pill("radio", "opt-" + o.id, c.id, rich(L(c)))).join("")}</div></fieldset>`;
     });
     if (hasSauces(it)) {
-      html += `<fieldset class="opt-group sauce-grid" data-sauces><legend>${esc(t("options.sauces"))} <small>(${esc(t("options.saucesHint", { max: MAX_SAUCES }))})</small></legend>
-        ${SAUCES.map((s) => `<label class="opt"><input type="checkbox" name="sauce" value="${s.id}"><span>${rich(L(s))}</span></label>`).join("")}</fieldset>`;
+      html += `<fieldset class="field" data-sauces><legend class="field__label">${esc(t("options.sauces"))} <small>(${esc(t("options.saucesHint", { max: MAX_SAUCES }))})</small></legend><div class="pills">
+        ${SAUCES.map(saucePill).join("")}</div></fieldset>`;
     }
+    html += `<div class="field"><span class="field__label">${esc(t("options.qty"))}</span>
+      <div class="qty">
+        <button type="button" class="qty__btn" data-step="-1" aria-label="${esc(t("menu.decrease", { name: L(it) }))}"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M5 12h14"/></svg></button>
+        <output class="roll" id="options-qty"></output>
+        <button type="button" class="qty__btn" data-step="1" aria-label="${esc(t("menu.increase", { name: L(it) }))}"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M5 12h14M12 5v14"/></svg></button>
+      </div></div>`;
     $("#options-body").innerHTML = html;
     $("#options-error").textContent = "";
+    $("#options-submit").innerHTML = `<span>${esc(t("menu.add"))}</span> · <span class="money" id="options-price"></span>`;
     updateOptionsPrice();
     openDialog($("#options-dialog"));
+  }
+  function pill(type, name, value, label, checked = false) {
+    return `<label class="pill"><input type="${type}" name="${name}" value="${esc(value)}"${checked ? " checked" : ""}><span>${label}</span></label>`;
+  }
+  function saucePill(s) {
+    const swatch = s.color ? `<i class="pill__swatch" style="--sauce:${s.color}"></i>` : "";
+    return pill("checkbox", "sauce", s.id, swatch + rich(L(s)));
   }
   function updateOptionsPrice() {
     const it = optionsItem;
     const size = $('#options-body input[name="size"]:checked');
     const price = it.prices ? it.prices[size ? size.value : Object.keys(it.prices)[0]] : it.price;
-    $("#options-submit").textContent = t("options.addToOrder", { price: money(price) });
+    Kit.roll($("#options-qty"), optionsQty);
+    $('.qty__btn[data-step="-1"]').disabled = optionsQty <= 1;
+    Kit.setMoney($("#options-price"), price * optionsQty, C.currency[lang]);
     // Sauce limit: disable the rest once the maximum is ticked.
     const boxes = $$('#options-body input[name="sauce"]');
     const ticked = boxes.filter((b) => b.checked).length;
     boxes.forEach((b) => { b.disabled = !b.checked && ticked >= MAX_SAUCES; });
   }
+  function onOptionsStep(e) {
+    const b = e.target.closest(".qty__btn");
+    if (!b) return;
+    optionsQty = Math.max(1, Math.min(50, optionsQty + +b.dataset.step));
+    updateOptionsPrice();
+  }
   function submitOptions(e) {
     e.preventDefault();
     const it = optionsItem;
-    const line = { id: it.id, qty: 1 };
+    const line = { id: it.id, qty: optionsQty };
     if (it.prices) line.size = $('#options-body input[name="size"]:checked').value;
     if (it.options && it.options.length) {
       line.opts = {};
@@ -629,8 +616,7 @@
     if (sauces.length) line.sauces = sauces;
     addLine(line);
     closeDialog($("#options-dialog"));
-    flyEmojis(optionsFrom, it);
-    animateCart(true);
+    sprayEmojis(optionsFrom, it);
   }
 
   /* ---------- Dialog helpers ---------- */
@@ -822,6 +808,7 @@
     addEventListener("popstate", onPopState);
     $("#options-form").addEventListener("submit", submitOptions);
     $("#options-body").addEventListener("change", updateOptionsPrice);
+    $("#options-body").addEventListener("click", onOptionsStep);
     $("#sauce-form").addEventListener("submit", submitSauces);
     $("#sauce-list").addEventListener("change", updateSauceLimit);
     $("#sauce-skip").addEventListener("click", () => { sauceLine = null; closeDialog($("#sauce-dialog")); });
