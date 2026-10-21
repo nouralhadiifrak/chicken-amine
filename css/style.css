@@ -602,6 +602,76 @@ html.no-intro .intro { display: none; }
   .item:nth-child(2) { border-top: 0; }
 }
 
+/* Phones and tablets: the dishes become cards like the category tiles (picture on top, name, price, +). */
+@media (max-width: 899px) {
+  .category { background: none; box-shadow: none; border: 0; border-radius: 0; overflow: visible; }
+  .category__media { display: none; }
+  .category__title { padding: 4px 4px 12px; color: var(--white); font-size: 1.9rem; }
+  .items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; }
+  .item {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr auto;
+    align-items: start;
+    gap: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--white);
+  }
+  .item__thumb {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    border-radius: 0;
+    /* the soft yellow circles of the category tiles */
+    background:
+      radial-gradient(circle at 8% 88%, #fde08a 0 9%, transparent 9.5%),
+      radial-gradient(circle at 104% 50%, #fde08a 0 13%, transparent 13.5%),
+      radial-gradient(circle at 93% 10%, #fde08a 0 6%, transparent 6.5%),
+      var(--yellow-soft);
+  }
+  .item__thumb span { font-size: 54px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.18)); }
+  .item__name,
+  .item__name:last-of-type {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    padding: 10px 12px 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    color: var(--red);
+  }
+  .item__desc {
+    grid-column: 1;
+    grid-row: 3;
+    padding: 2px 12px 0;
+    font-size: 0.8rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .item__side {
+    grid-column: 1;
+    grid-row: 4;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 10px 10px 12px 12px;
+  }
+  .add-btn { width: 40px; height: 40px; }
+  .in-cart { margin-inline-end: 4px; }
+}
+@media (min-width: 600px) and (max-width: 899px) {
+  .items { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 /* ---------- Infos ---------- */
 .infos { max-width: 1120px; margin: 0 auto; padding: 0 14px 40px; }
 .infos__grid { display: grid; gap: 14px; }
