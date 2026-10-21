@@ -14,7 +14,8 @@
  *
  * Category fields: id, fr, ar, icon (placeholder illustration), image (photo path, empty = illustration),
  * emoji (flies when one of its dishes is added), sauces (true: after adding a dish, the customer may
- * choose up to MAX_SAUCES sauces).
+ * choose up to MAX_SAUCES sauces). Sauces go with sandwiches, tacos, burgers and fried chicken; salads,
+ * pizzas, pasta and plates served in their own sauce have none. An item's own sauces: true/false wins.
  * To add a photo: put it in assets/photos/ and set the category's image, e.g. image: "assets/photos/tacos.jpg".
  */
 window.MAX_SAUCES = 2;
@@ -42,7 +43,7 @@ window.MENU = [
     icon: "salad",
     image: "",
     emoji: "🥗",
-    sauces: true,
+    sauces: false,
     items: [
       { id: "sal-nicoise", emoji: "🥗", fr: "Salade Niçoise", ar: "سلطة نيسواز", price: 42,
         desc: { fr: "Pommes de terre, betterave, tomate, thon, chicken, dinde fumée, concombre", ar: "بطاطس، شمندر، طماطم، تون، تشيكن، ديك رومي مدخن، خيار" } },
@@ -87,7 +88,7 @@ window.MENU = [
     icon: "plate",
     image: "",
     emoji: "🍽️",
-    sauces: true,
+    sauces: false,
     items: [
       { id: "pl-broch-mixtes", emoji: "🍢", fr: "Plat Brochettes Mixtes", ar: "طبق بروشيت ميكس", price: 90 },
       { id: "pl-pasticcio", fr: "Plat Pasticcio Amine", ar: "طبق باستيتشيو أمين", price: 80,
@@ -102,18 +103,18 @@ window.MENU = [
         desc: { fr: "Pâtes sauce blanche et champignons, riz, légumes sautés, frites", ar: "معكرونة بالصلصة البيضاء والفطر، أرز، خضر مشوحة، فريت" } },
       { id: "pl-broch-poulet", emoji: "🍢", fr: "Plat Brochettes Poulet", ar: "طبق بروشيت دجاج", price: 75,
         desc: { fr: "Pâtes sauce blanche et champignons, riz, légumes sautés, frites", ar: "معكرونة بالصلصة البيضاء والفطر، أرز، خضر مشوحة، فريت" } },
-      { id: "pl-tacos-amine", emoji: "🌮", fr: "Chicken Tacos Amine", ar: "تشيكن طاكوس أمين", price: 70, desc: { fr: "Chicken, tacos, frites, pâtes, boisson", ar: "تشيكن، طاكوس، فريت، معكرونة، مشروب" } },
-      { id: "pl-burger-amine", emoji: "🍔", fr: "Chicken Burger Amine", ar: "تشيكن برغر أمين", price: 70, desc: { fr: "Chicken, burger, frites, boisson", ar: "تشيكن، برغر، فريت، مشروب" } },
+      { id: "pl-tacos-amine", sauces: true, emoji: "🌮", fr: "Chicken Tacos Amine", ar: "تشيكن طاكوس أمين", price: 70, desc: { fr: "Chicken, tacos, frites, pâtes, boisson", ar: "تشيكن، طاكوس، فريت، معكرونة، مشروب" } },
+      { id: "pl-burger-amine", sauces: true, emoji: "🍔", fr: "Chicken Burger Amine", ar: "تشيكن برغر أمين", price: 70, desc: { fr: "Chicken, burger, frites, boisson", ar: "تشيكن، برغر، فريت، مشروب" } },
       { id: "pl-escalope", fr: "Escalope Gratinée", ar: "إسكالوب غراتيني", price: 70 },
       { id: "pl-saucisse", fr: "Plat Saucisse de Bœuf", ar: "طبق صوصيص البقر", price: 70,
         desc: { fr: "Pâtes sauce blanche et champignons, riz, légumes, frites", ar: "معكرونة بالصلصة البيضاء والفطر، أرز، خضر، فريت" } },
-      { id: "pl-panizza-mixte", emoji: "🍕", fr: "Panizza Mixte", ar: "بانيزا ميكس", price: 70, desc: { fr: "Avec frites", ar: "مع فريت" } },
-      { id: "pl-panizza-poulet", emoji: "🍕", fr: "Panizza Poulet", ar: "بانيزا دجاج", price: 68, desc: { fr: "Avec frites", ar: "مع فريت" } },
-      { id: "pl-panizza-viande", emoji: "🍕", fr: "Panizza Viande Hachée", ar: "بانيزا لحم مفروم", price: 68, desc: { fr: "Avec frites", ar: "مع فريت" } },
-      { id: "pl-panizza-chicken", emoji: "🍕", fr: "Panizza Chicken", ar: "بانيزا تشيكن", price: 68, desc: { fr: "Avec frites", ar: "مع فريت" } },
+      { id: "pl-panizza-mixte", sauces: true, emoji: "🍕", fr: "Panizza Mixte", ar: "بانيزا ميكس", price: 70, desc: { fr: "Avec frites", ar: "مع فريت" } },
+      { id: "pl-panizza-poulet", sauces: true, emoji: "🍕", fr: "Panizza Poulet", ar: "بانيزا دجاج", price: 68, desc: { fr: "Avec frites", ar: "مع فريت" } },
+      { id: "pl-panizza-viande", sauces: true, emoji: "🍕", fr: "Panizza Viande Hachée", ar: "بانيزا لحم مفروم", price: 68, desc: { fr: "Avec frites", ar: "مع فريت" } },
+      { id: "pl-panizza-chicken", sauces: true, emoji: "🍕", fr: "Panizza Chicken", ar: "بانيزا تشيكن", price: 68, desc: { fr: "Avec frites", ar: "مع فريت" } },
       { id: "pl-emince-blanche", fr: "Émincé de Poulet Sauce Blanche", ar: "إمانسي دجاج بالصلصة البيضاء", price: 65 },
       { id: "pl-emince-champignon", fr: "Émincé de Poulet Sauce Champignon", ar: "إمانسي دجاج بصلصة الفطر", price: 65 },
-      { id: "pl-sandwich-amine", emoji: "🥪", fr: "Plat Sandwich Amine", ar: "طبق ساندويتش أمين", price: 65,
+      { id: "pl-sandwich-amine", sauces: true, emoji: "🥪", fr: "Plat Sandwich Amine", ar: "طبق ساندويتش أمين", price: 65,
         desc: { fr: "Sandwich au choix, salade, frites, boisson", ar: "ساندويتش حسب الاختيار، سلطة، فريت، مشروب" },
         options: [{ id: "sandwich", fr: "Sandwich au choix", ar: "اختر الساندويتش", choices: [
           { id: "thon", fr: "Thon", ar: "تون" },
@@ -142,7 +143,7 @@ window.MENU = [
     icon: "cordon",
     image: "",
     emoji: "🍗",
-    sauces: true,
+    sauces: false,
     items: [
       { id: "cb-blanche", fr: "Cordon Bleu – Sauce Blanche", ar: "كوردون بلو – صلصة بيضاء", price: 59 },
       { id: "cb-champignons", fr: "Cordon Bleu – Sauce Champignons", ar: "كوردون بلو – صلصة الفطر", price: 59, desc: { fr: "Cordon bleu, pâtes, frites", ar: "كوردون بلو، معكرونة، فريت" } },
@@ -159,7 +160,7 @@ window.MENU = [
     icon: "nuggets",
     image: "",
     emoji: "🍗",
-    sauces: true,
+    sauces: false,
     items: [
       { id: "ng-blanche", fr: "Nuggets – Sauce Blanche", ar: "ناجتس – صلصة بيضاء", price: 58 },
       { id: "ng-champignons", fr: "Nuggets – Sauce Champignons", ar: "ناجتس – صلصة الفطر", price: 58, desc: { fr: "Nuggets, frites, pâtes", ar: "ناجتس، فريت، معكرونة" } },
@@ -277,7 +278,7 @@ window.MENU = [
     icon: "pizza",
     image: "",
     emoji: "🍕",
-    sauces: true,
+    sauces: false,
     items: [
       { id: "pz-chicken", fr: "Pizza Chicken", ar: "بيتزا تشيكن", price: 28, desc: { fr: "Sauce tomate, mozzarella, chicken, origan", ar: "صلصة الطماطم، موزاريلا، تشيكن، زعتر" } },
       { id: "pz-margherita", fr: "Pizza Margherita", ar: "بيتزا مارغريتا", price: 33, desc: { fr: "Sauce tomate, mozzarella, olives noires, origan", ar: "صلصة الطماطم، موزاريلا، زيتون أسود، زعتر" } },
@@ -297,7 +298,7 @@ window.MENU = [
     icon: "pasta",
     image: "",
     emoji: "🍝",
-    sauces: true,
+    sauces: false,
     items: [
       { id: "pt-thon", fr: "Pâtes Thon", ar: "معكرونة بالتون", price: 25, desc: { fr: "Sauce tomate, thon, olives noires, basilic", ar: "صلصة الطماطم، تون، زيتون أسود، حبق" } },
       { id: "pt-bolognaise", fr: "Pâtes Bolognaise", ar: "معكرونة بولونيز", price: 28, desc: { fr: "Sauce tomate aux herbes, viande hachée, parmesan, basilic", ar: "صلصة الطماطم بالأعشاب، لحم مفروم، بارميزان، حبق" } },
@@ -313,7 +314,7 @@ window.MENU = [
     icon: "gratin",
     image: "",
     emoji: "🧀",
-    sauces: true,
+    sauces: false,
     items: [
       { id: "ps-poulet", fr: "Pasticcio Poulet", ar: "باستيتشيو دجاج", price: 47 },
       { id: "ps-viande", fr: "Pasticcio Viande Hachée", ar: "باستيتشيو لحم مفروم", price: 48 },

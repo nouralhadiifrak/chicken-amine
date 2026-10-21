@@ -77,77 +77,27 @@ h1, h2, h3, h4, h5, h6 {
 
 :focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
 
-/* ---------- Intro: rooster, typed name, sprig ---------- */
+/* ---------- Intro: the logo builds itself from its four layers, then glides into the header ---------- */
 .intro {
   position: fixed;
   inset: 0;
   z-index: 90;
   display: grid;
   place-items: center;
+  overflow: hidden;
   background: var(--white);
   pointer-events: none;
 }
 .intro__stage {
-  display: flex;
-  align-items: center;
-  gap: clamp(6px, 2vw, 16px);
-  padding: 0 16px;
-}
-.intro__rooster {
-  height: clamp(96px, 27vw, 176px);
-  width: auto;
-  opacity: 0;
-  flex: none;
-}
-.intro__words {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 4.25em; /* fixed, so the rooster does not shift while the name is typed */
-  font-size: clamp(30px, 10vw, 66px);
+  width: min(86vw, 520px);
+  aspect-ratio: 900 / 467;
+  transform-origin: 0 0;
 }
-.intro__chicken {
-  font-family: "Pacifico", cursive;
-  color: var(--red);
-  font-size: 1em;
-  line-height: 1.25;
-  min-height: 1.25em;
-  white-space: nowrap;
-}
-.intro__amine {
-  font-family: "Baloo 2", sans-serif;
-  font-weight: 800;
-  font-style: italic;
-  font-size: 0.95em;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  min-height: 1em;
-  margin-inline-start: 0.5em;
-  white-space: nowrap;
-}
-.intro__amine .g { color: #6fa60b; }
-.intro__amine .y { color: var(--yellow); }
-.is-typing::after {
-  content: "";
-  display: inline-block;
-  width: 0.08em;
-  height: 0.85em;
-  margin-inline-start: 0.06em;
-  vertical-align: -0.08em;
-  background: var(--black);
-  animation: caret 0.5s steps(1) infinite;
-}
-@keyframes caret { 50% { opacity: 0; } }
-.intro__sprig {
-  position: absolute;
-  top: -0.5em;
-  left: 3.05em;
-  width: 1.3em;
-  height: auto;
-  opacity: 0;
-  transform-origin: 30% 100%;
-}
-.intro__final { position: absolute; height: auto; opacity: 0; transform-origin: center; }
+/* Each layer is a full-size cut of the logo, so stacked they rebuild it exactly. */
+.intro__layer { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.intro__rooster { transform-origin: 17% 41%; }
+.intro__sprig { transform-origin: 87% 33%; }
 .intro.is-done { display: none; }
 html.no-intro .intro { display: none; }
 
@@ -599,7 +549,9 @@ html.no-intro .intro { display: none; }
   line-height: 1;
   cursor: pointer;
 }
-.stepper output { min-width: 22px; text-align: center; font-weight: 700; }
+.stepper output { min-width: 22px; justify-content: center; font-weight: 700; }
+.stepper button { display: grid; place-items: center; padding: 0; }
+.stepper .stepper__bin { background: var(--black); }
 
 /* Desktop: one category per row (so the bar always has a single active category), dishes in two columns
    beside the photo. */
