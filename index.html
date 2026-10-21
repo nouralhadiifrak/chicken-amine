@@ -28,7 +28,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Pacifico&family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/css/style.css">
 
@@ -1343,9 +1343,13 @@
   <a class="skip" href="#menu" data-i18n="skip">Aller au menu</a>
 
   <div class="intro" id="intro" aria-hidden="true">
-    <div class="intro__stage">
+    <div class="intro__stage" id="intro-stage">
       <img class="intro__rooster" src="/assets/rooster.png" alt="" width="517" height="644">
-      <img class="intro__logo" src="/assets/logo.png" alt="" width="640" height="332">
+      <div class="intro__words">
+        <span class="intro__chicken" id="intro-chicken"></span>
+        <span class="intro__amine" id="intro-amine"></span>
+        <img class="intro__sprig" src="/assets/sprig.png" alt="" width="360" height="197">
+      </div>
     </div>
   </div>
 
@@ -1355,13 +1359,14 @@
         <img id="header-logo" src="/assets/logo.png" alt="Chicken Amine" width="640" height="332">
       </a>
       <nav class="header__nav" aria-label="Navigation">
-        <a href="#menu" data-i18n="nav.menu">Menu</a>
-        <a href="#infos" data-i18n="nav.infos">Infos pratiques</a>
+        <a href="#menu" data-nav="menu" data-i18n="nav.menu">Menu</a>
+        <a href="#infos" data-nav="infos" data-i18n="nav.infos">Infos pratiques</a>
       </nav>
-      <button class="lang-toggle" id="lang-toggle" type="button" lang="ar" dir="rtl" data-i18n="langToggle" data-i18n-label="langToggleLabel" aria-label="Afficher le site en arabe">العربية</button>
+      <button class="lang-link" id="lang-toggle" type="button" lang="ar" dir="rtl" data-i18n="langToggle" data-i18n-label="langToggleLabel" aria-label="Afficher le site en arabe">العربية</button>
       <button class="cart-btn" id="cart-btn" type="button" aria-label="Votre commande">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h-2l-1 2v1h2l3.6 7.6-1.3 2.4c-.6 1.2.2 2 1.2 2h10v-2h-9.6l1.1-2h7.5c.8 0 1.4-.4 1.7-1l3.3-6H6.2L5.3 4H7zm2 16a2 2 0 1 0 4 0 2 2 0 0 0-4 0zm8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/></svg>
-        <span class="cart-btn__count" id="cart-count" hidden>0</span>
+        <svg class="cart-ico" viewBox="0 0 64 64" aria-hidden="true"><g class="cart-ico__body"><path d="M4 10h8.5l2.2 4H58c1.6 0 2.7 1.6 2.1 3.1l-6.7 17.5A6 6 0 0 1 47.8 39H23.3l-3 5.6H52v5H16.6c-2.4 0-3.9-2.6-2.7-4.7l4.4-8.1L9.4 15H4z"/><circle cx="21" cy="56" r="4.6" fill="none" stroke="currentColor" stroke-width="3.4"/><circle cx="47" cy="56" r="4.6" fill="none" stroke="currentColor" stroke-width="3.4"/></g></svg>
+        <span class="cart-btn__label" data-i18n="cart.short">Commande</span>
+        <span class="cart-btn__count" id="cart-count">0</span>
       </button>
     </div>
   </header>
@@ -1383,10 +1388,16 @@
 
     <section class="menu" id="menu" aria-labelledby="menu-title">
       <h2 class="section-title" id="menu-title" data-i18n="menu.title">Notre menu</h2>
-      <nav class="catbar" id="catbar" aria-label="Catégories du menu" data-i18n-label="menu.categories">
-        <div class="catbar__track" id="catbar-track"></div>
-      </nav>
-      <div class="menu__list" id="menu-list"></div>
+      <div class="cat-grid" id="cat-grid"></div>
+      <div class="menu-detail" id="menu-detail" hidden>
+        <nav class="catbar" id="catbar" aria-label="Catégories du menu" data-i18n-label="menu.categories">
+          <div class="catbar__track" id="catbar-track"></div>
+        </nav>
+        <div class="menu-detail__inner">
+          <button class="back-link" id="back-to-cats" type="button"><span aria-hidden="true">←</span> <span data-i18n="menu.allCategories">Toutes les catégories</span></button>
+          <div id="menu-list"></div>
+        </div>
+      </div>
     </section>
 
     <section class="infos" id="infos" aria-labelledby="infos-title">
@@ -1423,7 +1434,7 @@
   </a>
 
   <button class="cart-bar" id="cart-bar" type="button" hidden>
-    <span class="cart-bar__label" data-i18n="cart.open">Voir la commande</span>
+    <span class="cart-bar__label"><svg class="cart-ico" viewBox="0 0 64 64" aria-hidden="true"><g class="cart-ico__body"><path d="M4 10h8.5l2.2 4H58c1.6 0 2.7 1.6 2.1 3.1l-6.7 17.5A6 6 0 0 1 47.8 39H23.3l-3 5.6H52v5H16.6c-2.4 0-3.9-2.6-2.7-4.7l4.4-8.1L9.4 15H4z"/><circle cx="21" cy="56" r="4.6" fill="none" stroke="currentColor" stroke-width="3.4"/><circle cx="47" cy="56" r="4.6" fill="none" stroke="currentColor" stroke-width="3.4"/></g></svg><span data-i18n="cart.open">Voir la commande</span></span>
     <span class="cart-bar__meta" id="cart-bar-meta"></span>
   </button>
 
@@ -1437,6 +1448,22 @@
       <p class="form-error" id="options-error" role="alert"></p>
       <div class="sheet__foot">
         <button class="btn btn--primary btn--block" id="options-submit" type="submit" value="add"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="sauce-dialog" aria-labelledby="sauce-title">
+    <form method="dialog" class="sheet__inner" id="sauce-form">
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="sauce-title"></h2>
+      </div>
+      <div class="sheet__body">
+        <p class="sauce-added" id="sauce-added"></p>
+        <fieldset class="opt-group sauce-grid" id="sauce-list"></fieldset>
+      </div>
+      <div class="sheet__foot sheet__actions">
+        <button class="btn btn--ghost-dark btn--small" id="sauce-skip" type="button"><span data-i18n="sauce.none">Sans sauce</span></button>
+        <button class="btn btn--primary" id="sauce-ok" type="submit"><span data-i18n="sauce.confirm">Valider</span></button>
       </div>
     </form>
   </dialog>
