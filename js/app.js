@@ -259,10 +259,18 @@
     return `<span class="price">${esc(money(it.price))}${unit}</span>`;
   }
 
+  const PLUS_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M5 12h14M12 5v14"/></svg>';
   function controlFor(it) {
     const qty = qtyOf(it.id);
     const label = needsDialog(it) ? t("menu.choose") : t("menu.add");
-    return `${qty ? `<span class="in-cart" aria-label="${esc(t("menu.inCart", { n: qty }))}">${qty}</span>` : ""}<button class="add-btn" type="button" data-add="${it.id}" aria-label="${esc(label + " · " + L(it))}">${esc(label)}</button>`;
+    return `${qty ? `<span class="in-cart" aria-label="${esc(t("menu.inCart", { n: qty }))}">${qty}</span>` : ""}<button class="add-btn" type="button" data-add="${it.id}" aria-label="${esc(label + " · " + L(it))}">${PLUS_ICON}</button>`;
+  }
+
+  // A photo of the dish when it has one (item.image), otherwise its emoji on a tile.
+  function thumbFor(it) {
+    it = itemById.get(it.id);
+    if (it.image) return `<div class="item__thumb"><img src="${esc(it.image)}" alt="" loading="lazy" width="160" height="160"></div>`;
+    return `<div class="item__thumb" aria-hidden="true"><span>${it.emoji || it.cat.emoji || "🍽️"}</span></div>`;
   }
 
   let currentCat = null;
@@ -278,6 +286,13 @@
     }).join("");
   }
 
+  // The moving band of categories between the hero and the menu. The list is there twice so the loop
+  // has no gap; the copy is hidden from screen readers and the keyboard.
+  function renderBand() {
+    const row = (copy) => MENU.map((c) => `<button class="cat-band__item" type="button" data-open-cat="${c.id}"${copy ? ' tabindex="-1" aria-hidden="true"' : ""}><span class="cat-band__emoji" aria-hidden="true">${c.emoji || "🍽️"}</span>${rich(L(c))}</button>`).join("");
+    $("#cat-band-track").innerHTML = `<div class="cat-band__row">${row(false)}</div><div class="cat-band__row" aria-hidden="true">${row(true)}</div>`;
+  }
+
   function renderDetail() {
     const c = catById.get(currentCat);
     if (!c) return;
@@ -288,6 +303,7 @@
         <h3 class="category__title">${esc(L(c))}</h3>
         <ul class="items">${c.items.map((it) => `
           <li class="item" data-item="${it.id}">
+            ${thumbFor(it)}
             <p class="item__name">${rich(L(it))}</p>
             ${it.desc ? `<p class="item__desc">${rich(L(it.desc))}</p>` : ""}
             <div class="item__side">${priceLabel(it)}<span class="item__ctl">${controlFor(it)}</span></div>
@@ -298,6 +314,7 @@
 
   function renderMenu() {
     renderHome();
+    renderBand();
     const detail = !!currentCat;
     $("#cat-grid").hidden = detail;
     $("#menu-detail").hidden = !detail;
@@ -518,22 +535,25 @@
   function onAdd(id, btn) {
     const it = itemById.get(id);
     if (needsDialog(it)) { openOptions(id, btn); return; }
-    addLine({ id, qty: 1 });
-    sprayEmojis(btn, it);
-    if (hasSauces(it)) openSauces({ id, qty: 1 });
+    // Sauces are chosen first; the dish goes into the order (and the emojis fly) once that is settled.
+    if (hasSauces(it)) { openSauces(it, btn); return; }
+    addDish({ id, qty: 1 }, btn);
+  }
+  function addDish(line, fromEl) {
+    addLine(line);
+    sprayEmojis(fromEl, itemById.get(line.id));
   }
 
-  /* ---------- Sauce sheet: after a dish is added, up to MAX_SAUCES sauces to go with it ---------- */
-  let sauceLine = null;
-  function openSauces(line) {
-    sauceLine = line;
-    const it = itemById.get(line.id);
-    $("#sauce-title").textContent = t("sauce.title");
-    $("#sauce-added").innerHTML = rich(t("sauce.added", { name: L(it), max: MAX_SAUCES }));
+  /* ---------- Sauce sheet: before a dish goes into the order, up to MAX_SAUCES sauces to go with it ---------- */
+  let sauceItem = null, sauceFrom = null;
+  function openSauces(it, fromEl) {
+    sauceItem = it;
+    sauceFrom = fromEl;
+    $("#sauce-title").innerHTML = rich(L(it));
+    $("#sauce-added").innerHTML = rich(t("sauce.pick", { max: MAX_SAUCES }));
     $("#sauce-list").innerHTML = SAUCES.map(saucePill).join("");
     updateSauceLimit();
-    // Let the emojis fly before the sheet covers the page.
-    setTimeout(() => openDialog($("#sauce-dialog")), reducedMotion.matches ? 0 : 650);
+    openDialog($("#sauce-dialog"));
   }
   function updateSauceLimit() {
     const boxes = $$('#sauce-list input[name="sauce"]');
@@ -541,16 +561,20 @@
     boxes.forEach((b) => { b.disabled = !b.checked && ticked >= MAX_SAUCES; });
     $("#sauce-ok").disabled = ticked === 0;
   }
+  // "Valider" adds the dish with its sauces, "Sans sauce" without; closing the sheet adds nothing.
+  function finishSauces(sauces) {
+    const it = sauceItem;
+    sauceItem = null;
+    closeDialog($("#sauce-dialog"));
+    if (!it) return;
+    const line = { id: it.id, qty: 1 };
+    if (sauces.length) line.sauces = sauces;
+    addDish(line, sauceFrom);
+  }
   function submitSauces(e) {
     e.preventDefault();
-    const chosen = $$('#sauce-list input[name="sauce"]:checked').map((b) => b.value);
-    if (sauceLine && chosen.length) {
-      // Move the unit just added onto a line with its sauces.
-      changeQty(lineKey(sauceLine), -1);
-      addLine({ ...sauceLine, qty: 1, sauces: chosen });
-    }
-    sauceLine = null;
-    closeDialog($("#sauce-dialog"));
+    if (e.submitter && e.submitter.value === "cancel") { sauceItem = null; closeDialog($("#sauce-dialog")); return; }
+    finishSauces($$('#sauce-list input[name="sauce"]:checked').map((b) => b.value));
   }
 
   /* ---------- Options dialog (sizes, required choices; sauces too when the dish has them) ---------- */
@@ -615,6 +639,7 @@
   }
   function submitOptions(e) {
     e.preventDefault();
+    if (e.submitter && e.submitter.value === "cancel") { closeDialog($("#options-dialog")); return; }
     const it = optionsItem;
     const line = { id: it.id, qty: optionsQty };
     if (it.prices) line.size = $('#options-body input[name="size"]:checked').value;
@@ -815,6 +840,7 @@
     $("#lang-toggle").addEventListener("click", switchLanguage);
     $("#catbar-track").addEventListener("click", (e) => { const b = e.target.closest("[data-cat]"); if (b && b.dataset.cat !== currentCat) openCategory(b.dataset.cat); });
     $("#cat-grid").addEventListener("click", (e) => { const b = e.target.closest("[data-open-cat]"); if (b) openCategory(b.dataset.openCat); });
+    $("#cat-band").addEventListener("click", (e) => { const b = e.target.closest("[data-open-cat]"); if (b) openCategory(b.dataset.openCat); });
     $("#back-to-cats").addEventListener("click", () => showCategories());
     $("#menu-list").addEventListener("click", (e) => { const b = e.target.closest("[data-add]"); if (b) onAdd(b.dataset.add, b); });
     $("#order-btn").addEventListener("click", (e) => { e.preventDefault(); if (currentCat) showCategories(); else scrollToMenu(); });
@@ -825,7 +851,8 @@
     $("#options-body").addEventListener("click", onOptionsStep);
     $("#sauce-form").addEventListener("submit", submitSauces);
     $("#sauce-list").addEventListener("change", updateSauceLimit);
-    $("#sauce-skip").addEventListener("click", () => { sauceLine = null; closeDialog($("#sauce-dialog")); });
+    $("#sauce-skip").addEventListener("click", () => finishSauces([]));
+    $("#sauce-dialog").addEventListener("close", () => { sauceItem = null; });
     $("#cart-btn").addEventListener("mouseenter", () => { if (!count()) animateCart(true); });
     $("#cart-btn").addEventListener("click", openCart);
     $("#cart-bar").addEventListener("click", openCart);

@@ -1379,10 +1379,12 @@
         <p class="hero__lead" data-i18n="hero.lead">Tacos, broasters, burgers, pizzas et plats à Sidi Moumen Al Houda. Ouvert tous les jours, de midi à minuit.</p>
         <div class="hero__actions">
           <a class="btn btn--primary" href="#menu" id="order-btn"><span data-i18n="hero.order">Commander</span></a>
-          <a class="btn btn--ghost" id="location-btn" href="https://share.google/GEj7spYMAm6NMEYuv" target="_blank" rel="noopener"><span data-i18n="hero.location">Voir la localisation</span></a>
+          <a class="btn btn--red" id="location-btn" href="https://share.google/GEj7spYMAm6NMEYuv" target="_blank" rel="noopener"><span data-i18n="hero.location">Voir la localisation</span></a>
         </div>
       </div>
     </section>
+
+    <div class="cat-band" id="cat-band" aria-label="Catégories du menu" data-i18n-label="menu.categories"><div class="cat-band__track" id="cat-band-track"></div></div>
 
     <section class="menu" id="menu" aria-labelledby="menu-title">
       <h2 class="section-title" id="menu-title" data-i18n="menu.title">Notre menu</h2>
@@ -1454,6 +1456,7 @@
     <form method="dialog" class="sheet__inner" id="sauce-form">
       <div class="sheet__head">
         <h2 class="sheet__title" id="sauce-title"></h2>
+        <button class="icon-btn" value="cancel" formnovalidate data-i18n-label="cart.close" aria-label="Fermer">✕</button>
       </div>
       <div class="sheet__body">
         <p class="sauce-added" id="sauce-added"></p>
@@ -1483,14 +1486,14 @@
         <p class="notice" id="closed-warning" hidden></p>
         <fieldset class="mode">
           <legend data-i18n="checkout.mode">Mode</legend>
-          <label class="mode__opt"><input type="radio" name="mode" value="pickup" checked><span data-i18n="checkout.pickup">À emporter</span></label>
-          <label class="mode__opt"><input type="radio" name="mode" value="delivery"><span data-i18n="checkout.delivery">Livraison</span></label>
+          <label class="mode__opt"><input type="radio" name="mode" value="pickup" checked><svg class="mode__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12.2a1 1 0 0 1-1 .8H8a1 1 0 0 1-1-.8z"/><path d="M9 10V6.5a3 3 0 0 1 6 0V10"/></svg><span data-i18n="checkout.pickup">À emporter</span></label>
+          <label class="mode__opt"><input type="radio" name="mode" value="delivery"><svg class="mode__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="17" r="2"/><path d="M5 16v1a2 2 0 0 0 4 0v-5H6a3 3 0 0 0-3 3v1h10a6 6 0 0 1 5-4V7a2 2 0 0 0-2-2h-1M6 9h3"/></svg><span data-i18n="checkout.delivery">Livraison</span></label>
         </fieldset>
         <div class="delivery" id="delivery-box" hidden>
           <p class="delivery__info" id="delivery-info"></p>
           <p class="delivery__hint" data-i18n="checkout.mapHint">Touchez la carte à l'endroit de livraison, ou utilisez votre position.</p>
           <div class="delivery__map" id="delivery-map"></div>
-          <button class="btn btn--small" id="gps-btn" type="button"><span data-i18n="checkout.gps">Utiliser ma position</span></button>
+          <button class="btn btn--red btn--small" id="gps-btn" type="button"><span data-i18n="checkout.gps">Utiliser ma position</span></button>
           <p class="delivery__status" id="delivery-status" role="status"></p>
         </div>
         <label class="field"><span data-i18n="checkout.name">Nom</span><input name="name" autocomplete="name" required></label>

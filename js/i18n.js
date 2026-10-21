@@ -35,7 +35,7 @@ window.I18N = {
     },
     sauce: {
       title: "Vos sauces",
-      added: "{name} est dans votre commande. Choisissez jusqu'à {max} sauces pour l'accompagner.",
+      pick: "Choisissez jusqu'à {max} sauces pour l'accompagner.",
       none: "Sans sauce",
       confirm: "Valider",
       chosen: "{n}/{max}",
@@ -148,7 +148,7 @@ window.I18N = {
     },
     sauce: {
       title: "الصلصات",
-      added: "{name} في طلبك. اختر حتى {max} صلصات معه.",
+      pick: "اختر حتى {max} صلصات معه.",
       none: "بدون صلصة",
       confirm: "تأكيد",
       chosen: "{n}/{max}",

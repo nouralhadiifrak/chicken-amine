@@ -193,6 +193,10 @@ async function main() {
       check(layers.length === 4 && layers.every(([, ok, op]) => ok && op === "1"), `${label}: intro built the logo from its layers (${layers.map(([n]) => n).join(", ")})`);
       const video = await page.$eval("#hero-media video", (v) => ({ src: v.currentSrc.split("/").pop(), paused: v.paused, poster: !!v.poster })).catch(() => null);
       check(video && /^hero\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: hero video plays (${video && video.src})`);
+      const band = await page.evaluate(() => ({ items: document.querySelectorAll("#cat-band .cat-band__row:first-child .cat-band__item").length, anim: getComputedStyle(document.querySelector("#cat-band-track")).animationName }));
+      check(band.items === 19 && /band/.test(band.anim), `${label}: moving band shows the ${band.items} categories (${band.anim})`);
+      const look = await page.evaluate(() => ({ upper: getComputedStyle(document.querySelector(".hero__title")).textTransform, loc: getComputedStyle(document.querySelector("#location-btn")).backgroundColor }));
+      check(look.upper === "uppercase" && look.loc === "rgb(225, 6, 15)", `${label}: hero title in capitals, « Voir la localisation » in red`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
 
       // Language, title, description, canonical.
@@ -217,22 +221,36 @@ async function main() {
       check(menuTop < 300, `${label}: "Commander" scrolls to the menu`);
 
       await testCategories(page, label);
+      await page.click('#cat-band .cat-band__row:first-child [data-open-cat="pizzas"]', { force: true });
+      await page.waitForTimeout(600);
+      check(await page.evaluate(() => document.querySelector("#menu-list .category")?.dataset.cat === "pizzas"), `${label}: tapping « Pizzas » in the band opens that category`);
 
       // Pickup order: a tacos with two sauces, a tacos without sauce, a soda (no sauces), a dish with a required option.
       await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
       await openCat(page, "tacos");
+      check(await page.$eval('.item[data-item="tc-mixte"]', (li) => !!li.querySelector(".item__thumb") && !!li.querySelector("[data-add] svg") && !/Ajouter|أضف/.test(li.querySelector("[data-add]").textContent)), `${label}: each dish has a picture and a round + button`);
+      // Sauces first: nothing is added and nothing flies until the sauce sheet is settled.
       await page.click('.item[data-item="tc-mixte"] [data-add]');
-      await page.waitForTimeout(60);
-      const fx = await page.evaluate(() => ({ emojis: document.querySelectorAll(".spree").length, text: [...document.querySelectorAll(".spree")].map((e) => e.textContent).join("") }));
-      check(fx.emojis >= 12 && /🌮/.test(fx.text), `${label}: adding Tacos Mixte sends ${fx.emojis} emojis flying (${[...new Set([...fx.text])].join("")})`);
-      check(await page.$eval("#cart-btn .cart-ico", (i) => i.classList.contains("is-looping")), `${label}: cart icon rocks once the order has a dish`);
       await page.waitForSelector("#sauce-dialog[open]", { timeout: 2000 });
+      const early = await page.evaluate(() => ({ emojis: document.querySelectorAll(".spree").length, lines: (JSON.parse(localStorage.getItem("chickenamine.cart.v1") || "[]")).length }));
+      check(early.emojis === 0 && early.lines === 0, `${label}: the sauce sheet opens first, before any emoji flies or anything is added`);
       await page.waitForTimeout(250);
-      check(await page.isDisabled("#sauce-ok"), `${label}: sauce sheet opens, « Valider » waits for a sauce`);
+      check(await page.isDisabled("#sauce-ok"), `${label}: « Valider » waits for a sauce`);
       await pick(page, '#sauce-list input[value="algerienne"]');
       await pick(page, '#sauce-list input[value="andalouse"]');
       check(await page.isDisabled('#sauce-list input[value="harissa"]'), `${label}: a third sauce cannot be ticked`);
       await page.click("#sauce-ok");
+      await page.waitForTimeout(60);
+      const fx = await page.evaluate(() => ({ emojis: document.querySelectorAll(".spree").length, text: [...document.querySelectorAll(".spree")].map((e) => e.textContent).join("") }));
+      check(fx.emojis >= 12 && /🌮/.test(fx.text), `${label}: after « Valider », Tacos Mixte goes in and ${fx.emojis} emojis fly (${[...new Set([...fx.text])].join("")})`);
+      check(await page.$eval("#cart-btn .cart-ico", (i) => i.classList.contains("is-looping")), `${label}: cart icon rocks once the order has a dish`);
+      // Closing the sheet adds nothing.
+      await page.waitForTimeout(400);
+      await page.click('.item[data-item="tc-poulet"] [data-add]');
+      await page.waitForSelector("#sauce-dialog[open]");
+      await page.click('#sauce-dialog .icon-btn');
+      await page.waitForTimeout(300);
+      check(await page.evaluate(() => !JSON.parse(localStorage.getItem("chickenamine.cart.v1")).some((l) => l.id === "tc-poulet")), `${label}: closing the sauce sheet adds nothing`);
       await page.waitForTimeout(200);
       await addDish(page, "tacos", "tc-mixte", []);
       await addDish(page, "boissons", "bs-soda");
@@ -247,6 +265,11 @@ async function main() {
       await page.waitForTimeout(800);
       check(!(await page.$("#sauce-dialog[open]")), `${label}: no sauce sheet for a salad`);
       await openCat(page, "plats");
+      await page.click('.item[data-item="pl-sandwich-amine"] [data-add]');
+      await pick(page, '#options-body input[name="opt-sandwich"][value="thon"]');
+      await page.click("#options-dialog .icon-btn");
+      await page.waitForTimeout(300);
+      check(await page.evaluate(() => !JSON.parse(localStorage.getItem("chickenamine.cart.v1")).some((l) => l.id === "pl-sandwich-amine")), `${label}: closing the options sheet with ✕ adds nothing`);
       await page.click('.item[data-item="pl-sandwich-amine"] [data-add]');
       check(await page.isVisible('#options-body input[name="sauce"]'), `${label}: the options sheet also offers sauces`);
       await page.click("#options-submit");
@@ -288,8 +311,9 @@ async function main() {
       check(pickupOk, `${label}: pickup message has items, sauces, option, notes, total 169 and no delivery fee`);
 
       // Delivery: needs a position, refuses beyond 3 km, accepts inside with a 30 DH fee.
-      await page.check('input[name="mode"][value="delivery"]');
+      await pick(page, 'input[name="mode"][value="delivery"]');
       await page.waitForSelector("#delivery-map.leaflet-container", { state: "attached", timeout: 8000 });
+      check(await page.evaluate(() => getComputedStyle(document.querySelector("#gps-btn")).backgroundColor === "rgb(225, 6, 15)" && document.querySelectorAll(".mode__opt .mode__icon").length === 2), `${label}: « Utiliser ma position » in red, icons on both modes`);
       await page.waitForTimeout(300);
       await page.evaluate(() => { window.__opened = []; });
       await page.click("#send-btn");
