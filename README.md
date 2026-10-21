@@ -47,6 +47,9 @@ come from the category's `emoji`, or the item's own `emoji`.
 
 ### Hero video
 
+The current clip (`assets/video/`) is the watermarked iStock preview 1921631984, a stand-in that is not
+licensed for the live site: replace it with the licensed download or the restaurant's own footage.
+
 Put the video in `assets/video/` and set `heroVideo` in `js/config.js`
 (`mp4`, optional `webm`, and a `poster` image shown before it plays and when motion is reduced).
 
