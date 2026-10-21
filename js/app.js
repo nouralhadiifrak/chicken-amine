@@ -286,11 +286,15 @@
     }).join("");
   }
 
-  // The moving band of categories between the hero and the menu. The list is there twice so the loop
-  // has no gap; the copy is hidden from screen readers and the keyboard.
+  // The two moving bands between the hero and the menu. Each track holds its list twice so the loop has
+  // no gap; the copy is hidden from screen readers and the keyboard. Front: the categories (tap to open).
+  // Back: the essentials, decorative.
   function renderBand() {
-    const row = (copy) => MENU.map((c) => `<button class="cat-band__item" type="button" data-open-cat="${c.id}"${copy ? ' tabindex="-1" aria-hidden="true"' : ""}><span class="cat-band__emoji" aria-hidden="true">${c.emoji || "🍽️"}</span>${rich(L(c))}</button>`).join("");
-    $("#cat-band-track").innerHTML = `<div class="cat-band__row">${row(false)}</div><div class="cat-band__row" aria-hidden="true">${row(true)}</div>`;
+    const cats = (copy) => MENU.map((c) => `<button class="band__item" type="button" data-open-cat="${c.id}"${copy ? ' tabindex="-1"' : ""}>${esc(L(c))}</button>`).join("");
+    $("#band-front").innerHTML = `<div class="band__group">${cats(false)}</div><div class="band__group" aria-hidden="true">${cats(true)}</div>`;
+    const words = t("bands.info").split("|");
+    const info = () => `<div class="band__group">${[...words, ...words].map((w) => `<span class="band__item">${esc(w)}</span>`).join("")}</div>`;
+    $("#band-back").innerHTML = info() + info();
   }
 
   function renderDetail() {
