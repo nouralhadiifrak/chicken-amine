@@ -280,6 +280,9 @@ html.no-intro .intro { display: none; }
 .btn--primary { --btn-bg: var(--yellow); --btn-fg: var(--black); }
 .btn--ghost { --btn-bg: rgba(0, 0, 0, 0.28); --btn-fg: var(--white); backdrop-filter: blur(6px); }
 .btn--ghost-dark { --btn-bg: var(--white); --btn-fg: var(--ink); --trail-a: var(--red); --trail-b: var(--yellow); }
+.btn--red { --btn-bg: var(--red); --btn-fg: var(--white); --trail-a: var(--yellow); --trail-b: var(--white); }
+.panel .btn--red,
+.sheet .btn--red { --trail-a: var(--yellow); --trail-b: var(--red-dark); }
 .btn--whatsapp { --btn-bg: var(--whatsapp); --btn-fg: var(--white); }
 .btn--small { min-height: 40px; padding: 8px 16px; font-size: 0.95rem; }
 .btn--block { width: 100%; }
@@ -288,6 +291,7 @@ html.no-intro .intro { display: none; }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
 /* ---------- Hero ---------- */
+.hero__title { text-transform: uppercase; }
 .hero {
   position: relative;
   min-height: calc(100svh - var(--header-h));
@@ -520,16 +524,30 @@ html.no-intro .intro { display: none; }
 .items { list-style: none; margin: 0; padding: 4px 8px 12px; }
 .item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 64px 1fr auto;
   gap: 4px 12px;
   align-items: center;
   padding: 12px 10px;
   border-top: 1px solid var(--line);
 }
 .item:first-child { border-top: 0; }
-.item__name { font-weight: 600; margin: 0; }
-.item__desc { grid-column: 1; margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.4; }
-.item__side { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.item__thumb {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--yellow-soft);
+}
+.item__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.item__thumb span { font-size: 34px; line-height: 1; }
+.item__name { grid-column: 2; font-weight: 600; margin: 0; align-self: end; }
+.item__desc { grid-column: 2; margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.4; align-self: start; }
+.item__name:last-of-type { grid-row: 1 / span 2; align-self: center; }
+.item__side { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .price {
   display: inline-block;
   background: var(--yellow);
@@ -542,15 +560,20 @@ html.no-intro .intro { display: none; }
 }
 .price small { font-weight: 500; font-size: 0.75rem; }
 .add-btn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
   border: 0;
+  border-radius: 50%;
   background: var(--red);
   color: var(--white);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-weight: 700;
   cursor: pointer;
-  min-height: 36px;
+  box-shadow: 0 6px 14px -8px rgba(225, 6, 15, 0.9);
+  transition: transform 0.15s ease, background-color 0.2s ease;
 }
+.add-btn:active { transform: scale(0.9); }
 .add-btn:hover { background: var(--red-dark); }
 .stepper { display: inline-flex; align-items: center; gap: 6px; }
 .stepper button {
@@ -761,6 +784,40 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 @keyframes kit-pop { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
 #options-submit { gap: 6px; }
 
+/* ---------- Moving band of categories between the hero and the menu ---------- */
+.cat-band {
+  position: relative;
+  overflow: hidden;
+  background: var(--yellow);
+  border-block: 3px solid var(--black);
+  padding: 10px 0;
+}
+.cat-band__track { display: flex; width: max-content; animation: band 48s linear infinite; }
+.cat-band:hover .cat-band__track,
+.cat-band:focus-within .cat-band__track { animation-play-state: paused; }
+[dir="rtl"] .cat-band__track { animation-name: band-rtl; }
+@keyframes band { to { transform: translateX(-50%); } }
+@keyframes band-rtl { to { transform: translateX(50%); } }
+.cat-band__row { display: flex; gap: 10px; padding-inline-end: 10px; }
+.cat-band__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 18px 6px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cat-band__item:hover { background: var(--red); }
+.cat-band__emoji { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--yellow-soft); font-size: 18px; }
+
 .form-error { color: var(--red); font-weight: 600; margin: 0 18px; min-height: 0; }
 .form-error:empty { display: none; }
 
@@ -782,7 +839,11 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .mode legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
 .mode__opt { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 2px solid var(--line); border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; }
 .mode__opt:has(input:checked) { border-color: var(--red); background: #fff5f5; color: var(--red); }
-.mode__opt input { accent-color: var(--red); }
+.mode__opt { position: relative; white-space: nowrap; }
+/* The coloured border shows the choice, so the radio dot itself is hidden (still focusable). */
+.mode__opt input { position: absolute; opacity: 0; pointer-events: none; }
+.mode__opt:has(input:focus-visible) { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.mode__icon { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .delivery { display: flex; flex-direction: column; gap: 10px; }
 .delivery__info { margin: 0; font-weight: 600; }
 .delivery__hint { margin: 0; color: var(--muted); font-size: 0.9rem; }
@@ -833,4 +894,7 @@ html { scrollbar-color: var(--yellow) var(--red-dark); }
   .st-pending .st-unit { opacity: 1; }
   .cart-ico__body { animation: none !important; }
   #options-dialog[open], #sauce-dialog[open], .bump { animation: none !important; }
+  .cat-band { overflow-x: auto; }
+  .cat-band__track { animation: none; }
+  .cat-band__row[aria-hidden] { display: none; }
 }

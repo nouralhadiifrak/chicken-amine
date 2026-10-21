@@ -45,6 +45,11 @@ The sauce list is `SAUCES` in `js/menu-data.js` (`color` is the swatch shown on 
 an item can override it with its own `sauces: true/false`. The emojis that fly when a dish is added
 come from the category's `emoji`, or the item's own `emoji`.
 
+### Dish photos
+
+Each dish shows its emoji on a tile until it has a photo: put a square photo (about 320 × 320) in
+`assets/photos/` and set the dish's `image` in `js/menu-data.js`, e.g. `image: "assets/photos/tacos-mixte.jpg"`.
+
 ### Hero video
 
 The current clip (`assets/video/`) is the watermarked iStock preview 1921631984, a stand-in that is not

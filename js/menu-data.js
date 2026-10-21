@@ -17,6 +17,7 @@
  * choose up to MAX_SAUCES sauces). Sauces go with sandwiches, tacos, burgers and fried chicken; salads,
  * pizzas, pasta and plates served in their own sauce have none. An item's own sauces: true/false wins.
  * To add a photo: put it in assets/photos/ and set the category's image, e.g. image: "assets/photos/tacos.jpg".
+ * A dish can have its own square photo the same way (item image); without one it shows its emoji.
  */
 window.MAX_SAUCES = 2;
 
