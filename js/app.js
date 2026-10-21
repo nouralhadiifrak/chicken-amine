@@ -139,10 +139,15 @@
     video.play().catch(() => {});
   }
 
-  /* ---------- Intro: logo animation that glides into the header ---------- */
+  /* ---------- Intro: the rooster, the name typed out, the sprig, then a glide into the header ---------- */
   function runIntro() {
     const intro = $("#intro");
+    const target = $("#header-logo");
+    let done = false;
     const finish = () => {
+      if (done) return;
+      done = true;
+      target.style.opacity = "";
       intro.classList.add("is-done");
       document.documentElement.classList.add("no-intro");
       // After the intro the hero title behaves like any heading (it replays on language switch when in view).
@@ -152,37 +157,71 @@
       SpringText.observe(document.querySelector("main"));
     };
     if (reducedMotion.matches || !intro.animate) { finish(); return; }
-    const rooster = $(".intro__rooster", intro);
-    const logo = $(".intro__logo", intro);
-    const target = $("#header-logo");
-    const ease = "cubic-bezier(.2,.9,.25,1)";
 
-    rooster.animate(
-      [{ opacity: 0, transform: "scale(.4) rotate(-12deg)" }, { opacity: 1, transform: "scale(1.08) rotate(4deg)", offset: 0.7 }, { opacity: 1, transform: "scale(1) rotate(0)" }],
-      { duration: 480, easing: ease, fill: "forwards" }
-    );
-    const reveal = logo.animate(
-      [{ opacity: 1, clipPath: "inset(0 100% 0 0)" }, { opacity: 1, clipPath: "inset(0 0% 0 0)" }],
-      { duration: 520, delay: 380, easing: "cubic-bezier(.6,0,.3,1)", fill: "forwards" }
-    );
-    reveal.finished.then(() => {
-      rooster.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: "forwards" });
-      // Glide: from the centred logo to the header logo's place.
+    const stage = $("#intro-stage");
+    const rooster = $(".intro__rooster", intro);
+    const chicken = $("#intro-chicken");
+    const amine = $("#intro-amine");
+    const sprig = $(".intro__sprig", intro);
+    const ease = "cubic-bezier(.2,.9,.25,1)";
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const TYPE_MS = 62;
+
+    async function type(el, text, cls = () => "") {
+      el.classList.add("is-typing");
+      let i = 0;
+      for (const ch of text) {
+        const span = document.createElement("span");
+        span.textContent = ch;
+        span.className = cls(i++);
+        el.appendChild(span);
+        await wait(TYPE_MS);
+      }
+      el.classList.remove("is-typing");
+    }
+
+    (async () => {
+      await rooster.animate(
+        [{ opacity: 0, transform: "scale(.3) rotate(-14deg)" }, { opacity: 1, transform: "scale(1.1) rotate(5deg)", offset: 0.7 }, { opacity: 1, transform: "scale(1) rotate(0)" }],
+        { duration: 460, easing: ease, fill: "forwards" }
+      ).finished;
+      // The typed name uses the logo's script face; wait for it briefly so no fallback font flashes.
+      if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load('1em "Pacifico"'), wait(700)]).catch(() => {});
+      await type(chicken, "Chicken");
+      await type(amine, "AMINE", (i) => (i < 2 ? "g" : "y")); // logo colours: AM green, INE yellow
+      // The sprig above the name appears once "Amine" is typed.
+      await sprig.animate(
+        [{ opacity: 0, transform: "translateY(10px) scale(.2) rotate(-20deg)" }, { opacity: 1, transform: "translateY(-3px) scale(1.15) rotate(4deg)", offset: 0.65 }, { opacity: 1, transform: "none" }],
+        { duration: 420, easing: ease, fill: "forwards" }
+      ).finished;
+      await wait(180);
+
+      // Swap the typed composition for the real logo at the same place, then glide it into the header.
+      const box = stage.getBoundingClientRect();
+      const logo = document.createElement("img");
+      logo.src = "/assets/logo.png";
+      logo.alt = "";
+      logo.className = "intro__final";
+      const w = Math.min(box.width, (box.height * 640) / 332);
+      Object.assign(logo.style, { width: w + "px", left: box.left + (box.width - w) / 2 + "px", top: box.top + box.height / 2 - (w * 332) / 640 / 2 + "px" });
+      intro.appendChild(logo);
+      stage.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
+      await logo.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, fill: "forwards" }).finished;
+
       const from = logo.getBoundingClientRect();
       const to = target.getBoundingClientRect();
       const dx = to.left + to.width / 2 - (from.left + from.width / 2);
       const dy = to.top + to.height / 2 - (from.top + from.height / 2);
-      const s = to.width / from.width;
       target.style.opacity = "0";
       intro.animate([{ backgroundColor: "rgba(255,255,255,1)" }, { backgroundColor: "rgba(255,255,255,0)" }], { duration: 520, easing: ease, fill: "forwards" });
-      const glide = logo.animate(
-        [{ transform: "translate(0,0) scale(1)" }, { transform: `translate(${dx}px, ${dy}px) scale(${s})` }],
-        { duration: 560, delay: 120, easing: ease, fill: "forwards" }
-      );
-      glide.finished.then(() => { target.style.opacity = ""; finish(); });
-    }).catch(finish);
+      await logo.animate(
+        [{ transform: "translate(0,0) scale(1)" }, { transform: `translate(${dx}px, ${dy}px) scale(${to.width / from.width})` }],
+        { duration: 560, easing: ease, fill: "forwards" }
+      ).finished;
+      finish();
+    })().catch(finish);
     // Safety net: never keep the page covered.
-    setTimeout(() => { if (!intro.classList.contains("is-done")) { $("#header-logo").style.opacity = ""; finish(); } }, 3000);
+    setTimeout(finish, 4500);
   }
 
   /* ---------- Placeholder illustrations ---------- */
@@ -213,10 +252,12 @@
       <g transform="translate(210 100) scale(2.2)">${glyph}</g></svg>`;
   }
 
-  /* ---------- Menu ---------- */
+  /* ---------- Menu: categories first, then the dishes of the chosen one ---------- */
   const itemById = new Map();
   MENU.forEach((cat) => cat.items.forEach((it) => itemById.set(it.id, { ...it, cat })));
-  const needsDialog = (it) => !!(it.prices || (it.options && it.options.length) || it.sauces);
+  const catById = new Map(MENU.map((c) => [c.id, c]));
+  const hasSauces = (it) => SAUCES.length > 0 && (it.sauces !== undefined ? !!it.sauces : !!it.cat.sauces);
+  const needsDialog = (it) => !!(it.prices || (it.options && it.options.length));
   const basePrice = (it) => (it.prices ? Math.min(...Object.values(it.prices)) : it.price);
 
   function priceLabel(it) {
@@ -226,21 +267,31 @@
   }
 
   function controlFor(it) {
-    if (needsDialog(it)) return `<button class="add-btn" type="button" data-choose="${it.id}">${esc(t("menu.choose"))}</button>`;
-    const qty = qtyOfSimple(it.id);
-    if (!qty) return `<button class="add-btn" type="button" data-add="${it.id}" aria-label="${esc(t("menu.add") + " · " + L(it))}">${esc(t("menu.add"))}</button>`;
-    return `<span class="stepper">
-      <button type="button" data-dec="${it.id}" aria-label="${esc(t("menu.decrease", { name: L(it) }))}">−</button>
-      <output aria-live="polite">${qty}</output>
-      <button type="button" data-inc="${it.id}" aria-label="${esc(t("menu.increase", { name: L(it) }))}">+</button></span>`;
+    const qty = qtyOf(it.id);
+    const label = needsDialog(it) ? t("menu.choose") : t("menu.add");
+    return `${qty ? `<span class="in-cart" aria-label="${esc(t("menu.inCart", { n: qty }))}">${qty}</span>` : ""}<button class="add-btn" type="button" data-add="${it.id}" aria-label="${esc(label + " · " + L(it))}">${esc(label)}</button>`;
   }
 
-  function renderMenu() {
-    const track = $("#catbar-track");
-    track.innerHTML = MENU.map((c) => `<button class="chip" type="button" data-cat="${c.id}">${rich(L(c))}</button>`).join("");
-    $("#menu-list").innerHTML = MENU.map((c) => `
+  let currentCat = null;
+
+  function renderHome() {
+    $("#cat-grid").innerHTML = MENU.map((c) => {
+      const from = Math.min(...c.items.map(basePrice));
+      return `<button class="cat-tile" type="button" data-open-cat="${c.id}" aria-label="${esc(t("menu.open", { name: L(c) }))}">
+        <span class="cat-tile__media">${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy" width="600" height="400">` : illustration(c.icon)}</span>
+        <span class="cat-tile__text"><span class="cat-tile__name">${rich(L(c))}</span>
+        <span class="cat-tile__meta">${esc(t("menu.dishes", { n: c.items.length }))} · ${esc(t("menu.from", { price: money(from) }))}</span></span>
+      </button>`;
+    }).join("");
+  }
+
+  function renderDetail() {
+    const c = catById.get(currentCat);
+    if (!c) return;
+    $("#catbar-track").innerHTML = MENU.map((x) => `<button class="chip${x.id === c.id ? " is-active" : ""}" type="button" data-cat="${x.id}"${x.id === c.id ? ' aria-current="true"' : ""}>${rich(L(x))}</button>`).join("");
+    $("#menu-list").innerHTML = `
       <article class="panel category" id="cat-${c.id}" data-cat="${c.id}">
-        <div class="category__media">${c.image ? `<img src="${esc(c.image)}" alt="${esc(L(c))}" loading="lazy" width="1200" height="571">` : illustration(c.icon)}</div>
+        <div class="category__media">${c.image ? `<img src="${esc(c.image)}" alt="${esc(L(c))}" width="1200" height="571">` : illustration(c.icon)}</div>
         <h3 class="category__title">${esc(L(c))}</h3>
         <ul class="items">${c.items.map((it) => `
           <li class="item" data-item="${it.id}">
@@ -248,8 +299,16 @@
             ${it.desc ? `<p class="item__desc">${rich(L(it.desc))}</p>` : ""}
             <div class="item__side">${priceLabel(it)}<span class="item__ctl">${controlFor(it)}</span></div>
           </li>`).join("")}</ul>
-      </article>`).join("");
-    setActiveCat(activeCat || MENU[0].id, false);
+      </article>`;
+    requestAnimationFrame(() => centreChip(c.id));
+  }
+
+  function renderMenu() {
+    renderHome();
+    const detail = !!currentCat;
+    $("#cat-grid").hidden = detail;
+    $("#menu-detail").hidden = !detail;
+    if (detail) renderDetail();
   }
 
   function refreshControls() {
@@ -259,53 +318,71 @@
     });
   }
 
-  /* ---------- Category bar: scroll to, and highlight the active category ---------- */
-  let activeCat = null;
-  let spyLockUntil = 0;
-  const offsetTop = () => $("#header").offsetHeight + $("#catbar").offsetHeight + 8;
-
-  function setActiveCat(id, centre = true) {
-    activeCat = id;
-    $$(".chip").forEach((c) => {
-      const on = c.dataset.cat === id;
-      c.classList.toggle("is-active", on);
-      if (on) c.setAttribute("aria-current", "true"); else c.removeAttribute("aria-current");
-    });
-    if (centre) centreChip(id);
+  const headerH = () => $("#header").offsetHeight;
+  function scrollToMenu() {
+    const y = $("#menu").getBoundingClientRect().top + scrollY - headerH();
+    scrollTo({ top: Math.max(0, y), behavior: reducedMotion.matches ? "auto" : "smooth" });
   }
   function centreChip(id) {
     const chip = $(`.chip[data-cat="${id}"]`);
     const track = $("#catbar-track");
     if (!chip) return;
     const cr = chip.getBoundingClientRect(), tr = track.getBoundingClientRect();
-    const delta = cr.left + cr.width / 2 - (tr.left + tr.width / 2);
-    track.scrollBy({ left: delta, behavior: reducedMotion.matches ? "auto" : "smooth" });
+    track.scrollBy({ left: cr.left + cr.width / 2 - (tr.left + tr.width / 2), behavior: "auto" });
   }
-  function goToCat(id) {
-    const sec = $(`#cat-${id}`);
-    if (!sec) return;
-    setActiveCat(id);
-    const y = sec.getBoundingClientRect().top + scrollY - offsetTop();
-    // Keep the clicked category highlighted while the page scrolls (it may not reach the top near the end of the menu).
-    spyLockUntil = performance.now() + 1200;
-    scrollTo({ top: Math.max(0, y), behavior: reducedMotion.matches ? "auto" : "smooth" });
+
+  // Each view has its own address (#categorie-tacos), so the phone's back button returns to the categories.
+  const catHash = (id) => (id ? "#categorie-" + id : "#menu");
+  function catFromHash() {
+    const m = /^#categorie-(.+)$/.exec(location.hash);
+    return m && catById.has(m[1]) ? m[1] : null;
   }
-  function spy() {
-    if (performance.now() < spyLockUntil) return;
-    const line = offsetTop() + 4;
-    const secs = $$(".category");
-    if (!secs.length) return;
-    let current = secs[0].dataset.cat;
-    for (const s of secs) { if (s.getBoundingClientRect().top <= line) current = s.dataset.cat; else break; }
-    if (current !== activeCat) setActiveCat(current);
+  function openCategory(id, push = true) {
+    if (!catById.has(id)) return;
+    const fromHome = !currentCat;
+    currentCat = id;
+    if (push) history[fromHome ? "pushState" : "replaceState"]({ cat: id }, "", location.pathname + location.search + catHash(id));
+    renderMenu();
+    if (window.SpringText) { SpringText.observe($("#menu-list")); SpringText.play($(".category__title")); }
+    scrollToMenu();
   }
-  let spyQueued = false;
+  function showCategories(push = true) {
+    const was = currentCat;
+    currentCat = null;
+    if (push && was) {
+      if (history.state && history.state.cat) history.back();
+      else history.replaceState(null, "", location.pathname + location.search + "#menu");
+    }
+    renderMenu();
+    scrollToMenu();
+    const tile = was && $(`.cat-tile[data-open-cat="${was}"]`);
+    if (tile) tile.focus({ preventScroll: true });
+  }
+  function onPopState() {
+    const id = catFromHash();
+    if (id === currentCat) return;
+    currentCat = id;
+    renderMenu();
+    if (id && window.SpringText) SpringText.observe($("#menu-list"));
+    scrollToMenu();
+  }
+
+  /* ---------- Header: shadow once it floats over the page, current section underlined ---------- */
+  function updateHeader() {
+    $("#header").classList.toggle("is-floating", scrollY > 4);
+    const line = headerH() + 80;
+    let current = "";
+    ["menu", "infos"].forEach((id) => { const r = $("#" + id).getBoundingClientRect(); if (r.top <= line && r.bottom > line) current = id; });
+    $$(".header__nav a").forEach((a) => {
+      if (a.dataset.nav === current) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+    });
+  }
+  let headerQueued = false;
   function onScroll() {
-    if (spyQueued) return;
-    spyQueued = true;
-    requestAnimationFrame(() => { spyQueued = false; spy(); });
+    if (headerQueued) return;
+    headerQueued = true;
+    requestAnimationFrame(() => { headerQueued = false; updateHeader(); });
   }
-  function onScrollEnd() { if (performance.now() < spyLockUntil) spyLockUntil = performance.now() + 120; }
 
   /* ---------- Cart ---------- */
   let cart = loadCart();
@@ -321,7 +398,7 @@
   const lineTotal = (l) => unitPrice(l) * l.qty;
   const subtotal = () => cart.reduce((s, l) => s + lineTotal(l), 0);
   const count = () => cart.reduce((s, l) => s + l.qty, 0);
-  function qtyOfSimple(id) { const l = cart.find((x) => x.id === id && !x.size && !x.opts && !x.sauces); return l ? l.qty : 0; }
+  const qtyOf = (id) => cart.reduce((n, l) => n + (l.id === id ? l.qty : 0), 0);
 
   function addLine(line) {
     const key = lineKey(line);
@@ -337,6 +414,15 @@
     cartChanged();
   }
   function cartChanged() { saveCart(); refreshControls(); renderCart(); }
+
+  // The cart rocks on its wheels while it holds something, and once more on every add.
+  function animateCart(bump) {
+    const has = count() > 0;
+    $$(".cart-ico").forEach((ico) => {
+      ico.classList.toggle("is-looping", has);
+      if (bump) { ico.classList.remove("is-bump"); void ico.getBoundingClientRect(); ico.classList.add("is-bump"); }
+    });
+  }
 
   function lineDetails(l) {
     const it = itemById.get(l.id);
@@ -359,6 +445,7 @@
     const bar = $("#cart-bar");
     bar.hidden = n === 0;
     document.body.classList.toggle("has-cart", n > 0);
+    animateCart(false);
     $("#cart-bar-meta").innerHTML = `${esc(t("cart.items", { n }))} · ${esc(money(subtotal()))}`;
 
     $("#cart-lines").innerHTML = cart.map((l) => {
@@ -394,11 +481,107 @@
     $("#totals").innerHTML = html;
   }
 
-  /* ---------- Options dialog ---------- */
-  let optionsItem = null;
-  function openOptions(id) {
+  /* ---------- Adding: emojis fly, the cart rocks, then the sauce choice ---------- */
+  function emojisFor(it) {
+    const list = [it.emoji || it.cat.emoji || "🍽️"];
+    const d = it.desc ? it.desc.fr.toLowerCase() : "";
+    if (/frites/.test(d)) list.push("🍟");
+    if (/boisson|coca/.test(d)) list.push("🥤");
+    if (/jouet/.test(d)) list.push("🧸");
+    return list;
+  }
+  function flyEmojis(fromEl, it) {
+    if (reducedMotion.matches || !fromEl || !document.body.animate) return;
+    const r = fromEl.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const list = emojisFor(it);
+    const layer = document.createElement("div");
+    layer.className = "emoji-layer";
+    layer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(layer);
+    const anims = [];
+    // A burst around the button.
+    for (let i = 0; i < 8; i++) {
+      const e = document.createElement("span");
+      e.className = "emoji-fly";
+      e.textContent = list[i % list.length];
+      e.style.left = x + "px";
+      e.style.top = y + "px";
+      layer.appendChild(e);
+      const ang = (-160 + (140 * i) / 7 + (Math.random() * 14 - 7)) * (Math.PI / 180);
+      const dist = 70 + Math.random() * 60;
+      const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+      anims.push(e.animate([
+        { transform: "translate(-50%,-50%) scale(.3) rotate(0deg)", opacity: 0 },
+        { transform: `translate(calc(-50% + ${dx * 0.7}px), calc(-50% + ${dy * 0.7}px)) scale(1.15) rotate(${dx / 3}deg)`, opacity: 1, offset: 0.45 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + 40}px)) scale(.9) rotate(${dx / 2}deg)`, opacity: 0 },
+      ], { duration: 780 + Math.random() * 220, easing: "cubic-bezier(.2,.8,.3,1)", fill: "forwards" }).finished);
+    }
+    // One flies into the cart.
+    const cartEl = !$("#cart-bar").hidden && innerWidth < 760 ? $("#cart-bar .cart-ico") : $("#cart-btn .cart-ico");
+    if (cartEl) {
+      const c = cartEl.getBoundingClientRect();
+      const e = document.createElement("span");
+      e.className = "emoji-fly emoji-fly--cart";
+      e.textContent = list[0];
+      e.style.left = x + "px";
+      e.style.top = y + "px";
+      layer.appendChild(e);
+      const tx = c.left + c.width / 2 - x, ty = c.top + c.height / 2 - y;
+      anims.push(e.animate([
+        { transform: "translate(-50%,-50%) scale(1)", opacity: 1 },
+        { transform: `translate(calc(-50% + ${tx * 0.45}px), calc(-50% + ${ty * 0.45 - 90}px)) scale(1.3)`, opacity: 1, offset: 0.45 },
+        { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(.4)`, opacity: 0.2 },
+      ], { duration: 720, easing: "cubic-bezier(.45,0,.2,1)", fill: "forwards" }).finished);
+    }
+    Promise.all(anims).catch(() => {}).then(() => layer.remove());
+  }
+
+  function onAdd(id, btn) {
+    const it = itemById.get(id);
+    if (needsDialog(it)) { openOptions(id, btn); return; }
+    addLine({ id, qty: 1 });
+    flyEmojis(btn, it);
+    animateCart(true);
+    if (hasSauces(it)) openSauces({ id, qty: 1 });
+  }
+
+  /* ---------- Sauce sheet: after a dish is added, up to MAX_SAUCES sauces to go with it ---------- */
+  let sauceLine = null;
+  function openSauces(line) {
+    sauceLine = line;
+    const it = itemById.get(line.id);
+    $("#sauce-title").textContent = t("sauce.title");
+    $("#sauce-added").innerHTML = rich(t("sauce.added", { name: L(it), max: MAX_SAUCES }));
+    $("#sauce-list").innerHTML = SAUCES.map((s) => `<label class="opt"><input type="checkbox" name="sauce" value="${s.id}"><span>${rich(L(s))}</span></label>`).join("");
+    updateSauceLimit();
+    // Let the emojis start before the sheet covers the page.
+    setTimeout(() => openDialog($("#sauce-dialog")), reducedMotion.matches ? 0 : 380);
+  }
+  function updateSauceLimit() {
+    const boxes = $$('#sauce-list input[name="sauce"]');
+    const ticked = boxes.filter((b) => b.checked).length;
+    boxes.forEach((b) => { b.disabled = !b.checked && ticked >= MAX_SAUCES; });
+    $("#sauce-ok").disabled = ticked === 0;
+  }
+  function submitSauces(e) {
+    e.preventDefault();
+    const chosen = $$('#sauce-list input[name="sauce"]:checked').map((b) => b.value);
+    if (sauceLine && chosen.length) {
+      // Move the unit just added onto a line with its sauces.
+      changeQty(lineKey(sauceLine), -1);
+      addLine({ ...sauceLine, qty: 1, sauces: chosen });
+    }
+    sauceLine = null;
+    closeDialog($("#sauce-dialog"));
+  }
+
+  /* ---------- Options dialog (sizes, required choices; sauces too when the dish has them) ---------- */
+  let optionsItem = null, optionsFrom = null;
+  function openOptions(id, fromEl) {
     const it = itemById.get(id);
     optionsItem = it;
+    optionsFrom = fromEl || null;
     $("#options-title").innerHTML = rich(L(it));
     let html = "";
     if (it.prices) {
@@ -410,8 +593,8 @@
       html += `<fieldset class="opt-group" data-opt="${o.id}"><legend>${rich(L(o))} <small>(${esc(t("options.required"))})</small></legend>
         ${o.choices.map((c) => `<label class="opt"><input type="radio" name="opt-${o.id}" value="${c.id}"><span>${rich(L(c))}</span></label>`).join("")}</fieldset>`;
     });
-    if (it.sauces && SAUCES.length) {
-      html += `<fieldset class="opt-group" data-sauces><legend>${esc(t("options.sauces"))} <small>(${esc(t("options.saucesHint", { max: MAX_SAUCES }))})</small></legend>
+    if (hasSauces(it)) {
+      html += `<fieldset class="opt-group sauce-grid" data-sauces><legend>${esc(t("options.sauces"))} <small>(${esc(t("options.saucesHint", { max: MAX_SAUCES }))})</small></legend>
         ${SAUCES.map((s) => `<label class="opt"><input type="checkbox" name="sauce" value="${s.id}"><span>${rich(L(s))}</span></label>`).join("")}</fieldset>`;
     }
     $("#options-body").innerHTML = html;
@@ -442,12 +625,12 @@
         line.opts[o.id] = r.value;
       }
     }
-    if (it.sauces) {
-      const s = $$('#options-body input[name="sauce"]:checked').map((b) => b.value);
-      if (s.length) line.sauces = s;
-    }
+    const sauces = $$('#options-body input[name="sauce"]:checked').map((b) => b.value);
+    if (sauces.length) line.sauces = sauces;
     addLine(line);
     closeDialog($("#options-dialog"));
+    flyEmojis(optionsFrom, it);
+    animateCart(true);
   }
 
   /* ---------- Dialog helpers ---------- */
@@ -630,18 +813,19 @@
   /* ---------- Events ---------- */
   function bind() {
     $("#lang-toggle").addEventListener("click", switchLanguage);
-    $("#catbar-track").addEventListener("click", (e) => { const b = e.target.closest("[data-cat]"); if (b) goToCat(b.dataset.cat); });
-    $("#menu-list").addEventListener("click", (e) => {
-      const b = e.target.closest("button");
-      if (!b) return;
-      if (b.dataset.add) addLine({ id: b.dataset.add, qty: 1 });
-      else if (b.dataset.inc) changeQty(lineKey({ id: b.dataset.inc }), 1);
-      else if (b.dataset.dec) changeQty(lineKey({ id: b.dataset.dec }), -1);
-      else if (b.dataset.choose) openOptions(b.dataset.choose);
-    });
-    $("#order-btn").addEventListener("click", (e) => { e.preventDefault(); goToCat(MENU[0].id); });
+    $("#catbar-track").addEventListener("click", (e) => { const b = e.target.closest("[data-cat]"); if (b && b.dataset.cat !== currentCat) openCategory(b.dataset.cat); });
+    $("#cat-grid").addEventListener("click", (e) => { const b = e.target.closest("[data-open-cat]"); if (b) openCategory(b.dataset.openCat); });
+    $("#back-to-cats").addEventListener("click", () => showCategories());
+    $("#menu-list").addEventListener("click", (e) => { const b = e.target.closest("[data-add]"); if (b) onAdd(b.dataset.add, b); });
+    $("#order-btn").addEventListener("click", (e) => { e.preventDefault(); if (currentCat) showCategories(); else scrollToMenu(); });
+    $$('.header__nav a[href="#menu"]').forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); scrollToMenu(); }));
+    addEventListener("popstate", onPopState);
     $("#options-form").addEventListener("submit", submitOptions);
     $("#options-body").addEventListener("change", updateOptionsPrice);
+    $("#sauce-form").addEventListener("submit", submitSauces);
+    $("#sauce-list").addEventListener("change", updateSauceLimit);
+    $("#sauce-skip").addEventListener("click", () => { sauceLine = null; closeDialog($("#sauce-dialog")); });
+    $("#cart-btn").addEventListener("mouseenter", () => { if (!count()) animateCart(true); });
     $("#cart-btn").addEventListener("click", openCart);
     $("#cart-bar").addEventListener("click", openCart);
     $("#cart-close").addEventListener("click", () => closeDialog($("#cart-dialog")));
@@ -663,7 +847,6 @@
       d.addEventListener("click", (e) => { if (e.target === d) closeDialog(d); }); // click on the backdrop
     });
     addEventListener("scroll", onScroll, { passive: true });
-    addEventListener("scrollend", onScrollEnd);
     addEventListener("resize", onScroll);
     setInterval(updateStatus, 30000);
   }
@@ -673,9 +856,11 @@
   setupHero();
   bind();
   loadCustomer();
+  currentCat = catFromHash();
   applyLanguage();
   runIntro();
-  spy();
+  updateHeader();
+  if (currentCat) requestAnimationFrame(scrollToMenu);
 
   // Exposed for the automated tests.
   window.__chickenAmine = { isOpen, distanceKm, cart: () => cart, lineKey };

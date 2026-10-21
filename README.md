@@ -36,6 +36,13 @@ Each category shows an illustration until it has a photo. Put the photo in `asse
 { id: "tacos", ..., image: "assets/photos/tacos.jpg", items: [...] }
 ```
 
+### Sauces and emojis
+
+The sauce list is `SAUCES` in `js/menu-data.js`; after a dish is added the customer may pick up to
+`MAX_SAUCES` (2). A category with `sauces: false` (drinks, juices, desserts) skips the sauce choice;
+an item can override it with its own `sauces: true/false`. The emojis that fly when a dish is added
+come from the category's `emoji`, or the item's own `emoji`.
+
 ### Hero video
 
 Put the video in `assets/video/` and set `heroVideo` in `js/config.js`
@@ -53,7 +60,8 @@ python3 tools/table-card.py   # table card with its QR code (print/table-card.ht
 ## Tests
 
 End-to-end checks in headless Chromium, at phone (390 px) and desktop widths, in French and Arabic:
-every menu category, pickup and delivery orders, closed hours, options and sauces, reduced motion,
+the intro, the header, the category tiles and every category view, flying emojis, the sauce sheet,
+pickup and delivery orders, closed hours, options and sauces, reduced motion,
 and no JavaScript errors.
 
 ```sh

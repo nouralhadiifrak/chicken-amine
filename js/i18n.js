@@ -28,6 +28,17 @@ window.I18N = {
       increase: "Ajouter un {name}",
       decrease: "Retirer un {name}",
       inCart: "{n} dans la commande",
+      allCategories: "Toutes les catégories",
+      dishes: "{n} choix",
+      from: "dès {price}",
+      open: "Voir {name}",
+    },
+    sauce: {
+      title: "Vos sauces",
+      added: "{name} est dans votre commande. Choisissez jusqu'à {max} sauces pour l'accompagner.",
+      none: "Sans sauce",
+      confirm: "Valider",
+      chosen: "{n}/{max}",
     },
     options: {
       size: "Taille",
@@ -39,6 +50,7 @@ window.I18N = {
     },
     cart: {
       open: "Voir la commande",
+      short: "Commande",
       title: "Votre commande",
       empty: "Votre commande est vide.",
       items: "{n} article(s)",
@@ -129,6 +141,17 @@ window.I18N = {
       increase: "أضف {name}",
       decrease: "أنقص {name}",
       inCart: "{n} في الطلب",
+      allCategories: "كل الأقسام",
+      dishes: "{n} اختيار",
+      from: "ابتداء من {price}",
+      open: "عرض {name}",
+    },
+    sauce: {
+      title: "الصلصات",
+      added: "{name} في طلبك. اختر حتى {max} صلصات معه.",
+      none: "بدون صلصة",
+      confirm: "تأكيد",
+      chosen: "{n}/{max}",
     },
     options: {
       size: "الحجم",
@@ -140,6 +163,7 @@ window.I18N = {
     },
     cart: {
       open: "عرض الطلب",
+      short: "الطلب",
       title: "طلبك",
       empty: "طلبك فارغ.",
       items: "{n} منتج",
