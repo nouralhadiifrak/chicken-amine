@@ -658,8 +658,8 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 20px;
+  gap: 8px;
+  padding: 10px 16px;
   border: 0;
   border-radius: 999px;
   background: var(--black);
@@ -670,7 +670,7 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 .cart-bar__label { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
 .cart-bar .cart-ico { width: 24px; height: 24px; flex: none; }
-.cart-bar__meta { color: var(--yellow); white-space: nowrap; }
+.cart-bar__meta { display: inline-flex; align-items: baseline; gap: 0.3em; color: var(--yellow); white-space: nowrap; font-size: 0.95em; }
 
 /* ---------- Dialogs ---------- */
 .sheet {
@@ -715,22 +715,83 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .sheet__actions .btn--primary,
 .sheet__actions .btn--whatsapp { flex: 1; }
 
-.opt-group { border: 0; margin: 0 0 16px; padding: 0; }
-.opt-group legend { font-weight: 700; margin-bottom: 8px; }
-.opt-group legend small { color: var(--muted); font-weight: 500; }
-.opt {
-  display: flex;
+
+/* ---------- UI kit: pills, sauce swatches, quantity stepper, rolling numbers, emoji spree ---------- */
+.field { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; border: 0; min-width: 0; }
+.field__label { padding: 0; font-size: 0.85rem; font-weight: 700; color: var(--muted); }
+.field__label small { font-weight: 500; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { position: relative; }
+.pill input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; pointer-events: none; }
+.pill span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.pill input:disabled + span { opacity: 0.4; cursor: not-allowed; }
+.pill input:checked + span { background: var(--red); border-color: var(--red); color: var(--white); }
+.pill input:focus-visible + span { outline: 3px solid var(--red); outline-offset: 2px; }
+.pill__swatch { width: 14px; height: 14px; flex: none; border-radius: 50%; background: var(--sauce); border: 1px solid rgba(0, 0, 0, 0.25); }
+.pill input:checked + span .pill__swatch { border-color: rgba(255, 255, 255, 0.8); }
+
+.qty {
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border: 2px solid var(--line);
-  border-radius: var(--radius-sm);
-  margin-bottom: 8px;
-  cursor: pointer;
+  width: max-content;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: var(--yellow-soft);
 }
-.opt:has(input:checked) { border-color: var(--red); background: #fff5f5; }
-.opt input { accent-color: var(--red); width: 18px; height: 18px; }
-.opt__price { margin-inline-start: auto; font-weight: 600; }
+.qty output { min-width: 56px; font-size: 1.6rem; font-weight: 800; justify-content: center; text-align: center; }
+.qty__btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--white);
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.qty__btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.qty__btn:not(:disabled):active { transform: scale(0.88); }
+.qty__btn:hover:not(:disabled) { background: var(--red); color: var(--white); }
+
+.roll { display: inline-flex; direction: ltr; font-variant-numeric: tabular-nums; }
+.roll__cell { position: relative; display: inline-block; overflow: hidden; padding-block: 0.08em; margin-block: -0.08em; }
+.roll__ch { display: inline-block; }
+.roll__ch--out { position: absolute; inset-inline-start: 0; top: 0.08em; }
+.money { display: inline-flex; align-items: baseline; gap: 0.25em; white-space: nowrap; }
+.bump { animation: kit-bump 0.4s ease; }
+@keyframes kit-bump { 40% { transform: scale(1.18); } }
+
+.spree {
+  position: fixed;
+  z-index: 90;
+  font-size: 1.9rem;
+  line-height: 1;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+}
+
+/* Options and sauce pop-ups take the kit's pop-in. */
+#options-dialog[open], #sauce-dialog[open] { animation: kit-pop 0.2s ease; }
+#options-dialog::backdrop, #sauce-dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); }
+@keyframes kit-pop { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+#options-submit { gap: 6px; }
 
 .form-error { color: var(--red); font-weight: 600; margin: 0 18px; min-height: 0; }
 .form-error:empty { display: none; }
@@ -787,16 +848,9 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .st-pending .st-unit { opacity: 0; }
 
 /* ---------- Flying emojis ---------- */
-.emoji-layer { position: fixed; inset: 0; z-index: 95; pointer-events: none; overflow: hidden; }
-.emoji-fly { position: absolute; font-size: 28px; line-height: 1; will-change: transform, opacity; }
-.emoji-fly--cart { font-size: 32px; }
 
 /* ---------- Sauce sheet ---------- */
 .sauce-added { margin: 0 0 14px; font-weight: 600; }
-.sauce-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.sauce-grid legend { grid-column: 1 / -1; }
-.sauce-grid .opt { margin: 0; }
-.opt:has(input:disabled) { opacity: 0.45; cursor: not-allowed; }
 
 /* ---------- Browser surfaces ---------- */
 ::selection { background: var(--yellow); color: var(--black); }
@@ -810,4 +864,5 @@ html { scrollbar-color: var(--yellow) var(--red-dark); }
   .intro { display: none; }
   .st-pending .st-unit { opacity: 1; }
   .cart-ico__body { animation: none !important; }
+  #options-dialog[open], #sauce-dialog[open], .bump { animation: none !important; }
 }

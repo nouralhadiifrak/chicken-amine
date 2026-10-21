@@ -142,6 +142,11 @@ async function testCategories(page, label) {
   check(await page.evaluate(() => document.querySelector("#menu-list .category")?.dataset.cat === "burgers"), `${label}: forward opens the category again`);
 }
 
+// Pills hide their input under the label, so tick them the way a customer does: on the label.
+async function pick(page, sel) {
+  await page.locator(sel).locator("xpath=..").click();
+}
+
 async function openCat(page, id) {
   if (await page.$(`.chip[data-cat="${id}"]`)) {
     if (!(await page.$(`.chip.is-active[data-cat="${id}"]`))) await page.click(`.chip[data-cat="${id}"]`);
@@ -157,7 +162,7 @@ async function addDish(page, cat, id, sauces) {
   await page.waitForSelector("#sauce-dialog[open]", { timeout: 2000 });
   await page.waitForTimeout(250);
   if (!sauces.length) { await page.click("#sauce-skip"); return; }
-  for (const v of sauces) await page.check(`#sauce-list input[value="${v}"]`);
+  for (const v of sauces) await pick(page, `#sauce-list input[value="${v}"]`);
   await page.click("#sauce-ok");
 }
 
@@ -220,14 +225,14 @@ async function main() {
       await openCat(page, "tacos");
       await page.click('.item[data-item="tc-mixte"] [data-add]');
       await page.waitForTimeout(60);
-      const fx = await page.evaluate(() => ({ emojis: document.querySelectorAll(".emoji-fly").length, text: [...document.querySelectorAll(".emoji-fly")].map((e) => e.textContent).join("") }));
-      check(fx.emojis >= 8 && /🌮/.test(fx.text), `${label}: adding Tacos Mixte sends ${fx.emojis} emojis flying (${[...new Set([...fx.text])].join("")})`);
+      const fx = await page.evaluate(() => ({ emojis: document.querySelectorAll(".spree").length, text: [...document.querySelectorAll(".spree")].map((e) => e.textContent).join("") }));
+      check(fx.emojis >= 12 && /🌮/.test(fx.text), `${label}: adding Tacos Mixte sends ${fx.emojis} emojis flying (${[...new Set([...fx.text])].join("")})`);
       check(await page.$eval("#cart-btn .cart-ico", (i) => i.classList.contains("is-looping")), `${label}: cart icon rocks once the order has a dish`);
       await page.waitForSelector("#sauce-dialog[open]", { timeout: 2000 });
       await page.waitForTimeout(250);
       check(await page.isDisabled("#sauce-ok"), `${label}: sauce sheet opens, « Valider » waits for a sauce`);
-      await page.check('#sauce-list input[value="algerienne"]');
-      await page.check('#sauce-list input[value="andalouse"]');
+      await pick(page, '#sauce-list input[value="algerienne"]');
+      await pick(page, '#sauce-list input[value="andalouse"]');
       check(await page.isDisabled('#sauce-list input[value="harissa"]'), `${label}: a third sauce cannot be ticked`);
       await page.click("#sauce-ok");
       await page.waitForTimeout(200);
@@ -246,7 +251,7 @@ async function main() {
       await page.click("#options-submit");
       const reqErr = await page.textContent("#options-error");
       check(reqErr.length > 0, `${label}: a required option must be chosen ("${reqErr}")`);
-      await page.check('#options-body input[name="opt-sandwich"][value="cordon"]');
+      await pick(page, '#options-body input[name="opt-sandwich"][value="cordon"]');
       await page.click("#options-submit");
       await openCat(page, "tacos");
       const badge = await page.textContent('.item[data-item="tc-mixte"] .in-cart');
@@ -357,10 +362,16 @@ async function main() {
     await openCat(page, "test");
     check(/la pièce/.test(await page.textContent('.item[data-item="t-piece"]')), "per-piece price shows « / la pièce »");
     await page.click('.item[data-item="t-size"] [data-add]');
-    await page.check('#options-body input[name="size"][value="L"]');
-    check(/45/.test(await page.textContent("#options-submit")), "choosing size L shows 45 DH");
-    await page.check('#options-body input[value="algerienne"]');
-    await page.check('#options-body input[value="biggy"]');
+    await pick(page, '#options-body input[name="size"][value="L"]');
+    await page.waitForTimeout(700);
+    check(/^45 DH$/.test(await page.getAttribute("#options-price .roll", "aria-label") + " DH") && /Ajouter · 45 DH/.test(await page.textContent("#options-submit")), "choosing size L rolls the price to 45 DH");
+    await page.click('.qty__btn[data-step="1"]');
+    await page.waitForTimeout(700);
+    check((await page.textContent("#options-qty")) === "2" && /90 DH/.test(await page.textContent("#options-submit")), "quantity 2 rolls the price to 90 DH");
+    await page.click('.qty__btn[data-step="-1"]');
+    await page.waitForTimeout(700);
+    await pick(page, '#options-body input[value="algerienne"]');
+    await pick(page, '#options-body input[value="biggy"]');
     check(await page.isDisabled('#options-body input[value="harissa"]'), "a third sauce cannot be ticked");
     await page.click("#options-submit");
     await addDish(page, "test", "t-piece");

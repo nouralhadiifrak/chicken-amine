@@ -25,6 +25,7 @@ python3 -m http.server 8000
 | Interface text (French / Arabic), page titles and descriptions | `js/i18n.js` |
 | Page logic | `js/app.js` |
 | Heading animation | `js/spring-text.js` |
+| Flying emojis, rolling numbers, cart pop (UI kit) | `js/kit.js` |
 | Colours and layout | `css/style.css` |
 
 ### Category photos
@@ -38,7 +39,7 @@ Each category shows an illustration until it has a photo. Put the photo in `asse
 
 ### Sauces and emojis
 
-The sauce list is `SAUCES` in `js/menu-data.js`; after a dish is added the customer may pick up to
+The sauce list is `SAUCES` in `js/menu-data.js` (`color` is the swatch shown on its pill); after a dish is added the customer may pick up to
 `MAX_SAUCES` (2). A category with `sauces: false` (drinks, juices, desserts) skips the sauce choice;
 an item can override it with its own `sauces: true/false`. The emojis that fly when a dish is added
 come from the category's `emoji`, or the item's own `emoji`.

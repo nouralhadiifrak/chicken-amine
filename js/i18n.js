@@ -45,7 +45,7 @@ window.I18N = {
       required: "obligatoire",
       sauces: "Sauces",
       saucesHint: "{max} au choix",
-      addToOrder: "Ajouter · {price}",
+      qty: "Quantité",
       pickRequired: "Choisissez : {label}",
     },
     cart: {
@@ -158,7 +158,7 @@ window.I18N = {
       required: "إجباري",
       sauces: "الصلصات",
       saucesHint: "{max} للاختيار",
-      addToOrder: "أضف · {price}",
+      qty: "الكمية",
       pickRequired: "اختر: {label}",
     },
     cart: {

@@ -20,18 +20,18 @@
 window.MAX_SAUCES = 2;
 
 // Sauces offered after adding a dish. TO CONFIRM with the restaurant: the menu lists none, this is the
-// usual list. Add, remove or rename freely.
+// usual list. Add, remove or rename freely; color is the swatch shown next to the name.
 window.SAUCES = [
-  { id: "algerienne", fr: "Algérienne", ar: "جزائرية" },
-  { id: "andalouse", fr: "Andalouse", ar: "أندلسية" },
-  { id: "barbecue", fr: "Barbecue", ar: "باربيكيو" },
-  { id: "biggy", fr: "Biggy", ar: "بيغي" },
-  { id: "blanche", fr: "Blanche", ar: "بيضاء" },
-  { id: "fromagere", fr: "Fromagère", ar: "بالجبن" },
-  { id: "harissa", fr: "Harissa", ar: "هريسة" },
-  { id: "ketchup", fr: "Ketchup", ar: "كاتشب" },
-  { id: "mayonnaise", fr: "Mayonnaise", ar: "مايونيز" },
-  { id: "samourai", fr: "Samouraï", ar: "ساموراي" },
+  { id: "algerienne", color: "#e9a07a", fr: "Algérienne", ar: "جزائرية" },
+  { id: "andalouse", color: "#e2752f", fr: "Andalouse", ar: "أندلسية" },
+  { id: "barbecue", color: "#4a1f1a", fr: "Barbecue", ar: "باربيكيو" },
+  { id: "biggy", color: "#c9b48a", fr: "Biggy", ar: "بيغي" },
+  { id: "blanche", color: "#eef2ea", fr: "Blanche", ar: "بيضاء" },
+  { id: "fromagere", color: "#f2cf5b", fr: "Fromagère", ar: "بالجبن" },
+  { id: "harissa", color: "#a3160d", fr: "Harissa", ar: "هريسة" },
+  { id: "ketchup", color: "#d42a1f", fr: "Ketchup", ar: "كاتشب" },
+  { id: "mayonnaise", color: "#f7efc4", fr: "Mayonnaise", ar: "مايونيز" },
+  { id: "samourai", color: "#b3202e", fr: "Samouraï", ar: "ساموراي" },
 ];
 
 window.MENU = [
