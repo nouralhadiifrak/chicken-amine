@@ -234,6 +234,14 @@ async function main() {
       await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
       await openCat(page, "tacos");
       check(await page.$eval('.item[data-item="tc-mixte"]', (li) => !!li.querySelector(".item__thumb") && !!li.querySelector("[data-add] svg") && !/Ajouter|أضف/.test(li.querySelector("[data-add]").textContent)), `${label}: each dish has a picture and a round + button`);
+      if (s.name === "phone") {
+        const card = await page.evaluate(() => {
+          const cols = getComputedStyle(document.querySelector("#menu-list .items")).gridTemplateColumns.split(" ").length;
+          const li = document.querySelector('.item[data-item="tc-mixte"]');
+          return { cols, full: Math.abs(li.querySelector(".item__thumb").offsetWidth - li.offsetWidth) < 2 };
+        });
+        check(card.cols === 2 && card.full, `${label}: dishes are cards like the category tiles, ${card.cols} per row, picture on top`);
+      }
       // Sauces first: nothing is added and nothing flies until the sauce sheet is settled.
       await page.click('.item[data-item="tc-mixte"] [data-add]');
       await page.waitForSelector("#sauce-dialog[open]", { timeout: 2000 });
