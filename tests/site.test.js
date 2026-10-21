@@ -191,6 +191,8 @@ async function main() {
       check(headerLogo === "1", `${label}: logo has glided into the header`);
       const layers = await page.$$eval(".intro__layer", (ls) => ls.map((l) => [l.classList[1].replace("intro__", ""), l.naturalWidth > 0, getComputedStyle(l).opacity]));
       check(layers.length === 4 && layers.every(([, ok, op]) => ok && op === "1"), `${label}: intro built the logo from its layers (${layers.map(([n]) => n).join(", ")})`);
+      const video = await page.$eval("#hero-media video", (v) => ({ src: v.currentSrc.split("/").pop(), paused: v.paused, poster: !!v.poster })).catch(() => null);
+      check(video && /^hero\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: hero video plays (${video && video.src})`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
 
       // Language, title, description, canonical.
@@ -415,6 +417,7 @@ async function main() {
     check(r.intro === "none", "intro skipped");
     check(r.split === 0, "headings not split or animated");
     check(r.btnAnim === "none", "button border trails stopped");
+    check(await page.$eval("#hero-media video", (v) => v.paused && !!v.poster), "hero video stays on its poster");
     check(errors.length === 0, "no JavaScript errors");
     await context.close();
   }

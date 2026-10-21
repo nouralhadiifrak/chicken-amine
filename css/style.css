@@ -323,6 +323,22 @@ html.no-intro .intro { display: none; }
   inset: 0;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 30%, rgba(0, 0, 0, 0.65) 100%);
 }
+/* Over the video the text needs more contrast: an overall veil on phones, a fade from the text side on wide screens. */
+.hero__media.has-video + .hero__shade {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.75) 100%);
+}
+@media (min-width: 900px) {
+  .hero__media.has-video + .hero__shade {
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.45) 38%, rgba(0, 0, 0, 0) 70%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%);
+  }
+  [dir="rtl"] .hero__media.has-video + .hero__shade {
+    background:
+      linear-gradient(270deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.45) 38%, rgba(0, 0, 0, 0) 70%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%);
+  }
+}
 .hero__content {
   position: relative;
   width: 100%;
