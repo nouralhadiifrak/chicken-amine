@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /avis/
+Disallow: /print/
+
+Sitemap: https://chicken-amine.vercel.app/sitemap.xml
