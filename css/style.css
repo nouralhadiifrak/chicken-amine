@@ -344,6 +344,22 @@ html.no-intro .intro { display: none; }
 .hero__plate::after { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .hero__plate video { display: block; object-fit: cover; }
 .hero__plate::after { content: ""; background: url("/assets/video/hero-plate-poster.jpg") center / cover; z-index: -1; }
+/* Fallback when a browser will not play the video: the plate of the still frame turns (clockwise, one
+   turn in 15 s like the video). The circle sits on the plate: centre 349.5 / 346, radius 255 of 720 x 760. */
+.hero__spin {
+  display: none;
+  position: absolute;
+  left: 13.13%;
+  top: 11.97%;
+  width: 70.83%;
+  height: 67.11%;
+  border-radius: 50%;
+  background: url("/assets/video/hero-plate-poster.jpg") 45% 36.4% / 141.18% 149.02% no-repeat;
+  animation: plate-turn 15s linear infinite;
+}
+.hero__plate.is-spinning .hero__spin { display: block; }
+.hero__plate.is-spinning video { visibility: hidden; }
+@keyframes plate-turn { to { transform: rotate(360deg); } }
 .hero__actions { grid-area: actions; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 0 18px; }
 @media (min-width: 900px) {
   .hero__inner {
@@ -988,6 +1004,7 @@ html { scrollbar-color: var(--yellow) var(--red-dark); }
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .hero__spin { animation: plate-turn 15s linear infinite !important; } /* the slow turn stays (see setupHero) */
   .intro { display: none; }
   .st-pending .st-unit { opacity: 1; }
   .cart-ico__body { animation: none !important; }

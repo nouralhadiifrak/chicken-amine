@@ -490,6 +490,27 @@ async function main() {
     await context.close();
   }
 
+  // A phone that refuses to autoplay video (data or battery saver): the plate of the still frame turns instead.
+  console.log("\nautoplay blocked (simulated)");
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    const page = await context.newPage();
+    await page.addInitScript(() => {
+      HTMLMediaElement.prototype.play = function () { return Promise.reject(new DOMException("blocked", "NotAllowedError")); };
+      Object.defineProperty(HTMLMediaElement.prototype, "autoplay", { get() { return false; }, set() {}, configurable: true });
+      const sa = Element.prototype.setAttribute;
+      Element.prototype.setAttribute = function (n, v) { if (this instanceof HTMLMediaElement && n === "autoplay") return; return sa.call(this, n, v); };
+    });
+    await page.goto(base + "/");
+    await waitIntro(page);
+    await page.waitForTimeout(3000);
+    const a1 = await page.$eval(".hero__spin", (e) => getComputedStyle(e).transform);
+    await page.waitForTimeout(700);
+    const st = await page.evaluate(() => ({ spinning: document.querySelector("#hero-plate").classList.contains("is-spinning"), shown: getComputedStyle(document.querySelector(".hero__spin")).display, a2: getComputedStyle(document.querySelector(".hero__spin")).transform }));
+    check(st.spinning && st.shown === "block" && a1 !== st.a2, "the plate still turns when the video cannot play");
+    await context.close();
+  }
+
   // Reduced motion: no intro, no heading animation.
   console.log("\nreduced motion");
   {
@@ -503,7 +524,8 @@ async function main() {
     check(r.intro === "none", "intro skipped");
     check(r.split === 0, "headings not split or animated");
     check(r.btnAnim === "none", "button border trails stopped");
-    check(await page.$eval("#hero-plate video", (v) => v.paused && !!v.poster), "the plate stays still on its poster");
+    await page.waitForTimeout(600);
+    check(await page.$eval("#hero-plate video", (v) => !v.paused), "the slow plate still turns (it is the point of the hero; nothing flashes)");
     check(errors.length === 0, "no JavaScript errors");
     await context.close();
   }
