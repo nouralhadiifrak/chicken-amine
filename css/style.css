@@ -854,42 +854,41 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 @keyframes kit-pop { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
 #options-submit { gap: 6px; }
 
-/* ---------- Two tilted bands crossing between the hero and the menu ---------- */
+/* ---------- Torn white paper strip between the hero and the menu ---------- */
 .bands {
   position: relative;
   z-index: 2;
-  height: 150px;
-  margin-top: -56px;
-  margin-bottom: -40px;
+  margin-top: -44px;
+  margin-bottom: -30px;
+  padding: 18px 0;
   overflow: hidden;
   pointer-events: none;
 }
-.band {
+.paper {
+  position: relative;
+  width: 108%;
+  margin-left: -4%;
+  transform: rotate(-2deg);
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
+}
+/* the fibrous, slightly creamy rim that shows along a tear */
+.paper__rim {
   position: absolute;
-  left: -5%;
-  width: 110%;
+  inset: -5px 0;
+  background: #efe7d6;
+  clip-path: polygon(0.0% 4.9px, 1.03% 9.9px, 2.6% 10.8px, 3.33% 0.3px, 5.2% 4.5px, 6.8% 8.5px, 8.61% 14.2px, 9.4% 8.7px, 10.29% 9.1px, 11.13% 7.9px, 11.9% 10.7px, 12.66% 0.3px, 14.13% 12.5px, 15.65% 1.0px, 17.06% 1.3px, 18.75% 7.8px, 20.6% 10.2px, 21.76% 4.8px, 22.81% 11.0px, 23.57% 12.5px, 25.23% 9.2px, 26.77% 12.6px, 28.41% 7.0px, 29.58% 9.5px, 31.27% 19.9px, 32.2% 6.0px, 33.29% 0.4px, 34.15% 2.8px, 35.2% 11.4px, 36.17% 0.1px, 36.9% 9.4px, 38.47% 9.0px, 39.71% 14.7px, 41.2% 4.0px, 42.42% 6.9px, 43.97% 4.3px, 44.94% 3.3px, 45.8% 1.6px, 47.38% 2.4px, 48.61% 9.4px, 49.89% 14.5px, 50.8% 17.2px, 51.77% 12.7px, 53.27% 1.6px, 54.51% 11.3px, 55.72% 5.7px, 56.41% 12.2px, 58.06% 17.9px, 58.75% 1.9px, 59.76% 19.0px, 61.14% 10.3px, 62.42% 5.9px, 64.12% 12.9px, 65.52% 7.9px, 67.33% 2.7px, 68.78% 2.0px, 69.5% 0.0px, 70.86% 3.8px, 72.37% 9.1px, 73.86% 12.0px, 75.26% 8.6px, 76.42% 7.1px, 78.18% 14.3px, 79.19% 9.7px, 80.18% 1.6px, 81.68% 12.3px, 82.92% 16.4px, 83.95% 20.5px, 85.62% 7.5px, 87.49% 8.7px, 88.17% 9.8px, 89.61% 11.9px, 90.96% 8.3px, 91.7% 4.5px, 93.16% 11.2px, 94.66% 3.7px, 96.3% 7.2px, 97.32% 4.2px, 98.45% 6.7px, 99.89% 7.1px, 100% 4.7px, 100% calc(100% - 0.4px), 99.35% calc(100% - 6.4px), 98.6% calc(100% - 2.0px), 97.05% calc(100% - 12.3px), 95.49% calc(100% - 5.9px), 94.7% calc(100% - 1.3px), 93.46% calc(100% - 12.3px), 92.66% calc(100% - 3.9px), 90.9% calc(100% - 19.4px), 89.13% calc(100% - 11.5px), 88.47% calc(100% - 14.8px), 86.82% calc(100% - 8.7px), 85.35% calc(100% - 7.0px), 84.71% calc(100% - 4.8px), 83.08% calc(100% - 12.7px), 81.55% calc(100% - 12.6px), 80.75% calc(100% - 1.5px), 79.7% calc(100% - 10.5px), 78.47% calc(100% - 3.3px), 76.81% calc(100% - 6.9px), 74.97% calc(100% - 1.7px), 74.13% calc(100% - 3.8px), 73.39% calc(100% - 7.5px), 72.21% calc(100% - 8.4px), 70.46% calc(100% - 10.9px), 69.01% calc(100% - 8.8px), 67.61% calc(100% - 4.6px), 66.22% calc(100% - 3.7px), 64.47% calc(100% - 7.9px), 63.78% calc(100% - 8.9px), 62.45% calc(100% - 8.6px), 60.6% calc(100% - 12.9px), 59.26% calc(100% - 3.1px), 58.03% calc(100% - 2.6px), 56.35% calc(100% - 5.5px), 54.93% calc(100% - 4.5px), 53.75% calc(100% - 8.8px), 52.0% calc(100% - 0.1px), 51.05% calc(100% - 6.0px), 50.25% calc(100% - 3.1px), 48.85% calc(100% - 1.0px), 48.01% calc(100% - 7.4px), 46.72% calc(100% - 4.9px), 45.73% calc(100% - 0.6px), 43.98% calc(100% - 5.8px), 42.26% calc(100% - 1.3px), 41.09% calc(100% - 13.0px), 39.32% calc(100% - 17.9px), 37.6% calc(100% - 9.3px), 36.58% calc(100% - 11.2px), 34.89% calc(100% - 8.4px), 33.4% calc(100% - 12.6px), 32.19% calc(100% - 8.5px), 31.05% calc(100% - 5.9px), 29.77% calc(100% - 11.4px), 28.06% calc(100% - 6.5px), 27.38% calc(100% - 12.8px), 25.73% calc(100% - 5.0px), 24.09% calc(100% - 9.7px), 23.41% calc(100% - 3.0px), 22.07% calc(100% - 2.5px), 21.05% calc(100% - 7.1px), 19.73% calc(100% - 7.0px), 18.92% calc(100% - 13.0px), 17.56% calc(100% - 3.7px), 15.91% calc(100% - 12.1px), 14.77% calc(100% - 3.6px), 13.06% calc(100% - 6.6px), 11.29% calc(100% - 7.2px), 10.36% calc(100% - 10.9px), 9.39% calc(100% - 9.3px), 8.14% calc(100% - 19.5px), 6.38% calc(100% - 1.2px), 5.06% calc(100% - 2.1px), 4.14% calc(100% - 12.7px), 3.36% calc(100% - 5.7px), 1.57% calc(100% - 2.6px), 0.0% calc(100% - 9.8px));
+}
+.paper__sheet {
+  position: relative;
   overflow: hidden;
-  white-space: nowrap;
-}
-.band--front {
-  top: 26px;
-  z-index: 2;
-  background: var(--yellow);
+  padding: 16px 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(180deg, #ffffff, #f7f4ee);
+  clip-path: polygon(0.0% 10.5px, 0.9% 6.6px, 2.64% 0.8px, 3.31% 2.0px, 3.96% 1.8px, 5.27% 2.0px, 6.91% 0.1px, 8.41% 3.1px, 10.23% 9.5px, 11.91% 5.4px, 13.45% 4.8px, 14.55% 5.0px, 15.94% 7.8px, 17.45% 0.4px, 18.44% 0.7px, 19.19% 2.5px, 20.27% 3.3px, 21.23% 8.4px, 22.61% 1.5px, 23.44% 3.4px, 24.87% 5.0px, 26.55% 7.0px, 27.21% 2.8px, 28.1% 8.5px, 29.12% 5.9px, 30.89% 4.1px, 31.82% 5.1px, 33.18% 8.1px, 34.08% 9.0px, 34.81% 12.4px, 36.43% 11.1px, 38.3% 4.8px, 40.0% 0.1px, 41.48% 4.8px, 42.9% 1.0px, 44.1% 8.6px, 45.05% 4.5px, 46.82% 7.8px, 48.24% 5.5px, 49.82% 4.9px, 51.11% 0.0px, 51.76% 8.4px, 53.42% 13.7px, 55.23% 0.8px, 55.94% 6.8px, 56.73% 4.3px, 57.68% 7.9px, 58.57% 4.9px, 59.45% 2.8px, 60.89% 3.9px, 61.66% 2.0px, 63.02% 2.1px, 63.74% 5.7px, 65.49% 10.3px, 66.95% 1.9px, 68.75% 5.1px, 70.35% 7.3px, 71.1% 3.9px, 72.31% 6.6px, 74.16% 0.9px, 75.21% 7.8px, 76.08% 4.0px, 77.05% 2.2px, 78.23% 7.8px, 78.92% 9.0px, 80.75% 8.3px, 81.59% 4.4px, 82.71% 0.5px, 84.57% 2.4px, 85.76% 3.8px, 87.63% 5.0px, 88.45% 2.7px, 89.8% 4.9px, 90.5% 5.3px, 92.19% 1.4px, 92.91% 1.7px, 94.38% 13.8px, 95.31% 5.4px, 96.46% 5.3px, 98.26% 1.8px, 99.18% 3.6px, 100% 2.8px, 100% calc(100% - 0.5px), 99.17% calc(100% - 5.8px), 98.51% calc(100% - 3.5px), 97.85% calc(100% - 1.1px), 96.64% calc(100% - 3.6px), 95.17% calc(100% - 0.3px), 94.0% calc(100% - 2.0px), 92.62% calc(100% - 6.7px), 91.47% calc(100% - 7.7px), 89.9% calc(100% - 0.1px), 88.8% calc(100% - 7.7px), 87.31% calc(100% - 8.1px), 86.16% calc(100% - 3.7px), 84.85% calc(100% - 0.6px), 83.34% calc(100% - 2.1px), 82.55% calc(100% - 2.9px), 81.58% calc(100% - 10.5px), 80.17% calc(100% - 6.9px), 78.75% calc(100% - 2.3px), 77.53% calc(100% - 8.1px), 76.22% calc(100% - 4.5px), 74.7% calc(100% - 8.0px), 72.89% calc(100% - 8.9px), 71.43% calc(100% - 4.1px), 69.74% calc(100% - 10.3px), 67.92% calc(100% - 3.8px), 67.16% calc(100% - 6.8px), 66.53% calc(100% - 2.2px), 65.29% calc(100% - 1.7px), 63.87% calc(100% - 11.2px), 62.65% calc(100% - 0.2px), 61.78% calc(100% - 6.1px), 60.22% calc(100% - 3.0px), 58.8% calc(100% - 0.8px), 57.96% calc(100% - 8.1px), 56.75% calc(100% - 4.0px), 55.54% calc(100% - 5.2px), 54.38% calc(100% - 10.5px), 53.38% calc(100% - 8.1px), 51.91% calc(100% - 3.8px), 51.12% calc(100% - 3.6px), 49.99% calc(100% - 2.7px), 48.46% calc(100% - 2.8px), 47.42% calc(100% - 12.6px), 45.96% calc(100% - 6.5px), 44.66% calc(100% - 0.0px), 43.15% calc(100% - 5.2px), 42.04% calc(100% - 5.5px), 41.03% calc(100% - 3.9px), 40.27% calc(100% - 8.7px), 39.42% calc(100% - 14.2px), 38.12% calc(100% - 3.6px), 36.7% calc(100% - 8.7px), 34.99% calc(100% - 1.7px), 34.34% calc(100% - 7.2px), 33.33% calc(100% - 7.3px), 32.43% calc(100% - 7.8px), 31.67% calc(100% - 2.4px), 30.03% calc(100% - 7.2px), 28.24% calc(100% - 6.6px), 27.58% calc(100% - 7.3px), 25.74% calc(100% - 8.4px), 24.92% calc(100% - 3.7px), 23.19% calc(100% - 0.9px), 22.25% calc(100% - 8.1px), 20.55% calc(100% - 8.1px), 19.54% calc(100% - 1.3px), 18.19% calc(100% - 4.9px), 16.43% calc(100% - 13.8px), 15.27% calc(100% - 6.7px), 14.32% calc(100% - 6.9px), 13.69% calc(100% - 3.8px), 12.95% calc(100% - 8.1px), 11.72% calc(100% - 5.7px), 10.84% calc(100% - 5.4px), 9.87% calc(100% - 12.0px), 9.08% calc(100% - 6.0px), 8.08% calc(100% - 13.4px), 6.22% calc(100% - 6.3px), 4.55% calc(100% - 3.3px), 2.83% calc(100% - 8.4px), 1.87% calc(100% - 10.2px), 0.0% calc(100% - 11.5px));
   color: var(--black);
-  transform: rotate(-2.5deg);
-  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
-}
-.band--back {
-  top: 80px;
-  background: #0b0b0b;
-  color: rgba(255, 255, 255, 0.6);
-  transform: rotate(1.5deg);
-  border-block: 1px solid rgba(255, 255, 255, 0.08);
 }
 .band__track { display: flex; width: max-content; animation: band 46s linear infinite; }
-.band--back .band__track { animation-duration: 40s; animation-direction: reverse; }
-.band--front:hover .band__track,
-.band--front:focus-within .band__track { animation-play-state: paused; }
+.paper:hover .band__track,
+.paper:focus-within .band__track { animation-play-state: paused; }
 [dir="rtl"] .band__track { animation-name: band-rtl; }
 @keyframes band { to { transform: translateX(-50%); } }
 @keyframes band-rtl { to { transform: translateX(50%); } }
@@ -897,7 +896,7 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .band__item {
   display: inline-flex;
   align-items: center;
-  padding: 9px 0;
+  padding: 4px 0;
   border: 0;
   background: none;
   color: inherit;
@@ -917,16 +916,14 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
   border-radius: 50%;
   background: var(--red);
 }
-.band--back .band__item::after { background: var(--yellow); }
 button.band__item { pointer-events: auto; cursor: pointer; }
 button.band__item:hover { color: var(--red); }
-button.band__item:focus-visible { outline: 3px solid var(--black); outline-offset: 2px; }
+button.band__item:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
 @media (min-width: 760px) {
-  .bands { height: 190px; margin-top: -70px; margin-bottom: -56px; }
-  .band--front { top: 34px; }
-  .band--back { top: 98px; }
-  .band__item { padding: 12px 0; }
+  .bands { margin-top: -56px; margin-bottom: -36px; padding: 22px 0; }
+  .paper__sheet { padding: 20px 0; }
 }
+
 
 .form-error { color: var(--red); font-weight: 600; margin: 0 18px; min-height: 0; }
 .form-error:empty { display: none; }

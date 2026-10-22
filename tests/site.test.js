@@ -198,10 +198,9 @@ async function main() {
       const band = await page.evaluate(() => ({
         items: document.querySelectorAll("#band-front .band__group:first-child [data-open-cat]").length,
         front: getComputedStyle(document.querySelector("#band-front")).animationName,
-        back: [getComputedStyle(document.querySelector("#band-back")).animationName, getComputedStyle(document.querySelector("#band-back")).animationDirection],
-        info: document.querySelector("#band-back").textContent.length > 0,
+        paper: getComputedStyle(document.querySelector(".paper__sheet")).clipPath.startsWith("polygon") && getComputedStyle(document.querySelector(".paper__sheet")).backgroundColor !== "rgb(0, 0, 0)",
       }));
-      check(band.items === 19 && /band/.test(band.front) && /band/.test(band.back[0]) && band.back[1] === "reverse" && band.info, `${label}: two tilted bands cross in opposite directions, the front one lists the ${band.items} categories`);
+      check(band.items === 19 && /band/.test(band.front) && band.paper, `${label}: a torn-paper strip carries the ${band.items} categories, moving`);
       const look = await page.evaluate(() => ({ upper: getComputedStyle(document.querySelector(".hero__title")).textTransform, loc: getComputedStyle(document.querySelector("#location-btn")).backgroundColor }));
       check(look.upper === "uppercase" && look.loc === "rgb(225, 6, 15)", `${label}: hero title in capitals, « Voir la localisation » in red`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
