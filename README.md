@@ -51,11 +51,12 @@ come from the category's `emoji`, or the item's own `emoji`.
 and each category uses one as its cover (`cat-<category>.webp`). A dish without one shows its emoji on a tile: put a square photo (about 320 × 320) in
 `assets/photos/` and set the dish's `image` in `js/menu-data.js`, e.g. `image: "assets/photos/tacos-mixte.jpg"`.
 
-### Hero plate video
+### Hero video
 
-The turning plate at the bottom of the hero is `assets/video/plate.webm` / `plate.mp4` (square, shown as
-a circle) with `plate-poster.jpg`, set in `plateVideo` in `js/config.js`. To change it, crop the new
-video to a square around the plate (ffmpeg `crop=`), about 640 × 640, and keep the three file names.
+The hero shows the turning plate with flying fries (`assets/video/hero-plate.webm` / `.mp4`, 720 × 760,
+poster `hero-plate-poster.jpg`, set in `plateVideo` in `js/config.js`), cut from the supplied vertical
+video without its drawn-in title and buttons; the real title and buttons sit above and below it on
+phones, and to its left on PC. The hero background matches the video's dark backdrop.
 
 ## After changing the code
 

@@ -202,12 +202,14 @@ async function main() {
       const layers = await page.$$eval(".intro__layer", (ls) => ls.map((l) => [l.classList[1].replace("intro__", ""), l.naturalWidth > 0, getComputedStyle(l).opacity]));
       check(layers.length === 4 && layers.every(([, ok, op]) => ok && op === "1"), `${label}: intro built the logo from its layers (${layers.map(([n]) => n).join(", ")})`);
       const video = await page.$eval("#hero-plate video", (v) => ({ src: v.currentSrc.split("/").pop(), paused: v.paused, poster: !!v.poster })).catch(() => null);
-      check(video && /^plate\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: the plate turns in the hero (${video && video.src})`);
-      const rest = await page.evaluate(() => {
-        const plate = document.querySelector("#hero-plate").getBoundingClientRect(), paper = document.querySelector(".paper__sheet").getBoundingClientRect();
-        return { overlaps: plate.bottom > paper.top && plate.bottom < paper.bottom + 20, above: plate.top < paper.top, round: getComputedStyle(document.querySelector("#hero-plate")).borderTopLeftRadius };
+      check(video && /^hero-plate\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: the plate turns in the hero (${video && video.src})`);
+      const lay = await page.evaluate(() => {
+        const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+        const t = r(".hero__title"), p = r("#hero-plate"), a = r(".hero__actions");
+        return { stacked: t.bottom <= p.top + 40 && p.bottom <= a.top + 40, side: t.right <= p.left + 10 && a.right <= p.left + 10, dir: document.documentElement.dir };
       });
-      check(rest.overlaps && rest.above && rest.round === "50%", `${label}: the round plate rests on the torn paper strip`);
+      if (s.name === "phone") check(lay.stacked, `${label}: phone hero reads title, turning plate, then the buttons`);
+      else check(lay.side || lay.dir === "rtl", `${label}: PC hero has the text and buttons on the left, the plate on the right`);
       const band = await page.evaluate(() => ({
         items: document.querySelectorAll("#band-front .band__group:first-child [data-open-cat]").length,
         front: getComputedStyle(document.querySelector("#band-front")).animationName,
