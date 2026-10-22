@@ -134,18 +134,28 @@
     if (!v.mp4 && !v.webm) return;
     const media = $("#hero-plate");
     const video = document.createElement("video");
-    video.muted = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "");
-    video.preload = "metadata";
+    // Phones only autoplay a video that is muted inline from the start: set it as attributes too.
+    ["muted", "autoplay", "loop", "playsinline", "webkit-playsinline"].forEach((a) => video.setAttribute(a, ""));
+    video.muted = video.defaultMuted = video.loop = video.playsInline = video.autoplay = true;
+    video.preload = "auto";
     if (v.poster) video.poster = v.poster;
     if (v.webm) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.webm)}" type="video/webm">`);
     if (v.mp4) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.mp4)}" type="video/mp4">`);
     media.appendChild(video);
-    if (reducedMotion.matches) return; // poster only
-    video.autoplay = true;
-    video.play().catch(() => {});
+    // The slow turn is the point of the hero, so it runs even with reduced motion (nothing flashes or moves
+    // across the screen).
+    const tryPlay = () => { const p = video.play(); if (p && p.catch) p.catch(() => {}); };
+    tryPlay();
+    // Some browsers (data or battery savers) only allow it after a touch, or once the video is on screen.
+    ["touchstart", "pointerdown", "scroll", "keydown"].forEach((ev) => addEventListener(ev, tryPlay, { passive: true, once: true }));
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) tryPlay(); });
+    if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && tryPlay())).observe(media);
+    // If the video still will not play, turn the plate of the still frame instead.
+    const spin = document.createElement("div");
+    spin.className = "hero__spin";
+    media.appendChild(spin);
+    video.addEventListener("playing", () => media.classList.remove("is-spinning"));
+    setTimeout(() => { if (video.paused) media.classList.add("is-spinning"); }, 2500);
   }
 
   /* ---------- Intro: the rooster, the name typed out, the sprig, then a glide into the header ---------- */
