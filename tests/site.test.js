@@ -63,7 +63,7 @@ async function newPage(browser, base, { width, height, lang, time = OPEN_TIME, r
   });
   if (fixture) {
     // Test-only item exercising sizes, per-piece price and the sauce choice (the real menu has none).
-    await page.route("**/js/menu-data.js", async (route) => {
+    await page.route("**/js/menu-data.js*", async (route) => {
       const body = fs.readFileSync(path.join(ROOT, "js/menu-data.js"), "utf8") + `
         window.SAUCES = [{ id: "algerienne", fr: "Algérienne", ar: "جزائرية" }, { id: "biggy", fr: "Biggy", ar: "بيغي" }, { id: "harissa", fr: "Harissa", ar: "هريسة" }];
         window.MENU.push({ id: "test", fr: "Test", ar: "اختبار", icon: "pizza", image: "", items: [
@@ -347,6 +347,7 @@ async function main() {
       await pick(page, 'input[name="mode"][value="delivery"]');
       await page.waitForSelector("#delivery-map.leaflet-container", { state: "attached", timeout: 8000 });
       check(await page.evaluate(() => getComputedStyle(document.querySelector("#gps-btn")).backgroundColor === "rgb(225, 6, 15)" && document.querySelectorAll(".mode__opt .mode__icon").length === 2), `${label}: « Utiliser ma position » in red, icons on both modes`);
+      check(await page.evaluate(() => document.querySelector(".mode__opt.is-checked input").value === "delivery"), `${label}: the chosen mode is highlighted without :has() (older browsers)`);
       await page.waitForTimeout(300);
       await page.evaluate(() => { window.__opened = []; });
       await page.click("#send-btn");
@@ -469,7 +470,7 @@ async function main() {
       .replace(/aspect-ratio:[^;{}]+;/g, "");
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     const page = await context.newPage();
-    await page.route("**/css/style.css", (r) => r.fulfill({ body: css, contentType: "text/css" }));
+    await page.route("**/css/style.css*", (r) => r.fulfill({ body: css, contentType: "text/css" }));
     await page.goto(base + "/#categorie-tacos");
     await page.waitForTimeout(400);
     const stage = await page.$eval("#intro-stage", (e) => e.getBoundingClientRect().height);

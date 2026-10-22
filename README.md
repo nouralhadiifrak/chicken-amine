@@ -59,6 +59,10 @@ licensed for the live site: replace it with the licensed download or the restaur
 Put the video in `assets/video/` and set `heroVideo` in `js/config.js`
 (`mp4`, optional `webm`, and a `poster` image shown before it plays and when motion is reduced).
 
+## After changing the code
+
+Raise the `?v=` number on the stylesheet and script links in `index.html` so phones fetch the new files.
+
 ## After changing the details or the menu
 
 ```sh

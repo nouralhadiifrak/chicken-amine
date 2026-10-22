@@ -11,6 +11,8 @@
  * The options pop-up of the kit is built into app.js (sizes, choices and sauces as pills).
  */
 window.Kit = (() => {
+  // node.replaceChildren(...) for older browsers
+  const replace = (node, ...kids) => { node.textContent = ""; node.append(...kids); };
   const reduce = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches || !Element.prototype.animate;
   const el = (tag, props = {}, ...children) => {
     const node = document.createElement(tag);
@@ -26,7 +28,7 @@ window.Kit = (() => {
   // 1. Flying emojis. `emoji` may be a list: each particle picks the next one.
   function emojiSpree(origin, { emoji, src, count = 12, onLand } = {}) {
     if (!origin || !origin.isConnected || reduce()) {
-      onLand?.();
+      if (onLand) onLand();
       return;
     }
     const list = [].concat(emoji);
@@ -124,12 +126,13 @@ window.Kit = (() => {
       }
       return cell;
     });
-    node.replaceChildren(...cells);
+    replace(node, ...cells);
   }
 
   function setDigits(node, text) {
     node.dataset.v = text;
-    node.replaceChildren(
+    replace(
+      node,
       ...[...text].map((ch) => el("span", { class: "roll__cell", dataset: { ch } }, el("span", { class: "roll__ch" }, ch)))
     );
   }
@@ -142,7 +145,7 @@ window.Kit = (() => {
     if (!num) {
       num = el("span", { class: "roll" });
       cur = el("span", { class: "money__cur" });
-      node.replaceChildren(num, " ", cur);
+      replace(node, num, " ", cur);
     }
     cur.textContent = currency;
     roll(num, amount, from);
