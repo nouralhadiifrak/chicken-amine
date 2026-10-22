@@ -52,8 +52,9 @@ Each dish shows its emoji on a tile until it has a photo: put a square photo (ab
 
 ### Hero video
 
-The current clip (`assets/video/`) is the watermarked iStock preview 1921631984, a stand-in that is not
-licensed for the live site: replace it with the licensed download or the restaurant's own footage.
+The current loop is original: it is generated from code (crispy chicken, warm backlight, steam) by
+`sh tools/hero-video/render.sh`, which needs `pip install pillow numpy scipy` and ffmpeg. To use real
+footage instead, replace the three files in `assets/video/`.
 
 Put the video in `assets/video/` and set `heroVideo` in `js/config.js`
 (`mp4`, optional `webm`, and a `poster` image shown before it plays and when motion is reduced).

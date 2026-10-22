@@ -33,8 +33,7 @@ window.CONFIG = {
   // Delivery: flat fee in MAD and maximum straight-line distance from the restaurant.
   delivery: { fee: 30, maxKm: 3 },
   // Full-bleed hero video (MP4, plus an optional WebM and a poster image). Empty = branded background.
-  // TO REPLACE: the current clip is the watermarked iStock preview (1921631984), not licensed for the live
-  // site. Swap in the licensed download or the restaurant's own footage (same file names).
+  // The current loop is generated from code (tools/hero-video); replace the files to use real footage.
   heroVideo: { mp4: "/assets/video/hero.mp4", webm: "/assets/video/hero.webm", poster: "/assets/video/hero-poster.jpg" },
   // Share-preview image (a food photo once available).
   shareImage: "assets/logo-1200.png",
