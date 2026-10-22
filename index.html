@@ -1384,10 +1384,12 @@
       </div>
     </section>
 
-    <!-- Two tilted bands crossing between the hero and the menu: the categories in front, the essentials behind. -->
+    <!-- A strip of torn white paper between the hero and the menu, the categories moving across it. -->
     <div class="bands" id="cat-band">
-      <nav class="band band--front" aria-label="Catégories du menu" data-i18n-label="menu.categories"><div class="band__track" id="band-front"></div></nav>
-      <div class="band band--back" aria-hidden="true"><div class="band__track" id="band-back"></div></div>
+      <nav class="paper" aria-label="Catégories du menu" data-i18n-label="menu.categories">
+        <div class="paper__rim" aria-hidden="true"></div>
+        <div class="paper__sheet"><div class="band__track" id="band-front"></div></div>
+      </nav>
     </div>
 
     <section class="menu" id="menu" aria-labelledby="menu-title">

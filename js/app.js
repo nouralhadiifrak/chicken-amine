@@ -286,15 +286,11 @@
     }).join("");
   }
 
-  // The two moving bands between the hero and the menu. Each track holds its list twice so the loop has
-  // no gap; the copy is hidden from screen readers and the keyboard. Front: the categories (tap to open).
-  // Back: the essentials, decorative.
+  // The torn-paper strip between the hero and the menu: the categories move across it (tap to open).
+  // The track holds the list twice so the loop has no gap; the copy is hidden from screen readers and the keyboard.
   function renderBand() {
     const cats = (copy) => MENU.map((c) => `<button class="band__item" type="button" data-open-cat="${c.id}"${copy ? ' tabindex="-1"' : ""}>${esc(L(c))}</button>`).join("");
     $("#band-front").innerHTML = `<div class="band__group">${cats(false)}</div><div class="band__group" aria-hidden="true">${cats(true)}</div>`;
-    const words = t("bands.info").split("|");
-    const info = () => `<div class="band__group">${[...words, ...words].map((w) => `<span class="band__item">${esc(w)}</span>`).join("")}</div>`;
-    $("#band-back").innerHTML = info() + info();
   }
 
   function renderDetail() {
