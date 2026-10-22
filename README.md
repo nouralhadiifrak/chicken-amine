@@ -47,7 +47,8 @@ come from the category's `emoji`, or the item's own `emoji`.
 
 ### Dish photos
 
-Each dish shows its emoji on a tile until it has a photo: put a square photo (about 320 × 320) in
+86 dishes have a photo (from the restaurant's Yassir listing, in `assets/photos/<dish id>.webp`, 600 × 450),
+and each category uses one as its cover (`cat-<category>.webp`). A dish without one shows its emoji on a tile: put a square photo (about 320 × 320) in
 `assets/photos/` and set the dish's `image` in `js/menu-data.js`, e.g. `image: "assets/photos/tacos-mixte.jpg"`.
 
 ### Hero video

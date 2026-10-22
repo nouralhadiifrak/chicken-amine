@@ -92,6 +92,8 @@ async function testCategories(page, label) {
   const home = await page.evaluate(() => ({ tiles: document.querySelectorAll(".cat-tile").length, detail: document.querySelector("#menu-detail").hidden, items: document.querySelectorAll(".item").length }));
   check(home.tiles === 19 && home.detail && home.items === 0, `${label}: menu shows only the 19 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
 
+  const covers = await page.$$eval(".cat-tile img", (is) => is.length);
+  check(covers === 19, `${label}: all 19 category tiles have a photo cover`);
   // A tile opens that category alone.
   await page.click('.cat-tile[data-open-cat="tacos"]');
   await page.waitForTimeout(700);
@@ -242,6 +244,12 @@ async function main() {
         });
         check(card.cols === 2 && card.full, `${label}: dishes are cards like the category tiles, ${card.cols} per row, picture on top`);
       }
+      await page.waitForFunction(() => { const i = document.querySelector('.item[data-item="tc-mixte"] .item__thumb img'); return i && i.complete; }, null, { timeout: 5000 }).catch(() => {});
+      const photo = await page.evaluate(() => {
+        const i = document.querySelector('.item[data-item="tc-mixte"] .item__thumb img');
+        return i ? i.naturalWidth : 0;
+      });
+      check(photo > 0, `${label}: Tacos Mixte shows its photo (${photo} px wide)`);
       // Sauces first: nothing is added and nothing flies until the sauce sheet is settled.
       await page.click('.item[data-item="tc-mixte"] [data-add]');
       await page.waitForSelector("#sauce-dialog[open]", { timeout: 2000 });
