@@ -54,6 +54,7 @@
   }
 
   function play(el) {
+    if (!el || el.dataset.stSkip) return;
     if (reduced.matches || !el || el.dataset.stReady !== "1" || el.dataset.stPlayed === "1") return;
     el.dataset.stPlayed = "1";
     const units = Array.from(el.querySelectorAll(".st-unit"));
@@ -104,7 +105,7 @@
       }, { rootMargin: "0px 0px -8% 0px" });
     }
     (root || document).querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((h) => {
-      if (h.closest("dialog")) return;
+      if (h.closest("dialog") || h.dataset.stSkip) return;
       prepare(h);
       // data-st-manual: prepared here, played by the page itself (the hero title plays after the intro).
       if (h.dataset.stPlayed !== "1" && h.dataset.stManual !== "1") observer.observe(h);

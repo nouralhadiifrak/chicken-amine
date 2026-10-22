@@ -289,18 +289,20 @@ html.no-intro .intro { display: none; }
 .sheet .btn { --trail-a: var(--red); --trail-b: var(--yellow); }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-/* ---------- Hero ---------- */
-.hero__title { text-transform: uppercase; }
+/* ---------- Hero: signed title, buttons, the turning plate resting on the paper strip ---------- */
 .hero {
+  --plate: min(76vw, 360px);
   position: relative;
   min-height: calc(100svh - var(--header-h));
-  display: grid;
-  align-items: end;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
+@media (min-width: 760px) { .hero { --plate: min(46vh, 440px); } }
 .hero__media {
   position: absolute;
   top: 0; right: 0; bottom: 0; left: 0;
+  overflow: hidden;
   background:
     radial-gradient(120% 80% at 80% 10%, rgba(251, 186, 0, 0.35), transparent 60%),
     linear-gradient(160deg, var(--red) 0%, var(--red-dark) 60%, var(--red-deep) 100%);
@@ -310,74 +312,50 @@ html.no-intro .intro { display: none; }
   position: absolute;
   top: 0; right: 0; bottom: 0; left: 0;
   background: url("/assets/rooster.png") no-repeat right -8% top 12% / auto 62%;
-  opacity: 0.16;
+  opacity: 0.12;
 }
 [dir="rtl"] .hero__media::after { background-position: left -8% top 12%; transform: scaleX(-1); }
-.hero__media video {
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.hero__media.has-video::after { display: none; }
-.hero__shade {
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 30%, rgba(0, 0, 0, 0.65) 100%);
-}
-/* Over the video the text needs more contrast: an overall veil on phones, a fade from the text side on wide screens. */
-.hero__media.has-video + .hero__shade {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.75) 100%);
-}
-@media (min-width: 900px) {
-  .hero__media.has-video + .hero__shade {
-    background:
-      linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.45) 38%, rgba(0, 0, 0, 0) 70%),
-      linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%);
-  }
-  [dir="rtl"] .hero__media.has-video + .hero__shade {
-    background:
-      linear-gradient(270deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.45) 38%, rgba(0, 0, 0, 0) 70%),
-      linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%);
-  }
-}
 .hero__content {
   position: relative;
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 18px 156px; /* room for the floating Instagram button and order bar */
+  /* the plate sits below: leave its visible height free */
+  padding: 28px 18px calc(var(--plate) * 0.9 + 24px);
+  text-align: center;
 }
-@media (min-width: 760px) { .hero__content { padding-bottom: 64px; } }
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 14px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: var(--white);
-  color: var(--black);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.status__dot { width: 10px; height: 10px; border-radius: 50%; background: #9a9a9a; }
-.status.is-open .status__dot { background: #19b34a; box-shadow: 0 0 0 4px rgba(25, 179, 74, 0.2); }
-.status.is-closed .status__dot { background: var(--red); }
 .hero__title {
-  font-size: clamp(2.3rem, 9vw, 4.6rem);
-  font-weight: 800;
-  max-width: 14ch;
-  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.35);
+  margin: 0 auto 22px;
+  max-width: 16ch;
+  font-family: "Great Vibes", cursive;
+  font-weight: 400;
+  font-size: clamp(2.9rem, 13vw, 5.6rem);
+  line-height: 1.05;
+  color: var(--white);
+  text-shadow: 0 4px 22px rgba(0, 0, 0, 0.35);
 }
-.hero__lead {
-  max-width: 46ch;
-  margin: 14px 0 26px;
-  font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.95);
+[dir="rtl"] .hero__title { font-family: "Aref Ruqaa", "Cairo", serif; font-weight: 700; font-size: clamp(2.3rem, 10vw, 4.4rem); line-height: 1.5; }
+/* written in like a signature: revealed along the line */
+.hero__title.is-signed { animation: sign 1.6s cubic-bezier(.55,.1,.35,1) both; }
+[dir="rtl"] .hero__title.is-signed { animation-name: sign-rtl; }
+@keyframes sign { from { clip-path: inset(-20% 100% -20% 0); } to { clip-path: inset(-20% 0 -20% 0); } }
+@keyframes sign-rtl { from { clip-path: inset(-20% 0 -20% 100%); } to { clip-path: inset(-20% 0 -20% 0); } }
+.hero__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+.hero__plate {
+  position: absolute;
+  z-index: 3; /* above the paper strip */
+  left: 50%;
+  bottom: calc(var(--plate) * -0.1);
+  width: var(--plate);
+  height: var(--plate);
+  margin-left: calc(var(--plate) / -2);
+  border-radius: 50%;
+  overflow: hidden;
+  background: #151515 url("/assets/video/plate-poster.jpg") center / cover;
+  box-shadow: 0 26px 36px -12px rgba(0, 0, 0, 0.6), 0 0 0 6px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
 }
-.hero__actions { display: flex; flex-wrap: wrap; gap: 14px; }
+.hero__plate video { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* ---------- Sections ---------- */
 .section-title {
@@ -1009,7 +987,7 @@ html { scrollbar-color: var(--yellow) var(--red-dark); }
   .intro { display: none; }
   .st-pending .st-unit { opacity: 1; }
   .cart-ico__body { animation: none !important; }
-  #options-dialog[open], #sauce-dialog[open], .bump { animation: none !important; }
+  #options-dialog[open], #sauce-dialog[open], .bump, .hero__title.is-signed { animation: none !important; }
   .band__track { animation: none; }
 }
 

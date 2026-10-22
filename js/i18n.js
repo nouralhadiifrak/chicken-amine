@@ -10,8 +10,7 @@ window.I18N = {
     langToggleLabel: "Afficher le site en arabe",
     nav: { menu: "Menu", infos: "Infos pratiques" },
     hero: {
-      title: "Le meilleur chicken de Casablanca",
-      lead: "Tacos, broasters, burgers, pizzas et plats à Sidi Moumen Al Houda. Ouvert tous les jours, de midi à minuit.",
+      title: "Les meilleurs plats à Casablanca",
       order: "Commander",
       location: "Voir la localisation",
     },
@@ -123,8 +122,7 @@ window.I18N = {
     langToggleLabel: "عرض الموقع بالفرنسية",
     nav: { menu: "القائمة", infos: "معلومات عملية" },
     hero: {
-      title: "أحسن تشيكن في الدار البيضاء",
-      lead: "طاكوس، بروستر، برغر، بيتزا وأطباق في سيدي مومن الهدى. مفتوح كل يوم من الزوال حتى منتصف الليل.",
+      title: "أشهى الأطباق في الدار البيضاء",
       order: "اطلب الآن",
       location: "عرض الموقع",
     },

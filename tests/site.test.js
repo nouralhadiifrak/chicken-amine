@@ -189,27 +189,33 @@ async function main() {
 
       // Intro and hero title timing.
       await waitIntro(page);
-      await page.waitForFunction(() => document.querySelector(".hero__title").dataset.stMs, null, { timeout: 4000 });
-      const heroMs = +(await page.$eval(".hero__title", (h) => h.dataset.stMs));
       const introMs = Math.round(await page.evaluate(() => performance.now()));
-      check(heroMs < 1000, `${label}: hero title fully shown in ${heroMs} ms (page ready after ~${introMs} ms incl. intro)`);
-      const units = await page.$$eval(".hero__title .st-unit", (us) => us.map((u) => u.textContent));
-      if (lang === "ar") check(units.every((u) => !/^.$/u.test(u) || units.length < 3), `${label}: Arabic title animates word by word (${units.length} words)`);
-      else check(units.length > 15, `${label}: French title animates letter by letter (${units.length} letters)`);
+      const sign = await page.$eval(".hero__title", (h) => ({
+        signed: h.classList.contains("is-signed"), split: h.querySelectorAll(".st-unit").length,
+        font: getComputedStyle(h).fontFamily, text: h.textContent.trim(),
+      }));
+      const wantFont = lang === "ar" ? /Aref Ruqaa/ : /Great Vibes/;
+      check(sign.signed && sign.split === 0 && wantFont.test(sign.font), `${label}: « ${sign.text} » is written in like a signature (${sign.font.split(",")[0]}), page ready after ~${introMs} ms`);
+      check(lang === "ar" ? /الأطباق/.test(sign.text) : /Les meilleurs plats à Casablanca/.test(sign.text), `${label}: hero keeps only the title and the buttons`);
       const headerLogo = await page.$eval("#header-logo", (i) => getComputedStyle(i).opacity);
       check(headerLogo === "1", `${label}: logo has glided into the header`);
       const layers = await page.$$eval(".intro__layer", (ls) => ls.map((l) => [l.classList[1].replace("intro__", ""), l.naturalWidth > 0, getComputedStyle(l).opacity]));
       check(layers.length === 4 && layers.every(([, ok, op]) => ok && op === "1"), `${label}: intro built the logo from its layers (${layers.map(([n]) => n).join(", ")})`);
-      const video = await page.$eval("#hero-media video", (v) => ({ src: v.currentSrc.split("/").pop(), paused: v.paused, poster: !!v.poster })).catch(() => null);
-      check(video && /^hero\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: hero video plays (${video && video.src})`);
+      const video = await page.$eval("#hero-plate video", (v) => ({ src: v.currentSrc.split("/").pop(), paused: v.paused, poster: !!v.poster })).catch(() => null);
+      check(video && /^plate\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: the plate turns in the hero (${video && video.src})`);
+      const rest = await page.evaluate(() => {
+        const plate = document.querySelector("#hero-plate").getBoundingClientRect(), paper = document.querySelector(".paper__sheet").getBoundingClientRect();
+        return { overlaps: plate.bottom > paper.top && plate.bottom < paper.bottom + 20, above: plate.top < paper.top, round: getComputedStyle(document.querySelector("#hero-plate")).borderTopLeftRadius };
+      });
+      check(rest.overlaps && rest.above && rest.round === "50%", `${label}: the round plate rests on the torn paper strip`);
       const band = await page.evaluate(() => ({
         items: document.querySelectorAll("#band-front .band__group:first-child [data-open-cat]").length,
         front: getComputedStyle(document.querySelector("#band-front")).animationName,
         paper: getComputedStyle(document.querySelector(".paper__sheet")).clipPath.startsWith("polygon") && getComputedStyle(document.querySelector(".paper__sheet")).backgroundColor !== "rgb(0, 0, 0)",
       }));
       check(band.items === 13 && /band/.test(band.front) && band.paper, `${label}: a torn-paper strip carries the ${band.items} categories, moving`);
-      const look = await page.evaluate(() => ({ upper: getComputedStyle(document.querySelector(".hero__title")).textTransform, loc: getComputedStyle(document.querySelector("#location-btn")).backgroundColor }));
-      check(look.upper === "uppercase" && look.loc === "rgb(225, 6, 15)", `${label}: hero title in capitals, « Voir la localisation » in red`);
+      const look = await page.evaluate(() => ({ loc: getComputedStyle(document.querySelector("#location-btn")).backgroundColor }));
+      check(look.loc === "rgb(225, 6, 15)", `${label}: « Voir la localisation » in red`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
 
       // Language, title, description, canonical.
@@ -222,8 +228,7 @@ async function main() {
       check(/Sidi Moumen|سيدي مومن/.test(meta.title) && /Casablanca|الدار البيضاء/.test(meta.title) && /[Tt]acos|طاكوس/.test(meta.title), `${label}: title names the dishes, the neighbourhood and Casablanca`);
       check(meta.canonical.endsWith(lang === "ar" ? "/?lang=ar" : "/"), `${label}: canonical ${meta.canonical}`);
       if (lang === "ar") check(meta.toggle === "Français" && meta.toggleDir === "ltr", `${label}: "Français" toggle keeps left-to-right order`);
-      const status = await page.$eval("#status", (e) => e.className);
-      check(/is-open/.test(status), `${label}: shows open at 14:00 Casablanca time`);
+      check(await page.evaluate(() => window.__chickenAmine.isOpen()), `${label}: open at 14:00 Casablanca time`);
 
       // Hero buttons.
       const loc = await page.$eval("#location-btn", (a) => a.href);
@@ -398,7 +403,7 @@ async function main() {
 
       await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
       await page.waitForTimeout(1300);
-      const heroShown = await page.$eval(".hero__title", (h) => h.textContent.trim().length > 0 && [...h.querySelectorAll(".st-unit")].every((u) => getComputedStyle(u).opacity === "1"));
+      const heroShown = await page.$eval(".hero__title", (h) => h.textContent.trim().length > 0 && h.classList.contains("is-signed"));
       check(heroShown, `${label}: hero title shown again after switching language and scrolling back up`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-top.png` });
       check(errors.length === 0, `${label}: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
@@ -411,7 +416,7 @@ async function main() {
   {
     const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr", time: CLOSED_TIME });
     await waitIntro(page);
-    check(/is-closed/.test(await page.$eval("#status", (e) => e.className)), "shows closed at 10:00 Casablanca time");
+    check(!(await page.evaluate(() => window.__chickenAmine.isOpen())), "closed at 10:00 Casablanca time");
     await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
     await addDish(page, "burgers", "bg-cheese", []);
     await page.click("#cart-bar");
@@ -496,7 +501,7 @@ async function main() {
     check(r.intro === "none", "intro skipped");
     check(r.split === 0, "headings not split or animated");
     check(r.btnAnim === "none", "button border trails stopped");
-    check(await page.$eval("#hero-media video", (v) => v.paused && !!v.poster), "hero video stays on its poster");
+    check(await page.$eval("#hero-plate video", (v) => v.paused && !!v.poster), "the plate stays still on its poster");
     check(errors.length === 0, "no JavaScript errors");
     await context.close();
   }
