@@ -475,7 +475,7 @@
 
     // Keep each line's shown numbers so the new ones roll from them.
     const before = new Map($$("#cart-lines .cart-line").map((li) => [li.dataset.key, {
-      total: ($(".cart-line__total .roll", li) || {}).dataset?.v,
+      total: (($(".cart-line__total .roll", li) || {}).dataset || {}).v,
       qty: $(".stepper output", li).dataset.v,
     }]));
     $("#cart-lines").innerHTML = cart.map((l) => {
@@ -691,6 +691,8 @@
   }
 
   function renderCheckout() {
+    // the chosen mode is highlighted by class (older browsers lack :has())
+    $$(".mode__opt").forEach((o) => o.classList.toggle("is-checked", $("input", o).checked));
     const warn = $("#closed-warning");
     warn.hidden = isOpen();
     warn.textContent = t("checkout.closedWarning", { time: C.hours.open });
