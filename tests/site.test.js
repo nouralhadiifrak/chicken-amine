@@ -448,6 +448,27 @@ async function main() {
     await context.close();
   }
 
+  // Older mobile browsers without aspect-ratio (seen on an owner's Android phone): pictures must keep their size.
+  console.log("\nbrowser without aspect-ratio (simulated)");
+  {
+    const css = fs.readFileSync(path.join(ROOT, "css/style.css"), "utf8")
+      .replace("@supports not (aspect-ratio: 1 / 1)", "@media all")
+      .replace(/aspect-ratio:[^;{}]+;/g, "");
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    const page = await context.newPage();
+    await page.route("**/css/style.css", (r) => r.fulfill({ body: css, contentType: "text/css" }));
+    await page.goto(base + "/#categorie-tacos");
+    await page.waitForTimeout(400);
+    const stage = await page.$eval("#intro-stage", (e) => e.getBoundingClientRect().height);
+    await waitIntro(page);
+    const h = { stage, thumb: await page.$eval(".item__thumb", (e) => e.getBoundingClientRect().height) };
+    await page.click("#back-to-cats");
+    await page.waitForTimeout(300);
+    const tile = await page.$eval(".cat-tile__media", (e) => e.getBoundingClientRect().height);
+    check(tile > 80 && h.thumb > 80 && h.stage > 80, `category photos (${Math.round(tile)} px), dish photos (${Math.round(h.thumb)} px) and the intro logo keep their height`);
+    await context.close();
+  }
+
   // Reduced motion: no intro, no heading animation.
   console.log("\nreduced motion");
   {
