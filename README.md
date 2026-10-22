@@ -53,11 +53,10 @@ and each category uses one as its cover (`cat-<category>.webp`). A dish without 
 
 ### Hero video
 
-The current clip (`assets/video/`) is the watermarked iStock preview 1921631984, a stand-in that is not
-licensed for the live site: replace it with the licensed download or the restaurant's own footage.
-
-Put the video in `assets/video/` and set `heroVideo` in `js/config.js`
-(`mp4`, optional `webm`, and a `poster` image shown before it plays and when motion is reduced).
+The hero shows the turning plate with flying fries (`assets/video/hero-plate.webm` / `.mp4`, 720 × 760,
+poster `hero-plate-poster.jpg`, set in `plateVideo` in `js/config.js`), cut from the supplied vertical
+video without its drawn-in title and buttons; the real title and buttons sit above and below it on
+phones, and to its left on PC. The hero background matches the video's dark backdrop.
 
 ## After changing the code
 

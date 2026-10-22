@@ -45,6 +45,7 @@
   }
   function updateStatus() {
     const el = $("#status");
+    if (!el) return;
     const open = isOpen();
     el.classList.toggle("is-open", open);
     el.classList.toggle("is-closed", !open);
@@ -93,12 +94,21 @@
     if (window.SpringText) SpringText.observe(document.querySelector("main"));
   }
 
+  // The hero title is written in, like a signature (again after a language switch).
+  function signTitle() {
+    const title = $(".hero__title");
+    title.classList.remove("is-signed");
+    void title.offsetWidth;
+    title.classList.add("is-signed");
+  }
+
   function switchLanguage() {
     lang = lang === "ar" ? "fr" : "ar";
     const url = new URL(location.href);
     if (lang === "ar") url.searchParams.set("lang", "ar"); else url.searchParams.delete("lang");
     history.replaceState(null, "", url.pathname + url.search + url.hash);
     applyLanguage();
+    signTitle();
     // Headings already on screen replay at once.
     $$("main h1, main h2, main h3").forEach((h) => {
       const r = h.getBoundingClientRect();
@@ -118,11 +128,11 @@
     $("#map-embed").src = "https://maps.google.com/maps?q=" + encodeURIComponent(C.googleMapsQuery) + "&z=16&output=embed";
   }
 
-  /* ---------- Hero video ---------- */
+  /* ---------- Hero: the turning plate ---------- */
   function setupHero() {
-    const v = C.heroVideo || {};
+    const v = C.plateVideo || {};
     if (!v.mp4 && !v.webm) return;
-    const media = $("#hero-media");
+    const media = $("#hero-plate");
     const video = document.createElement("video");
     video.muted = true;
     video.loop = true;
@@ -133,7 +143,6 @@
     if (v.webm) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.webm)}" type="video/webm">`);
     if (v.mp4) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.mp4)}" type="video/mp4">`);
     media.appendChild(video);
-    media.classList.add("has-video");
     if (reducedMotion.matches) return; // poster only
     video.autoplay = true;
     video.play().catch(() => {});
@@ -150,10 +159,7 @@
       target.style.opacity = "";
       intro.classList.add("is-done");
       document.documentElement.classList.add("no-intro");
-      // After the intro the hero title behaves like any heading (it replays on language switch when in view).
-      const title = $(".hero__title");
-      delete title.dataset.stManual;
-      SpringText.play(title);
+      signTitle();
       SpringText.observe(document.querySelector("main"));
     };
     if (reducedMotion.matches || !intro.animate) { finish(); return; }

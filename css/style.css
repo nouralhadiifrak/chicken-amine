@@ -289,95 +289,77 @@ html.no-intro .intro { display: none; }
 .sheet .btn { --trail-a: var(--red); --trail-b: var(--yellow); }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-/* ---------- Hero ---------- */
-.hero__title { text-transform: uppercase; }
+/* ---------- Hero: dark like the plate video; phone: title / plate / buttons, PC: text left, plate right ---------- */
 .hero {
   position: relative;
   min-height: calc(100svh - var(--header-h));
-  display: grid;
-  align-items: end;
-  overflow: hidden;
-}
-.hero__media {
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  background:
-    radial-gradient(120% 80% at 80% 10%, rgba(251, 186, 0, 0.35), transparent 60%),
-    linear-gradient(160deg, var(--red) 0%, var(--red-dark) 60%, var(--red-deep) 100%);
-}
-.hero__media::after {
-  content: "";
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  background: url("/assets/rooster.png") no-repeat right -8% top 12% / auto 62%;
-  opacity: 0.16;
-}
-[dir="rtl"] .hero__media::after { background-position: left -8% top 12%; transform: scaleX(-1); }
-.hero__media video {
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.hero__media.has-video::after { display: none; }
-.hero__shade {
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 30%, rgba(0, 0, 0, 0.65) 100%);
-}
-/* Over the video the text needs more contrast: an overall veil on phones, a fade from the text side on wide screens. */
-.hero__media.has-video + .hero__shade {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.75) 100%);
-}
-@media (min-width: 900px) {
-  .hero__media.has-video + .hero__shade {
-    background:
-      linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.45) 38%, rgba(0, 0, 0, 0) 70%),
-      linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%);
-  }
-  [dir="rtl"] .hero__media.has-video + .hero__shade {
-    background:
-      linear-gradient(270deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.45) 38%, rgba(0, 0, 0, 0) 70%),
-      linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%);
-  }
-}
-.hero__content {
-  position: relative;
-  width: 100%;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 32px 18px 156px; /* room for the floating Instagram button and order bar */
-}
-@media (min-width: 760px) { .hero__content { padding-bottom: 64px; } }
-.status {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 14px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: var(--white);
-  color: var(--black);
-  font-weight: 600;
-  font-size: 0.9rem;
+  overflow: hidden;
+  /* the video's own charcoal background, a little lighter around the plate */
+  background:
+    radial-gradient(70% 55% at 50% 52%, #24221d 0%, #15140f 55%, #080808 100%);
 }
-.status__dot { width: 10px; height: 10px; border-radius: 50%; background: #9a9a9a; }
-.status.is-open .status__dot { background: #19b34a; box-shadow: 0 0 0 4px rgba(25, 179, 74, 0.2); }
-.status.is-closed .status__dot { background: var(--red); }
+.hero__inner {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 0 64px;
+  display: grid;
+  grid-template-areas: "title" "plate" "actions";
+  justify-items: center;
+  text-align: center;
+}
 .hero__title {
-  font-size: clamp(2.3rem, 9vw, 4.6rem);
-  font-weight: 800;
-  max-width: 14ch;
-  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.35);
+  grid-area: title;
+  margin: 0;
+  padding: 0 18px;
+  max-width: 16ch;
+  font-family: "Great Vibes", cursive;
+  font-weight: 400;
+  font-size: clamp(2.9rem, 13vw, 5.8rem);
+  line-height: 1.05;
+  color: var(--white);
+  position: relative;
+  z-index: 1;
 }
-.hero__lead {
-  max-width: 46ch;
-  margin: 14px 0 26px;
-  font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.95);
+[dir="rtl"] .hero__title { font-family: "Aref Ruqaa", "Cairo", serif; font-weight: 700; font-size: clamp(2.3rem, 10vw, 4.4rem); line-height: 1.5; }
+/* written in like a signature: revealed along the line */
+.hero__title.is-signed { animation: sign 1.6s cubic-bezier(.55,.1,.35,1) both; }
+[dir="rtl"] .hero__title.is-signed { animation-name: sign-rtl; }
+@keyframes sign { from { clip-path: inset(-20% 100% -20% 0); } to { clip-path: inset(-20% 0 -20% 0); } }
+@keyframes sign-rtl { from { clip-path: inset(-20% 0 -20% 100%); } to { clip-path: inset(-20% 0 -20% 0); } }
+.hero__plate {
+  grid-area: plate;
+  position: relative;
+  width: min(100%, 560px);
+  margin: -8px 0 4px;
+  pointer-events: none;
+  /* the video melts into the background at its edges */
+  -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
 }
-.hero__actions { display: flex; flex-wrap: wrap; gap: 14px; }
+.hero__plate::before { content: ""; display: block; padding-top: 105.56%; } /* 720 x 760 */
+.hero__plate video,
+.hero__plate::after { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.hero__plate video { display: block; object-fit: cover; }
+.hero__plate::after { content: ""; background: url("/assets/video/hero-plate-poster.jpg") center / cover; z-index: -1; }
+.hero__actions { grid-area: actions; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 0 18px; }
+@media (min-width: 900px) {
+  .hero__inner {
+    padding: 32px 24px 72px;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "title plate" "actions plate";
+    grid-template-rows: auto auto;
+    align-content: center;
+    justify-items: start;
+    text-align: start;
+    column-gap: 24px;
+  }
+  .hero__title { align-self: end; padding: 0; max-width: 14ch; font-size: clamp(4rem, 6.2vw, 6.4rem); margin-bottom: 26px; }
+  .hero__actions { align-self: start; padding: 0; justify-content: flex-start; }
+  .hero__plate { justify-self: center; width: min(100%, 78vh, 700px); margin: 0; }
+}
 
 /* ---------- Sections ---------- */
 .section-title {
@@ -1009,7 +991,7 @@ html { scrollbar-color: var(--yellow) var(--red-dark); }
   .intro { display: none; }
   .st-pending .st-unit { opacity: 1; }
   .cart-ico__body { animation: none !important; }
-  #options-dialog[open], #sauce-dialog[open], .bump { animation: none !important; }
+  #options-dialog[open], #sauce-dialog[open], .bump, .hero__title.is-signed { animation: none !important; }
   .band__track { animation: none; }
 }
 
