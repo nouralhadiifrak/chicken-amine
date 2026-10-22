@@ -293,6 +293,12 @@
     $("#band-front").innerHTML = `<div class="band__group">${cats(false)}</div><div class="band__group" aria-hidden="true">${cats(true)}</div>`;
   }
 
+  // A merged category lists its dishes under their original sections (groups); others in one list.
+  function sections(c) {
+    if (!c.groups) return [[null, c.items]];
+    return c.groups.map((g) => [g, c.items.filter((it) => it.group === g.id)]).filter(([, items]) => items.length);
+  }
+
   function renderDetail() {
     const c = catById.get(currentCat);
     if (!c) return;
@@ -301,13 +307,16 @@
       <article class="panel category" id="cat-${c.id}" data-cat="${c.id}">
         <div class="category__media">${c.image ? `<img src="${esc(c.image)}" alt="${esc(L(c))}" width="1200" height="571">` : illustration(c.icon)}</div>
         <h3 class="category__title">${esc(L(c))}</h3>
-        <ul class="items">${c.items.map((it) => `
+        <div class="category__body">${sections(c).map(([g, items], i) => `
+          ${g && !(i === 0 && L(g) === L(c)) ? `<h4 class="items__group">${rich(L(g))}</h4>` : ""}
+          <ul class="items">${items.map((it) => `
           <li class="item" data-item="${it.id}">
             ${thumbFor(it)}
             <p class="item__name">${rich(L(it))}</p>
             ${it.desc ? `<p class="item__desc">${rich(L(it.desc))}</p>` : ""}
             <div class="item__side">${priceLabel(it)}<span class="item__ctl">${controlFor(it)}</span></div>
-          </li>`).join("")}</ul>
+          </li>`).join("")}</ul>`).join("")}
+        </div>
       </article>`;
     requestAnimationFrame(() => centreChip(c.id));
   }
@@ -343,9 +352,12 @@
 
   // Each view has its own address (#categorie-tacos), so the phone's back button returns to the categories.
   const catHash = (id) => (id ? "#categorie-" + id : "#menu");
+  // Sections that were merged into another category keep working as links.
+  const MERGED = Object.fromEntries(MENU.flatMap((c) => (c.groups || []).map((g) => [g.id, c.id])));
   function catFromHash() {
     const m = /^#categorie-(.+)$/.exec(location.hash);
-    return m && catById.has(m[1]) ? m[1] : null;
+    const id = m && (catById.has(m[1]) ? m[1] : MERGED[m[1]]);
+    return id || null;
   }
   function openCategory(id, push = true) {
     if (!catById.has(id)) return;

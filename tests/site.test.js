@@ -90,10 +90,10 @@ async function sentMessage(page) {
 async function testCategories(page, label) {
   // Only the category tiles are shown at first.
   const home = await page.evaluate(() => ({ tiles: document.querySelectorAll(".cat-tile").length, detail: document.querySelector("#menu-detail").hidden, items: document.querySelectorAll(".item").length }));
-  check(home.tiles === 19 && home.detail && home.items === 0, `${label}: menu shows only the 19 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
+  check(home.tiles === 13 && home.detail && home.items === 0, `${label}: menu shows only the 13 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
 
   const covers = await page.$$eval(".cat-tile img", (is) => is.length);
-  check(covers === 19, `${label}: all 19 category tiles have a photo cover`);
+  check(covers === 13, `${label}: all 13 category tiles have a photo cover`);
   // A tile opens that category alone.
   await page.click('.cat-tile[data-open-cat="tacos"]');
   await page.waitForTimeout(700);
@@ -101,9 +101,11 @@ async function testCategories(page, label) {
     hash: location.hash, grid: document.querySelector("#cat-grid").hidden,
     cats: [...document.querySelectorAll("#menu-list .category")].map((c) => c.dataset.cat),
     items: document.querySelectorAll("#menu-list .item").length,
+    groups: [...document.querySelectorAll("#menu-list .items__group")].map((g) => g.textContent.trim()),
     top: document.querySelector("#menu-detail").getBoundingClientRect().top,
   }));
-  check(opened.grid && opened.cats.join() === "tacos" && opened.items === 8 && opened.hash === "#categorie-tacos", `${label}: tapping « Tacos » shows its 8 dishes only (${opened.hash})`);
+  check(opened.grid && opened.cats.join() === "tacos" && opened.items === 15 && opened.hash === "#categorie-tacos", `${label}: tapping « Tacos » shows its 15 dishes only (${opened.hash})`);
+  check(opened.groups.length === 1 && /Gratin|غراتيني/.test(opened.groups[0]), `${label}: the gratinés follow under their own heading (« ${opened.groups.join(" / ")} »)`);
   check(opened.top < 300, `${label}: the open category is scrolled into view`);
 
   // Every chip switches the category shown and stays visible in the bar.
@@ -128,7 +130,12 @@ async function testCategories(page, label) {
     if (r.active === id && r.cats === id && r.items === counts[id] && r.hash === "#categorie-" + id && r.chipVisible) ok++;
     else bad.push(`${id} (${JSON.stringify(r)})`);
   }
-  check(ids.length === 19 && ok === ids.length, `${label}: every chip shows its own category with all its dishes (${ok}/${ids.length})${bad.length ? " — " + bad.join(", ") : ""}`);
+  check(ids.length === 13 && ok === ids.length, `${label}: every chip shows its own category with all its dishes (${ok}/${ids.length})${bad.length ? " — " + bad.join(", ") : ""}`);
+
+  // A link to a section that was merged opens the category it now belongs to.
+  await page.evaluate(() => { location.hash = "#categorie-crunchys"; });
+  await page.waitForTimeout(300);
+  check(await page.evaluate(() => document.querySelector("#menu-list .category")?.dataset.cat === "sandwichs"), `${label}: an old « Crunchy's » link opens Sandwichs`);
 
   // « Toutes les catégories » and the browser's back button both return to the tiles.
   await page.click("#back-to-cats");
@@ -200,7 +207,7 @@ async function main() {
         front: getComputedStyle(document.querySelector("#band-front")).animationName,
         paper: getComputedStyle(document.querySelector(".paper__sheet")).clipPath.startsWith("polygon") && getComputedStyle(document.querySelector(".paper__sheet")).backgroundColor !== "rgb(0, 0, 0)",
       }));
-      check(band.items === 19 && /band/.test(band.front) && band.paper, `${label}: a torn-paper strip carries the ${band.items} categories, moving`);
+      check(band.items === 13 && /band/.test(band.front) && band.paper, `${label}: a torn-paper strip carries the ${band.items} categories, moving`);
       const look = await page.evaluate(() => ({ upper: getComputedStyle(document.querySelector(".hero__title")).textTransform, loc: getComputedStyle(document.querySelector("#location-btn")).backgroundColor }));
       check(look.upper === "uppercase" && look.loc === "rgb(225, 6, 15)", `${label}: hero title in capitals, « Voir la localisation » in red`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
@@ -273,7 +280,13 @@ async function main() {
       check(await page.evaluate(() => !JSON.parse(localStorage.getItem("chickenamine.cart.v1")).some((l) => l.id === "tc-poulet")), `${label}: closing the sauce sheet adds nothing`);
       await page.waitForTimeout(200);
       await addDish(page, "tacos", "tc-mixte", []);
-      await addDish(page, "boissons", "bs-soda");
+      // Soda: the brand must be chosen.
+      await openCat(page, "boissons");
+      await page.click('.item[data-item="bs-soda"] [data-add]');
+      await page.click("#options-submit");
+      check((await page.textContent("#options-error")).length > 0 && (await page.$$eval('#options-body input[name="opt-marque"]', (b) => b.length)) === 5, `${label}: a soda asks for one of 5 brands before it is added`);
+      await pick(page, '#options-body input[name="opt-marque"][value="pepsi"]');
+      await page.click("#options-submit");
       // Latin words in Arabic text keep left-to-right order.
       if (lang === "ar") {
         const ltr = await page.$$eval("#menu-list .ltr", (els) => els.map((e) => [e.textContent, getComputedStyle(e).direction]));
@@ -327,8 +340,8 @@ async function main() {
       await page.click("#send-btn");
       const m1 = await sentMessage(page);
       check(m1 && m1.to === "/212634235350", `${label}: pickup order opens WhatsApp to +212634235350`);
-      const pickupOk = m1 && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /169/.test(m1.text) && /Sans oignon/.test(m1.text) && /(Cordon bleu|كوردون بلو)/.test(m1.text) && !/30 (DH|درهم)/.test(m1.text);
-      check(pickupOk, `${label}: pickup message has items, sauces, option, notes, total 169 and no delivery fee`);
+      const pickupOk = m1 && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /169/.test(m1.text) && /Sans oignon/.test(m1.text) && /(Cordon bleu|كوردون بلو)/.test(m1.text) && !/30 (DH|درهم)/.test(m1.text);
+      check(pickupOk, `${label}: pickup message has items, sauces, soda brand, option, notes, total 169 and no delivery fee`);
 
       // Delivery: needs a position, refuses beyond 3 km, accepts inside with a 30 DH fee.
       await pick(page, 'input[name="mode"][value="delivery"]');
@@ -373,7 +386,7 @@ async function main() {
       const want = lang === "ar" ? "fr" : "ar";
       check(after.lang === want && (want === "ar" ? after.url === "?lang=ar" : after.url === "") && after.canonical.endsWith(want === "ar" ? "/?lang=ar" : "/"), `${label}: toggle switches to ${want}, address "${after.url || "/"}"`);
       const rebuilt = await page.evaluate((want) => ({ tiles: document.querySelectorAll(".cat-tile").length, chips: document.querySelectorAll(".chip").length, name: document.querySelector("#menu-list .category__title")?.textContent || "" }), want);
-      check(rebuilt.tiles === 19 && rebuilt.chips === 19 && rebuilt.name.length > 0, `${label}: categories rebuilt after switching language (« ${rebuilt.name.trim()} »)`);
+      check(rebuilt.tiles === 13 && rebuilt.chips === 13 && rebuilt.name.length > 0, `${label}: categories rebuilt after switching language (« ${rebuilt.name.trim()} »)`);
       if (s.name === "desktop") {
         check(await page.$("#header.is-floating"), `${label}: header gets its shadow once the page scrolls`);
         await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
@@ -445,6 +458,27 @@ async function main() {
     const m = await sentMessage(page);
     check(m && /Pizza Test \(L\)/.test(m.text) && /Sauces : Algérienne, Biggy/.test(m.text), "message lists the size and the two sauces");
     check(errors.length === 0, "no JavaScript errors");
+    await context.close();
+  }
+
+  // Older mobile browsers without aspect-ratio (seen on an owner's Android phone): pictures must keep their size.
+  console.log("\nbrowser without aspect-ratio (simulated)");
+  {
+    const css = fs.readFileSync(path.join(ROOT, "css/style.css"), "utf8")
+      .replace("@supports not (aspect-ratio: 1 / 1)", "@media all")
+      .replace(/aspect-ratio:[^;{}]+;/g, "");
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    const page = await context.newPage();
+    await page.route("**/css/style.css", (r) => r.fulfill({ body: css, contentType: "text/css" }));
+    await page.goto(base + "/#categorie-tacos");
+    await page.waitForTimeout(400);
+    const stage = await page.$eval("#intro-stage", (e) => e.getBoundingClientRect().height);
+    await waitIntro(page);
+    const h = { stage, thumb: await page.$eval(".item__thumb", (e) => e.getBoundingClientRect().height) };
+    await page.click("#back-to-cats");
+    await page.waitForTimeout(300);
+    const tile = await page.$eval(".cat-tile__media", (e) => e.getBoundingClientRect().height);
+    check(tile > 80 && h.thumb > 80 && h.stage > 80, `category photos (${Math.round(tile)} px), dish photos (${Math.round(h.thumb)} px) and the intro logo keep their height`);
     await context.close();
   }
 
