@@ -187,15 +187,25 @@ async function main() {
       console.log(`\n${label}`);
       const { page, context, errors } = await newPage(browser, base, { ...s, lang });
 
-      // Intro and hero title timing.
+      // Intro and hero title: the title stays hidden until it is handwritten (no flash of the whole text first).
+      const during = [];
+      for (let i = 0; i < 12; i++) {
+        const v = await page.evaluate(() => ({ done: document.querySelector("#intro").classList.contains("is-done"), vis: getComputedStyle(document.querySelector(".hero__title")).visibility }));
+        if (v.done) break;
+        during.push(v.vis);
+        await page.waitForTimeout(250);
+      }
+      check(during.length > 0 && during.every((v) => v === "hidden"), `${label}: the title is not shown before it is written (${during.length} checks during the intro)`);
       await waitIntro(page);
       const introMs = Math.round(await page.evaluate(() => performance.now()));
+      await page.waitForFunction(() => document.querySelector(".hero__title").classList.contains("is-writing"), null, { timeout: 4000 });
       const sign = await page.$eval(".hero__title", (h) => ({
-        signed: h.classList.contains("is-signed"), split: h.querySelectorAll(".st-unit").length,
-        font: getComputedStyle(h).fontFamily, text: h.textContent.trim(),
+        lines: [...h.querySelectorAll(".hw-line")].map((l) => [getComputedStyle(l).animationName, getComputedStyle(l).animationDelay]),
+        split: h.querySelectorAll(".st-unit").length, font: getComputedStyle(h).fontFamily, text: h.textContent.trim(),
       }));
       const wantFont = lang === "ar" ? /Aref Ruqaa/ : /Great Vibes/;
-      check(sign.signed && sign.split === 0 && wantFont.test(sign.font), `${label}: « ${sign.text} » is written in like a signature (${sign.font.split(",")[0]}), page ready after ~${introMs} ms`);
+      const seq = sign.lines.length >= 2 && sign.lines.every(([n]) => /write/.test(n)) && parseFloat(sign.lines[1][1]) > parseFloat(sign.lines[0][1]);
+      check(seq && sign.split === 0 && wantFont.test(sign.font), `${label}: « ${sign.text} » is handwritten line after line (${sign.lines.length} lines, ${sign.font.split(",")[0]}), page ready after ~${introMs} ms`);
       check(lang === "ar" ? /الأطباق/.test(sign.text) : /Les meilleurs plats à Casablanca/.test(sign.text), `${label}: hero keeps only the title and the buttons`);
       const headerLogo = await page.$eval("#header-logo", (i) => getComputedStyle(i).opacity);
       check(headerLogo === "1", `${label}: logo has glided into the header`);
@@ -405,7 +415,7 @@ async function main() {
 
       await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
       await page.waitForTimeout(1300);
-      const heroShown = await page.$eval(".hero__title", (h) => h.textContent.trim().length > 0 && h.classList.contains("is-signed"));
+      const heroShown = await page.$eval(".hero__title", (h) => h.textContent.trim().length > 0 && h.classList.contains("is-writing"));
       check(heroShown, `${label}: hero title shown again after switching language and scrolling back up`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-top.png` });
       check(errors.length === 0, `${label}: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
