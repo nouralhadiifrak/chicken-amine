@@ -174,6 +174,19 @@
     ["touchstart", "pointerdown", "scroll", "keydown"].forEach((ev) => addEventListener(ev, tryPlay, { passive: true, once: true }));
     document.addEventListener("visibilitychange", () => { if (!document.hidden) tryPlay(); });
     if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && tryPlay())).observe(media);
+    // Extra fries, carrot crumbs and herbs floating on both sides of the plate (cut from the video itself).
+    // x / y: position in % of the plate box; on PC they spread wider (--spread in the CSS).
+    const CRUMBS = [
+      ["fry1", 6, 30, 74, 0], ["herb1", 15, 9, 38, 1.2], ["carrot2", 3, 58, 40, 2.1], ["fry4", 13, 86, 91, 0.6],
+      ["herb2", 22, 70, 49, 2.8], ["fry6", 10, 47, 60, 3.3],
+      ["fry2", 90, 18, 100, 0.4], ["herb4", 82, 6, 30, 1.8], ["carrot1", 94, 50, 70, 2.5], ["fry3", 84, 66, 33, 1.1],
+      ["herb3", 96, 84, 42, 3.0], ["fry5", 78, 92, 55, 0.2],
+    ];
+    const crumbs = document.createElement("div");
+    crumbs.className = "hero__crumbs";
+    crumbs.innerHTML = CRUMBS.map(([n, x, y, w, d]) =>
+      `<img src="/assets/crumbs/${n}.webp" alt="" style="--x:${x};--y:${y};--w:${(w / 720 * 100).toFixed(2)}%;--d:${d}s">`).join("");
+    media.appendChild(crumbs);
     // If the video still will not play, turn the plate of the still frame instead.
     const spin = document.createElement("div");
     spin.className = "hero__spin";
