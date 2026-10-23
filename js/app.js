@@ -94,12 +94,36 @@
     if (window.SpringText) SpringText.observe(document.querySelector("main"));
   }
 
-  // The hero title is written in, like a signature (again after a language switch).
-  function signTitle() {
+  // The hero title is handwritten: hidden until it is written, then each line is inked in turn along the
+  // writing direction, as if with a pen (again after a language switch). Words are never cut, so the
+  // joined-up script stays intact.
+  let writeRun = 0;
+  async function writeTitle() {
+    const run = ++writeRun;
     const title = $(".hero__title");
-    title.classList.remove("is-signed");
+    title.classList.remove("is-writing");
+    const text = t("hero.title");
+    if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
+    if (run !== writeRun) return;
+    // find the lines as the browser wraps them
+    title.innerHTML = text.split(/\s+/).map((w) => `<span class="hw-word">${esc(w)}</span>`).join(" ");
+    const lines = [];
+    $$(".hw-word", title).forEach((w) => {
+      const last = lines[lines.length - 1];
+      if (last && Math.abs(last.top - w.offsetTop) < 4) last.words.push(w.textContent);
+      else lines.push({ top: w.offsetTop, words: [w.textContent] });
+    });
+    // each line takes time in proportion to its length, the next starts as the pen reaches the end
+    let at = 0;
+    title.innerHTML = lines.map((l) => {
+      const s = l.words.join(" ");
+      const ms = Math.round(380 + s.length * 70);
+      const html = `<span class="hw-line" style="--hw-delay:${at}ms;--hw-time:${ms}ms">${esc(s)}</span>`;
+      at += ms - 120;
+      return html;
+    }).join(" ");
     void title.offsetWidth;
-    title.classList.add("is-signed");
+    title.classList.add("is-writing");
   }
 
   function switchLanguage() {
@@ -108,7 +132,7 @@
     if (lang === "ar") url.searchParams.set("lang", "ar"); else url.searchParams.delete("lang");
     history.replaceState(null, "", url.pathname + url.search + url.hash);
     applyLanguage();
-    signTitle();
+    writeTitle();
     // Headings already on screen replay at once.
     $$("main h1, main h2, main h3").forEach((h) => {
       const r = h.getBoundingClientRect();
@@ -169,7 +193,7 @@
       target.style.opacity = "";
       intro.classList.add("is-done");
       document.documentElement.classList.add("no-intro");
-      signTitle();
+      writeTitle();
       SpringText.observe(document.querySelector("main"));
     };
     if (reducedMotion.matches || !intro.animate) { finish(); return; }
@@ -209,13 +233,14 @@
         { opacity: 1, transform: "none" },
       ], { duration: 560, easing: slide });
 
-      // 4. The flower above the name.
+      // 4. The flower grows slowly out of the logo, from its stem (the layer's transform-origin) up.
       await show(layer("sprig"), [
-        { opacity: 0, transform: "translateY(4%) scale(.2) rotate(-20deg)" },
-        { opacity: 1, transform: "translateY(-1%) scale(1.15) rotate(4deg)", offset: 0.65 },
+        { opacity: 0, transform: "scale(.02) rotate(-12deg)" },
+        { opacity: 1, transform: "scale(.25) rotate(-9deg)", offset: 0.15 },
+        { opacity: 1, transform: "scale(.8) rotate(-2deg)", offset: 0.7 },
         { opacity: 1, transform: "none" },
-      ], { duration: 440 });
-      await wait(220);
+      ], { duration: 1500, easing: "cubic-bezier(.33,0,.25,1)" });
+      await wait(260);
 
       // 5. The finished logo glides into its place in the header.
       const from = stage.getBoundingClientRect();
@@ -230,7 +255,7 @@
       finish();
     })().catch(finish);
     // Safety net: never keep the page covered.
-    setTimeout(finish, 5000);
+    setTimeout(finish, 6500);
   }
 
   /* ---------- Placeholder illustrations ---------- */
