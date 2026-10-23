@@ -224,6 +224,8 @@ async function main() {
         return { n: imgs.length, loaded: imgs.every((i) => i.complete && i.naturalWidth > 0), left: imgs.filter((i) => i.getBoundingClientRect().right < cx - p.width * 0.3).length, right: imgs.filter((i) => i.getBoundingClientRect().left > cx + p.width * 0.3).length, moving: getComputedStyle(imgs[0]).animationName };
       });
       check(crumbs.n === 12 && crumbs.loaded && crumbs.left >= 4 && crumbs.right >= 4 && crumbs.moving === "crumb-float", `${label}: fries and herbs float on both sides of the plate (${crumbs.left} left, ${crumbs.right} right)`);
+      const slate = await page.evaluate(() => ({ bg: getComputedStyle(document.querySelector(".hero")).backgroundImage, light: !!document.querySelector("#hero-plate .hero__light") }));
+      check(/slate\.webp/.test(slate.bg) && slate.light, `${label}: hero has the video's dark slate and the light under the plate`);
       if (s.name === "phone") check(lay.stacked, `${label}: phone hero reads title, turning plate, then the buttons`);
       else check(lay.side || lay.dir === "rtl", `${label}: PC hero has the text and buttons on the left, the plate on the right`);
       const band = await page.evaluate(() => ({

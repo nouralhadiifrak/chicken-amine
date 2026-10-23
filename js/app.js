@@ -165,6 +165,7 @@
     if (v.poster) video.poster = v.poster;
     if (v.webm) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.webm)}" type="video/webm">`);
     if (v.mp4) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.mp4)}" type="video/mp4">`);
+    media.insertAdjacentHTML("afterbegin", '<div class="hero__light"></div>');
     media.appendChild(video);
     // The slow turn is the point of the hero, so it runs even with reduced motion (nothing flashes or moves
     // across the screen).
