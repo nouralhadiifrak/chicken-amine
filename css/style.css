@@ -364,22 +364,24 @@ html.no-intro .intro { display: none; }
 .hero__plate video { display: block; object-fit: cover; }
 .hero__plate::after { content: ""; background: url("/assets/video/hero-plate-poster.jpg") center / cover; z-index: -1; }
 /* Fallback when a browser will not play the video: the plate of the still frame turns (clockwise, one
-   turn in 15 s like the video). The circle covers the whole plate: centre 349.5 / 346, radius 272 of 720 x 760. */
+   turn in 15 s like the video). The circle covers the whole plate and its bowl (centre 349.5 / 346, radius
+   282 of 720 x 760); behind it, a still frame with the plate painted out, so no piece of it stays still. */
 .hero__spin {
   display: none;
   position: absolute;
-  left: 10.76%;
-  top: 9.74%;
-  width: 75.56%;
-  height: 71.58%;
+  left: 9.375%;
+  top: 8.42%;
+  width: 78.33%;
+  height: 74.21%;
   border-radius: 50%;
-  background: url("/assets/video/hero-plate-poster.jpg") 44.03% 34.26% / 132.35% 139.71% no-repeat;
-  -webkit-mask-image: radial-gradient(closest-side, #000 94%, transparent 100%);
-  mask-image: radial-gradient(closest-side, #000 94%, transparent 100%);
+  background: url("/assets/video/hero-plate-poster.jpg") 43.27% 32.65% / 127.66% 134.75% no-repeat;
+  -webkit-mask-image: radial-gradient(closest-side, #000 95%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 95%, transparent 100%);
   animation: plate-turn 15s linear infinite;
 }
 .hero__plate.is-spinning .hero__spin { display: block; }
 .hero__plate.is-spinning video { visibility: hidden; }
+.hero__plate.is-spinning::after { background-image: url("/assets/video/hero-plate-bg.jpg"); }
 @keyframes plate-turn { to { transform: rotate(360deg); } }
 .hero__actions { grid-area: actions; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 0 18px; }
 @media (min-width: 900px) {
