@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /avis/
 Disallow: /print/
+Disallow: /credits/
 
 Sitemap: https://chicken-amine-theta.vercel.app/sitemap.xml

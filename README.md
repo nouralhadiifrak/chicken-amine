@@ -1,11 +1,13 @@
 # CHICKEN AMINE
 
-One-page website for Chicken Amine, a fast-food restaurant in Sidi Moumen Al Houda, Casablanca.
+One-page website for Chicken Amine, a fast-food restaurant with two locations in Casablanca: Sidi Moumen Al Houda and Avenue Bouchaib Doukkali.
 Plain HTML, CSS and JavaScript with no build step, hosted on Vercel from this repository.
 
 - French (default) and Arabic (right-to-left, at `/?lang=ar`) with a language toggle
 - Full menu with prices in MAD, a sticky category bar, a photo (or placeholder illustration) per category
-- Cart saved in the browser, then pickup or delivery (Leaflet map, 3 km, 30 DH), and the order is sent on WhatsApp
+- On the first visit the customer picks a restaurant (the nearest, with their GPS); its phone, WhatsApp, Instagram, map and delivery area are used everywhere
+- Cart saved in the browser, then pickup or delivery (Leaflet map, 3 km from the chosen restaurant, 10 DH), and the order is sent to that restaurant's WhatsApp
+- Dishes served on some days only (`available`, e.g. the couscous on Fridays 12:00 – 17:00) cannot be ordered outside those hours
 - Open/closed status in Casablanca time, Google map, phone, Instagram
 - `/avis/` forwards the table cards' QR code to the Google review link
 
@@ -20,7 +22,7 @@ python3 -m http.server 8000
 
 | What | File |
 | --- | --- |
-| Phone, WhatsApp, hours, address, map position, delivery fee and range, review link, hero video, site address | `js/config.js` |
+| The two restaurants (phone, WhatsApp, Instagram, address, map link and position), hours, delivery fee and range, review link, hero video, site address | `js/config.js` |
 | Menu: dishes, categories, prices, options, sauces, category photos | `js/menu-data.js` |
 | Interface text (French / Arabic), page titles and descriptions | `js/i18n.js` |
 | Page logic | `js/app.js` |
@@ -47,7 +49,9 @@ come from the category's `emoji`, or the item's own `emoji`.
 
 ### Dish photos
 
-86 dishes have a photo (from the restaurant's Yassir listing, in `assets/photos/<dish id>.webp`, 600 × 450),
+Every dish has a photo (`assets/photos/<dish id>.webp`, 600 × 450): most are the restaurant's own (from its Yassir listing);
+48 are freely licensed stand-ins from Openverse, credited in `assets/photos/credits.json` and on `/credits/`
+(regenerate with `node tools/build-credits.js`); replace them with the restaurant's photos when available,
 and each category uses one as its cover (`cat-<category>.webp`). A dish without one shows its emoji on a tile: put a square photo (about 320 × 320) in
 `assets/photos/` and set the dish's `image` in `js/menu-data.js`, e.g. `image: "assets/photos/tacos-mixte.jpg"`.
 
