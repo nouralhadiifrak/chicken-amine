@@ -7,7 +7,7 @@ Repo: nouralhadiifrak/chicken-amine. Work on branch claude/serene-hypatia-bipryk
 Live: https://chicken-amine-theta.vercel.app (Vercel auto-deploys ~30 s after a merge into main).
 
 Stack: plain HTML/CSS/JS, no framework.
-Files: index.html, css/style.css, js/config.js, js/menu-data.js (14 categories, 142 dishes, prices from the October 2026 paper menu), js/i18n.js, js/app.js, js/kit.js, js/spring-text.js.
+Files: index.html, css/style.css, js/config.js, js/menu-data.js (14 categories, 138 dishes, prices from the October 2026 paper menu), js/i18n.js, js/app.js, js/kit.js, js/spring-text.js.
 Languages: French by default, Arabic RTL at /?lang=ar.
 Tests: run `node tests/site.test.js` (Playwright, 390 px and 1280 px, FR and AR) and check screenshots before every PR.
 After any code change, raise the ?v= number on the CSS/JS links in index.html.
@@ -23,7 +23,8 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 - Torn white paper strip with the categories moving across it.
 - Two restaurants: chosen on the first visit (GPS finds the nearest), remembered, changeable from the header pin. Phone, WhatsApp, Instagram, map and delivery area follow the choice.
 - Menu: 14 photo tiles; on phones, dishes are 2-per-row cards. Couscous only on Fridays 12:00 – 17:00.
-- Dish photos: only the restaurant's own (from Yassir); dishes without one show emoji tiles. Never use photos from elsewhere.
+- Dish photos: only the restaurant's own (Yassir and photos sent by the owner); a dish may reuse a photo of the same kind of dish; dishes without one show emoji tiles. Never use photos from elsewhere. A long press (phone) or a click (PC) shows a dish photo big.
+- Plats: each has its description; plats with "pâtes sauce champignon ou blanche" ask for the sauce first (plus the tacos / burger / pasticcio for the Amine plats).
 - Ordering: round + buttons; sauces chosen first (max 2), then emojis fly to the cart; soda asks for its brand.
 - Cart: rolling numbers, bin icon at quantity 1; WhatsApp order, pickup or delivery (map, 3 km from the chosen restaurant, 10 DH).
 

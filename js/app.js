@@ -453,7 +453,6 @@
     $("#catbar-track").innerHTML = MENU.map((x) => `<button class="chip${x.id === c.id ? " is-active" : ""}" type="button" data-cat="${x.id}"${x.id === c.id ? ' aria-current="true"' : ""}>${rich(L(x))}</button>`).join("");
     $("#menu-list").innerHTML = `
       <article class="panel category" id="cat-${c.id}" data-cat="${c.id}">
-        <div class="category__media">${c.image ? `<img src="${esc(c.image)}" alt="${esc(L(c))}" width="1200" height="571">` : illustration(c.icon)}</div>
         <h3 class="category__title">${esc(L(c))}</h3>
         ${c.available ? `<p class="category__note">${rich(cap(availText(c.available, "menu.onlyOn")))}</p>` : ""}
         <div class="category__body">${sections(c).map(([g, items], i) => `
@@ -679,7 +678,7 @@
     const list = [it.emoji || it.cat.emoji || "🍽️"];
     const d = it.desc ? it.desc.fr.toLowerCase() : "";
     if (/frites/.test(d)) list.push("🍟");
-    if (/boisson|coca/.test(d)) list.push("🥤");
+    if (/boisson|coca|soda/.test(d)) list.push("🥤");
     if (/jouet/.test(d)) list.push("🧸");
     return list;
   }
@@ -818,6 +817,36 @@
     addLine(line);
     closeDialog($("#options-dialog"));
     sprayEmojis(optionsFrom, it);
+  }
+
+  /* ---------- A dish photo, big: a long press on a phone, a click with a mouse ---------- */
+  function openPhoto(id) {
+    const it = itemById.get(id);
+    if (!it || !it.image) return;
+    $("#photo-img").src = it.image;
+    $("#photo-img").alt = L(it);
+    $("#photo-name").innerHTML = rich(L(it));
+    $("#photo-desc").innerHTML = it.desc ? rich(L(it.desc)) : "";
+    openDialog($("#photo-dialog"));
+  }
+  let pressTimer = null, pointerType = "";
+  function bindPhotos() {
+    const list = $("#menu-list");
+    const photoOf = (e) => { const img = e.target.closest && e.target.closest(".item__thumb img"); return img && img.closest(".item").dataset.item; };
+    const stop = () => { clearTimeout(pressTimer); pressTimer = null; };
+    list.addEventListener("pointerdown", (e) => {
+      pointerType = e.pointerType;
+      const id = photoOf(e);
+      stop();
+      if (id && e.pointerType !== "mouse") pressTimer = setTimeout(() => { pressTimer = null; openPhoto(id); }, 450);
+    });
+    // lifting the finger early, or scrolling, is not a long press
+    ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => list.addEventListener(ev, stop));
+    addEventListener("scroll", stop, { passive: true });
+    list.addEventListener("click", (e) => { const id = photoOf(e); if (id && pointerType === "mouse") openPhoto(id); });
+    // the phone's own menu for images would open on the same long press
+    list.addEventListener("contextmenu", (e) => { if (photoOf(e)) e.preventDefault(); });
+    $("#photo-dialog").addEventListener("click", () => closeDialog($("#photo-dialog")));
   }
 
   /* ---------- Dialog helpers ---------- */
@@ -1043,6 +1072,7 @@
     $("#checkout-form").addEventListener("change", (e) => { if (e.target.name === "mode") renderCheckout(); });
     $("#checkout-form").addEventListener("submit", (e) => { e.preventDefault(); send(); });
     $("#gps-btn").addEventListener("click", useGps);
+    bindPhotos();
     $("#site-btn").addEventListener("click", openSites);
     $("#site-gps").addEventListener("click", findNearestSite);
     $("#site-close").addEventListener("click", () => closeDialog($("#site-dialog")));
