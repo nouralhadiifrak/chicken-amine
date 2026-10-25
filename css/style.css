@@ -587,13 +587,6 @@ html.no-intro .intro { display: none; }
   gap: 22px;
 }
 .category { scroll-margin-top: calc(var(--header-h) + var(--catbar-h) + 12px); overflow: hidden; }
-.category__media {
-  position: relative;
-  background: var(--yellow-soft);
-  overflow: hidden;
-}
-.category__media img { width: 100%; height: 100%; object-fit: cover; }
-.category__media svg { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; }
 .category__title {
   font-size: 1.7rem;
   font-weight: 800;
@@ -630,7 +623,27 @@ html.no-intro .intro { display: none; }
   overflow: hidden;
   background: var(--yellow-soft);
 }
-.item__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.item__thumb img { width: 100%; height: 100%; object-fit: cover; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+@media (hover: hover) { .item__thumb img { cursor: zoom-in; } }
+
+/* A dish photo shown big (long press on a phone, click with a mouse); a tap anywhere closes it. */
+.photo-view {
+  width: min(94vw, 640px);
+  max-width: 94vw;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--white);
+  color: var(--ink);
+}
+.photo-view::backdrop { background: rgba(0, 0, 0, 0.75); }
+.photo-view img { display: block; width: 100%; height: auto; }
+.photo-view__name { margin: 0; padding: 12px 56px 14px 18px; font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; color: var(--red); }
+[dir="rtl"] .photo-view__name { padding: 12px 18px 14px 56px; }
+.photo-view__desc { margin: -8px 0 0; padding: 0 18px 16px; color: var(--muted); }
+.photo-view__desc:empty { display: none; }
+.photo-view__close { position: absolute; top: 10px; inset-inline-end: 10px; background: rgba(255, 255, 255, 0.9); }
 .item__thumb span { font-size: 34px; line-height: 1; }
 .item__name { grid-column: 2; font-weight: 600; margin: 0; align-self: end; }
 .item__desc { grid-column: 2; margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.4; align-self: start; }
@@ -693,11 +706,8 @@ html.no-intro .intro { display: none; }
 .stepper button { display: grid; place-items: center; padding: 0; }
 .stepper .stepper__bin { background: var(--black); }
 
-/* Desktop: one category per row (so the bar always has a single active category), dishes in two columns
-   beside the photo. */
+/* Desktop: one category per row (so the bar always has a single active category), dishes in two columns. */
 @media (min-width: 900px) {
-  .category { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: auto 1fr; }
-  .category__media { grid-row: 1 / span 2; min-height: 100%; }
   .category__title { padding: 20px 22px 4px; }
   .items { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; padding: 4px 14px 14px; align-content: start; }
   .item:nth-child(2) { border-top: 0; }
@@ -706,7 +716,6 @@ html.no-intro .intro { display: none; }
 /* Phones and tablets: the dishes become cards like the category tiles (picture on top, name, price, +). */
 @media (max-width: 899px) {
   .category { background: none; box-shadow: none; border: 0; border-radius: 0; overflow: visible; }
-  .category__media { display: none; }
   .category__title { padding: 4px 4px 12px; color: var(--white); font-size: 1.9rem; }
   .items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; }
   .items__group { margin: 22px 4px 10px; color: var(--yellow); font-size: 1.15rem; }
@@ -1169,9 +1178,6 @@ html { scrollbar-color: var(--yellow) var(--red-dark); }
 .intro__stage::before { content: ""; display: block; padding-top: 51.89%; }
 .cat-tile__media::before { content: ""; display: block; padding-top: 62.5%; }
 .cat-tile__media img { position: absolute; top: 0; left: 0; }
-.category__media::before { content: ""; display: block; padding-top: 47.62%; }
-.category__media img { position: absolute; top: 0; left: 0; }
-@media (min-width: 900px) { .category__media::before { display: none; } }
 @media (max-width: 899px) {
   .item__thumb { position: relative; display: block; }
   .item__thumb::before { content: ""; display: block; padding-top: 62.5%; }

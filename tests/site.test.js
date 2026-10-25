@@ -105,7 +105,7 @@ async function testCategories(page, label) {
   check(home.tiles === 14 && home.detail && home.items === 0, `${label}: menu shows only the 14 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
 
   const covers = await page.$$eval(".cat-tile img", (is) => is.length);
-  check(covers === 13, `${label}: the 13 categories with the restaurant's photos have a photo cover (couscous has none yet)`);
+  check(covers === 14, `${label}: all 14 category tiles have a photo cover`);
   // A tile opens that category alone.
   await page.click('.cat-tile[data-open-cat="tacos"]');
   await page.waitForTimeout(700);
@@ -293,6 +293,26 @@ async function main() {
         return i ? i.naturalWidth : 0;
       });
       check(photo > 0, `${label}: Tacos Mixte shows its photo (${photo} px wide)`);
+      check(!(await page.$(".category__media")), `${label}: no category photo beside the dishes`);
+      // The photo shown big: a long press on a phone (a short tap does nothing), a click with a mouse.
+      await page.waitForTimeout(900); // let the scroll to the category settle: scrolling cancels a long press
+      if (s.name === "phone") {
+        const press = (ms) => page.evaluate(async (ms) => {
+          const img = document.querySelector('.item[data-item="tc-mixte"] .item__thumb img');
+          img.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
+          await new Promise((r) => setTimeout(r, ms));
+          img.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerType: "touch" }));
+        }, ms);
+        await press(120);
+        check(!(await page.$("#photo-dialog[open]")), `${label}: a short tap on a photo does not open it`);
+        await press(650);
+      } else await page.click('.item[data-item="tc-mixte"] .item__thumb img');
+      await page.waitForTimeout(200);
+      const big = await page.evaluate(() => ({ open: !!document.querySelector("#photo-dialog[open]"), w: document.querySelector("#photo-img").getBoundingClientRect().width, name: document.querySelector("#photo-name").textContent }));
+      check(big.open && big.w > (s.name === "phone" ? 340 : 500) && /Mixte|ميكس/.test(big.name), `${label}: ${s.name === "phone" ? "a long press" : "a click"} shows the photo big (${Math.round(big.w)} px, « ${big.name} »)`);
+      await page.click("#photo-dialog");
+      await page.waitForTimeout(200);
+      check(!(await page.$("#photo-dialog[open]")), `${label}: a tap closes the big photo`);
       // Sauces first: nothing is added and nothing flies until the sauce sheet is settled.
       await page.click('.item[data-item="tc-mixte"] [data-add]');
       await page.waitForSelector("#sauce-dialog[open]", { timeout: 2000 });
@@ -321,7 +341,7 @@ async function main() {
       await openCat(page, "boissons");
       await page.click('.item[data-item="bs-soda"] [data-add]');
       await page.click("#options-submit");
-      check((await page.textContent("#options-error")).length > 0 && (await page.$$eval('#options-body input[name="opt-marque"]', (b) => b.length)) === 6, `${label}: a soda asks for one of 6 brands before it is added`);
+      check((await page.textContent("#options-error")).length > 0 && (await page.$$eval('#options-body input[name="opt-marque"]', (b) => b.length)) === 10, `${label}: a soda asks for one of 10 brands before it is added`);
       await pick(page, '#options-body input[name="opt-marque"][value="pepsi"]');
       await page.click("#options-submit");
       // Latin words in Arabic text keep left-to-right order.
@@ -334,18 +354,33 @@ async function main() {
       await addDish(page, "salades", "sal-nicoise");
       await page.waitForTimeout(800);
       check(!(await page.$("#sauce-dialog[open]")), `${label}: no sauce sheet for a salad`);
+      if (s.name === "phone" && lang === "fr") {
+        for (const [cat, id] of [["chawarmas", "ch-normale"], ["broasters", "bro-2"]]) {
+          await addDish(page, cat, id);
+          await page.waitForTimeout(500);
+          check(!(await page.$("#sauce-dialog[open]")), `${label}: no sauce sheet for ${id}`);
+        }
+        // take them out again so the order below stays the same
+        await page.evaluate(() => { const c = JSON.parse(localStorage.getItem("chickenamine.cart.v1")).filter((l) => !["ch-normale", "bro-2"].includes(l.id)); localStorage.setItem("chickenamine.cart.v1", JSON.stringify(c)); });
+        await page.reload();
+        await waitIntro(page);
+        await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
+      }
+      // Chicken Tacos Amine: the tacos and the pâtes sauce are chosen first.
       await openCat(page, "plats");
-      await page.click('.item[data-item="pl-sandwich-amine"] [data-add]');
-      await pick(page, '#options-body input[name="opt-sandwich"][value="thon"]');
+      await page.click('.item[data-item="pl-tacos-amine"] [data-add]');
+      await pick(page, '#options-body input[name="opt-tacos"][value="poulet"]');
       await page.click("#options-dialog .icon-btn");
       await page.waitForTimeout(300);
-      check(await page.evaluate(() => !JSON.parse(localStorage.getItem("chickenamine.cart.v1")).some((l) => l.id === "pl-sandwich-amine")), `${label}: closing the options sheet with ✕ adds nothing`);
-      await page.click('.item[data-item="pl-sandwich-amine"] [data-add]');
-      check(await page.isVisible('#options-body input[name="sauce"]'), `${label}: the options sheet also offers sauces`);
+      check(await page.evaluate(() => !JSON.parse(localStorage.getItem("chickenamine.cart.v1")).some((l) => l.id === "pl-tacos-amine")), `${label}: closing the options sheet with ✕ adds nothing`);
+      await page.click('.item[data-item="pl-tacos-amine"] [data-add]');
+      const tacosChoices = await page.$$eval('#options-body input[name="opt-tacos"]', (b) => b.map((x) => x.value).join());
+      check(tacosChoices === "poulet,nuggets,chicken,viande,sepia,mixte" && await page.isVisible('#options-body input[name="sauce"]'), `${label}: Chicken Tacos Amine offers 6 tacos (${tacosChoices}) and the sauces`);
+      await pick(page, '#options-body input[name="opt-tacos"][value="nuggets"]');
       await page.click("#options-submit");
       const reqErr = await page.textContent("#options-error");
-      check(reqErr.length > 0, `${label}: a required option must be chosen ("${reqErr}")`);
-      await pick(page, '#options-body input[name="opt-sandwich"][value="cordon"]');
+      check(/pâtes|المعكرونة/.test(reqErr), `${label}: the pâtes sauce must be chosen ("${reqErr}")`);
+      await pick(page, '#options-body input[name="opt-pates"][value="blanche"]');
       await page.click("#options-submit");
       await openCat(page, "tacos");
       const badge = await page.textContent('.item[data-item="tc-mixte"] .in-cart');
@@ -368,7 +403,7 @@ async function main() {
       await page.waitForTimeout(700);
       check(!(await page.$(salad)), `${label}: the bin removes the dish`);
       const total = await page.textContent("#totals");
-      check(/142/.test(total), `${label}: subtotal 2×35 + 7 + 65 = 142`);
+      check(/132/.test(total), `${label}: subtotal 2×35 + 7 + 55 = 132`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-cart.png` });
       await page.click("#cart-next");
       await page.fill('input[name="name"]', "Test Client");
@@ -377,8 +412,8 @@ async function main() {
       await page.click("#send-btn");
       const m1 = await sentMessage(page);
       check(m1 && m1.to === "/212634385931", `${label}: pickup order opens the Sidi Moumen WhatsApp, +212634385931`);
-      const pickupOk = m1 && /(Sidi Moumen|سيدي مومن)/.test(m1.text) && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /142/.test(m1.text) && /Sans oignon/.test(m1.text) && /(Cordon bleu|كوردون بلو)/.test(m1.text) && !/10 (DH|درهم)/.test(m1.text);
-      check(pickupOk, `${label}: pickup message names the restaurant, has items, sauces, soda brand, option, notes, total 142 and no delivery fee`);
+      const pickupOk = m1 && /(Sidi Moumen|سيدي مومن)/.test(m1.text) && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /132/.test(m1.text) && /Sans oignon/.test(m1.text) && /(Nuggets|ناجتس)/.test(m1.text) && /(Sauce blanche|الصلصة البيضاء)/.test(m1.text) && !/10 (DH|درهم)/.test(m1.text);
+      check(pickupOk, `${label}: pickup message names the restaurant, has items, sauces, soda brand, tacos and pâtes choices, notes, total 132 and no delivery fee`);
 
       // Delivery: needs a position, refuses beyond 3 km, accepts inside with a 10 DH fee.
       await pick(page, 'input[name="mode"][value="delivery"]');
@@ -391,7 +426,7 @@ async function main() {
       check(!(await sentMessage(page)), `${label}: delivery without a position is not sent`);
       await page.waitForTimeout(700);
       const totalDelivery = await page.textContent("#totals");
-      check(/152/.test(totalDelivery), `${label}: total with 10 DH delivery = 152`);
+      check(/142/.test(totalDelivery), `${label}: total with 10 DH delivery = 142`);
       // Tap the map 1 km east of the restaurant.
       const pt = await page.evaluate(() => {
         const map = document.querySelector("#delivery-map");
@@ -403,8 +438,8 @@ async function main() {
       await page.fill('input[name="address"]', "Rue 12, immeuble 3");
       await page.click("#send-btn");
       const m2 = await sentMessage(page);
-      const deliveryOk = m2 && /10 (DH|درهم)/.test(m2.text) && /152/.test(m2.text) && /maps\.google\.com\/\?q=33\.\d+,-7\.\d+/.test(m2.text) && /Rue 12/.test(m2.text);
-      check(deliveryOk, `${label}: delivery message has fee, total 152, address and map link`);
+      const deliveryOk = m2 && /10 (DH|درهم)/.test(m2.text) && /142/.test(m2.text) && /maps\.google\.com\/\?q=33\.\d+,-7\.\d+/.test(m2.text) && /Rue 12/.test(m2.text);
+      check(deliveryOk, `${label}: delivery message has fee, total 142, address and map link`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-delivery.png` });
 
       // Far point: GPS position about 7 km away.
