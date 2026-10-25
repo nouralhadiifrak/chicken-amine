@@ -98,7 +98,7 @@ window.MENU = [
         desc: { fr: "Pommes de terre, betterave, tomate, thon, chicken, dinde fumée, concombre", ar: "بطاطس، شمندر، طماطم، تون، تشيكن، ديك رومي مدخن، خيار" } },
       { id: "sal-cesar", image: "/assets/photos/sal-cesar.webp", fr: "Salade César", ar: "سلطة سيزر", price: 35,
         desc: { fr: "Salade, tomate, pain, chicken, fromage, maïs, mayonnaise", ar: "خس، طماطم، خبز، تشيكن، جبن، ذرة، مايونيز" } },
-      { id: "sal-amine", fr: "Salade Amine", ar: "سلطة أمين", price: 45, desc: { fr: "Salade, pommes de terre, betterave, tomate, concombre, maïs, thon, chicken, dinde fumée, fromage, pain, mayonnaise, fruits", ar: "خس، بطاطس، شمندر، طماطم، خيار، ذرة، تون، تشيكن، ديك رومي مدخن، جبن، خبز، مايونيز، فواكه" } },
+      { id: "sal-amine", image: "/assets/photos/sal-amine.webp", fr: "Salade Amine", ar: "سلطة أمين", price: 45, desc: { fr: "Salade, pommes de terre, betterave, tomate, concombre, maïs, thon, chicken, dinde fumée, fromage, pain, mayonnaise, fruits", ar: "خس، بطاطس، شمندر، طماطم، خيار، ذرة، تون، تشيكن، ديك رومي مدخن، جبن، خبز، مايونيز، فواكه" } },
     ],
   },
   {
@@ -114,11 +114,11 @@ window.MENU = [
       { id: "nuggets", fr: "Boîtes de Nuggets", ar: "علب الناجتس" },
     ],
     items: [
-      { id: "nb-4", group: "nuggets", fr: "Nuggets – 4 pièces", ar: "ناجتس – 4 قطع", price: 12 },
-      { id: "nb-6", group: "nuggets", fr: "Nuggets – 6 pièces", ar: "ناجتس – 6 قطع", price: 17 },
-      { id: "nb-8", group: "nuggets", fr: "Nuggets – 8 pièces", ar: "ناجتس – 8 قطع", price: 22 },
+      { id: "nb-4", image: "/assets/photos/nb-4.webp", group: "nuggets", fr: "Nuggets – 4 pièces", ar: "ناجتس – 4 قطع", price: 12 },
+      { id: "nb-6", image: "/assets/photos/nb-4.webp", group: "nuggets", fr: "Nuggets – 6 pièces", ar: "ناجتس – 6 قطع", price: 17 },
+      { id: "nb-8", image: "/assets/photos/nb-4.webp", group: "nuggets", fr: "Nuggets – 8 pièces", ar: "ناجتس – 8 قطع", price: 22 },
       { id: "bro-2", group: "broasters", image: "/assets/photos/bro-2.webp", fr: "Broasters – 2 pièces", ar: "بروستر – 2 قطع", price: 24, desc: { fr: "Frites et soda 33 cl", ar: "فريت وصودا 33 cl" } },
-      { id: "nb-10", group: "nuggets", fr: "Nuggets – 10 pièces", ar: "ناجتس – 10 قطع", price: 27 },
+      { id: "nb-10", image: "/assets/photos/nb-4.webp", group: "nuggets", fr: "Nuggets – 10 pièces", ar: "ناجتس – 10 قطع", price: 27 },
       { id: "bro-4", group: "broasters", image: "/assets/photos/bro-4.webp", fr: "Broasters – 4 pièces", ar: "بروستر – 4 قطع", price: 35, desc: { fr: "Frites et soda 33 cl", ar: "فريت وصودا 33 cl" } },
       { id: "bro-6", group: "broasters", image: "/assets/photos/bro-6.webp", fr: "Broasters – 6 pièces", ar: "بروستر – 6 قطع", price: 40, desc: { fr: "Frites et soda 33 cl", ar: "فريت وصودا 33 cl" } },
       { id: "bro-family", group: "broasters", image: "/assets/photos/bro-family.webp", fr: "Broasters Family", ar: "بروستر فاميلي", price: 150,
@@ -219,14 +219,14 @@ window.MENU = [
     fr: "Couscous",
     ar: "كسكس",
     icon: "plate",
-    image: "",
+    image: "/assets/photos/cat-couscous.webp",
     emoji: "🍲",
     sauces: false,
     // Friday lunch only (Casablanca time)
     available: { days: [5], from: "12:00", to: "17:00" },
     items: [
-      { id: "cs-poulet", fr: "Couscous Poulet", ar: "كسكس بالدجاج", price: 45 },
-      { id: "cs-viande", fr: "Couscous Viande", ar: "كسكس باللحم", price: 49 },
+      { id: "cs-poulet", image: "/assets/photos/cs-poulet.webp", fr: "Couscous Poulet", ar: "كسكس بالدجاج", price: 45 },
+      { id: "cs-viande", image: "/assets/photos/cs-viande.webp", fr: "Couscous Viande", ar: "كسكس باللحم", price: 49 },
     ],
   },
   {

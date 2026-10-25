@@ -39,7 +39,7 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 - Exact map position.
 - Tacos Mixte gratiné price is cut off on the menu scan (set to 40 DH, to confirm).
 - Penne Cordon Bleu prices.
-- Photos for the dishes that still show an emoji (and a couscous cover).
+- Photos for the dishes that still show an emoji.
 - Are the Yassir "Ain Sbaa" photos the same restaurant?
 - Plate video may come from Al-Omda.
 - Vercel Hobby plan is non-commercial; Pro may be needed.

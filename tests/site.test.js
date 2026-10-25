@@ -105,7 +105,7 @@ async function testCategories(page, label) {
   check(home.tiles === 14 && home.detail && home.items === 0, `${label}: menu shows only the 14 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
 
   const covers = await page.$$eval(".cat-tile img", (is) => is.length);
-  check(covers === 13, `${label}: the 13 categories with the restaurant's photos have a photo cover (couscous has none yet)`);
+  check(covers === 14, `${label}: all 14 category tiles have a photo cover`);
   // A tile opens that category alone.
   await page.click('.cat-tile[data-open-cat="tacos"]');
   await page.waitForTimeout(700);
