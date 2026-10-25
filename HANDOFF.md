@@ -23,7 +23,7 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 - Torn white paper strip with the categories moving across it.
 - Two restaurants: chosen on the first visit (GPS finds the nearest), remembered, changeable from the header pin. Phone, WhatsApp, Instagram, map and delivery area follow the choice.
 - Menu: 14 photo tiles; on phones, dishes are 2-per-row cards. Couscous only on Fridays 12:00 – 17:00.
-- Dish photos: all dishes have one; 48 are free-licensed stand-ins (credited on /credits/) until the restaurant sends real photos.
+- Dish photos: only the restaurant's own (from Yassir); dishes without one show emoji tiles. Never use photos from elsewhere.
 - Ordering: round + buttons; sauces chosen first (max 2), then emojis fly to the cart; soda asks for its brand.
 - Cart: rolling numbers, bin icon at quantity 1; WhatsApp order, pickup or delivery (map, 3 km from the chosen restaurant, 10 DH).
 
@@ -38,7 +38,7 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 - Exact map position.
 - Tacos Mixte gratiné price is cut off on the menu scan (set to 40 DH, to confirm).
 - Penne Cordon Bleu prices.
-- Real photos for the 48 stand-in dishes.
+- Photos for the dishes that still show an emoji (and a couscous cover).
 - Are the Yassir "Ain Sbaa" photos the same restaurant?
 - Plate video may come from Al-Omda.
 - Vercel Hobby plan is non-commercial; Pro may be needed.

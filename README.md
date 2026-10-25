@@ -49,9 +49,7 @@ come from the category's `emoji`, or the item's own `emoji`.
 
 ### Dish photos
 
-Every dish has a photo (`assets/photos/<dish id>.webp`, 600 × 450): most are the restaurant's own (from its Yassir listing);
-48 are freely licensed stand-ins from Openverse, credited in `assets/photos/credits.json` and on `/credits/`
-(regenerate with `node tools/build-credits.js`); replace them with the restaurant's photos when available,
+Only the restaurant's own photos are used (from its Yassir listing, in `assets/photos/<dish id>.webp`, 600 × 450),
 and each category uses one as its cover (`cat-<category>.webp`). A dish without one shows its emoji on a tile: put a square photo (about 320 × 320) in
 `assets/photos/` and set the dish's `image` in `js/menu-data.js`, e.g. `image: "assets/photos/tacos-mixte.jpg"`.
 

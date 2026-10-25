@@ -105,7 +105,7 @@ async function testCategories(page, label) {
   check(home.tiles === 14 && home.detail && home.items === 0, `${label}: menu shows only the 14 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
 
   const covers = await page.$$eval(".cat-tile img", (is) => is.length);
-  check(covers === 14, `${label}: all 14 category tiles have a photo cover`);
+  check(covers === 13, `${label}: the 13 categories with the restaurant's photos have a photo cover (couscous has none yet)`);
   // A tile opens that category alone.
   await page.click('.cat-tile[data-open-cat="tacos"]');
   await page.waitForTimeout(700);
@@ -665,9 +665,6 @@ async function main() {
     const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
     await page.goto(base + "/avis/");
     check(await page.isVisible("#coming-soon"), "review page shows « Bientôt disponible » while no link is set");
-    await page.goto(base + "/credits/");
-    const credited = await page.$$eval("li", (ls) => ls.filter((l) => l.querySelector('a[rel~="license"]') && l.querySelector("img").naturalWidth > 0).length);
-    check(credited >= 40, `the photo credits page names the author and licence of ${credited} photos`);
     check(errors.length === 0, "no JavaScript errors");
     await context.close();
   }

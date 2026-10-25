@@ -791,7 +791,6 @@ html.no-intro .intro { display: none; }
 
 .footer { text-align: center; padding: 20px 18px 120px; font-size: 0.9rem; background: var(--red-dark); }
 .footer p { margin: 0; }
-.footer__link { display: inline-block; margin-top: 6px; color: inherit; font-size: 0.82rem; opacity: 0.85; }
 
 /* ---------- Floating buttons ---------- */
 .ig-float {
