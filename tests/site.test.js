@@ -3,7 +3,8 @@
  *   npx playwright test is not needed: run with  node tests/site.test.js
  * Serves the site on a local port, then checks phone (390 px) and desktop widths, in French and Arabic:
  * language/SEO tags, the intro, the header, category tiles and the category view, emojis and the
- * sauce sheet, pickup and delivery orders sent to WhatsApp, the closed-hours warning, sizes/sauces/per-piece support, reduced motion and JS errors.
+ * sauce sheet, pickup and delivery orders sent to WhatsApp, the closed-hours warning, sizes/sauces/per-piece support, reduced motion and JS errors,
+ * the choice between the two restaurants (each with its own WhatsApp, Instagram, phone and delivery area) and the Friday-only couscous.
  */
 const http = require("http");
 const fs = require("fs");
@@ -37,8 +38,18 @@ function check(cond, msg) {
 // Casablanca is UTC+1 outside Ramadan (UTC+0 during it): 13:00 UTC is open either way, 09:00 UTC is closed.
 const OPEN_TIME = new Date("2026-10-21T13:00:00Z");
 const CLOSED_TIME = new Date("2026-10-21T09:00:00Z");
+// 2026-10-23 is a Friday: the couscous is served from 12:00 to 17:00.
+const FRIDAY_LUNCH = new Date("2026-10-23T13:00:00Z");
+const FRIDAY_EVENING = new Date("2026-10-23T18:00:00Z");
+const SITE_KEY = "chickenamine.location.v1";
 
-async function newPage(browser, base, { width, height, lang, time = OPEN_TIME, reducedMotion = "no-preference", geo, fixture = false }) {
+// Most checks run with a restaurant already chosen (as on a second visit); null leaves the first-visit choice.
+async function presetSite(context, id = "sidi-moumen") {
+  if (!id) return;
+  await context.addInitScript(([key, id]) => { try { if (!localStorage.getItem(key)) localStorage.setItem(key, id); } catch (e) { /* no storage */ } }, [SITE_KEY, id]);
+}
+
+async function newPage(browser, base, { width, height, lang, time = OPEN_TIME, reducedMotion = "no-preference", geo, fixture = false, site = "sidi-moumen" }) {
   const context = await browser.newContext({
     viewport: { width, height },
     reducedMotion,
@@ -46,6 +57,7 @@ async function newPage(browser, base, { width, height, lang, time = OPEN_TIME, r
     permissions: geo ? ["geolocation"] : [],
     serviceWorkers: "block",
   });
+  await presetSite(context, site);
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -90,10 +102,10 @@ async function sentMessage(page) {
 async function testCategories(page, label) {
   // Only the category tiles are shown at first.
   const home = await page.evaluate(() => ({ tiles: document.querySelectorAll(".cat-tile").length, detail: document.querySelector("#menu-detail").hidden, items: document.querySelectorAll(".item").length }));
-  check(home.tiles === 13 && home.detail && home.items === 0, `${label}: menu shows only the 13 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
+  check(home.tiles === 14 && home.detail && home.items === 0, `${label}: menu shows only the 14 category tiles (${home.tiles} tiles, ${home.items} dishes listed)`);
 
   const covers = await page.$$eval(".cat-tile img", (is) => is.length);
-  check(covers === 13, `${label}: all 13 category tiles have a photo cover`);
+  check(covers === 13, `${label}: the 13 categories with the restaurant's photos have a photo cover (couscous has none yet)`);
   // A tile opens that category alone.
   await page.click('.cat-tile[data-open-cat="tacos"]');
   await page.waitForTimeout(700);
@@ -104,7 +116,7 @@ async function testCategories(page, label) {
     groups: [...document.querySelectorAll("#menu-list .items__group")].map((g) => g.textContent.trim()),
     top: document.querySelector("#menu-detail").getBoundingClientRect().top,
   }));
-  check(opened.grid && opened.cats.join() === "tacos" && opened.items === 15 && opened.hash === "#categorie-tacos", `${label}: tapping « Tacos » shows its 15 dishes only (${opened.hash})`);
+  check(opened.grid && opened.cats.join() === "tacos" && opened.items === 17 && opened.hash === "#categorie-tacos", `${label}: tapping « Tacos » shows its 17 dishes only (${opened.hash})`);
   check(opened.groups.length === 1 && /Gratin|غراتيني/.test(opened.groups[0]), `${label}: the gratinés follow under their own heading (« ${opened.groups.join(" / ")} »)`);
   check(opened.top < 300, `${label}: the open category is scrolled into view`);
 
@@ -130,7 +142,7 @@ async function testCategories(page, label) {
     if (r.active === id && r.cats === id && r.items === counts[id] && r.hash === "#categorie-" + id && r.chipVisible) ok++;
     else bad.push(`${id} (${JSON.stringify(r)})`);
   }
-  check(ids.length === 13 && ok === ids.length, `${label}: every chip shows its own category with all its dishes (${ok}/${ids.length})${bad.length ? " — " + bad.join(", ") : ""}`);
+  check(ids.length === 14 && ok === ids.length, `${label}: every chip shows its own category with all its dishes (${ok}/${ids.length})${bad.length ? " — " + bad.join(", ") : ""}`);
 
   // A link to a section that was merged opens the category it now belongs to.
   await page.evaluate(() => { location.hash = "#categorie-crunchys"; });
@@ -233,7 +245,7 @@ async function main() {
         front: getComputedStyle(document.querySelector("#band-front")).animationName,
         paper: getComputedStyle(document.querySelector(".paper__sheet")).clipPath.startsWith("polygon") && getComputedStyle(document.querySelector(".paper__sheet")).backgroundColor !== "rgb(0, 0, 0)",
       }));
-      check(band.items === 13 && /band/.test(band.front) && band.paper, `${label}: a torn-paper strip carries the ${band.items} categories, moving`);
+      check(band.items === 14 && /band/.test(band.front) && band.paper, `${label}: a torn-paper strip carries the ${band.items} categories, moving`);
       const look = await page.evaluate(() => ({ loc: getComputedStyle(document.querySelector("#location-btn")).backgroundColor }));
       check(look.loc === "rgb(225, 6, 15)", `${label}: « Voir la localisation » in red`);
       check(!(await page.$("#header.is-floating")), `${label}: header has no shadow at the top of the page`);
@@ -309,12 +321,12 @@ async function main() {
       await openCat(page, "boissons");
       await page.click('.item[data-item="bs-soda"] [data-add]');
       await page.click("#options-submit");
-      check((await page.textContent("#options-error")).length > 0 && (await page.$$eval('#options-body input[name="opt-marque"]', (b) => b.length)) === 5, `${label}: a soda asks for one of 5 brands before it is added`);
+      check((await page.textContent("#options-error")).length > 0 && (await page.$$eval('#options-body input[name="opt-marque"]', (b) => b.length)) === 6, `${label}: a soda asks for one of 6 brands before it is added`);
       await pick(page, '#options-body input[name="opt-marque"][value="pepsi"]');
       await page.click("#options-submit");
       // Latin words in Arabic text keep left-to-right order.
       if (lang === "ar") {
-        const ltr = await page.$$eval("#menu-list .ltr", (els) => els.map((e) => [e.textContent, getComputedStyle(e).direction]));
+        const ltr = await page.$$eval(".ltr", (els) => els.map((e) => [e.textContent, getComputedStyle(e).direction]));
         check(ltr.length > 0 && ltr.every(([, d]) => d === "ltr"), `${label}: ${ltr.length} Latin runs isolated left-to-right (e.g. "${ltr[0] && ltr[0][0]}")`);
       }
       await page.waitForTimeout(600);
@@ -350,13 +362,13 @@ async function main() {
       const rolling = await page.$$eval(`${salad} .roll__ch--out`, (o) => o.length);
       await page.waitForTimeout(700);
       const two = await page.evaluate((sel) => ({ qty: document.querySelector(`${sel} output`).textContent, total: document.querySelector(`${sel} .cart-line__total`).textContent, bin: !!document.querySelector(`${sel} .stepper__bin`) }), salad);
-      check(rolling > 0 && two.qty === "2" && /^84 /.test(two.total) && !two.bin, `${label}: quantity and price roll to 2 · ${two.total}, the bin turns back into −`);
+      check(rolling > 0 && two.qty === "2" && /^50 /.test(two.total) && !two.bin, `${label}: quantity and price roll to 2 · ${two.total}, the bin turns back into −`);
       await page.click(`${salad} [data-line-dec]`);
       await page.click(`${salad} .stepper__bin`);
       await page.waitForTimeout(700);
       check(!(await page.$(salad)), `${label}: the bin removes the dish`);
       const total = await page.textContent("#totals");
-      check(/169/.test(total), `${label}: subtotal 2×47 + 10 + 65 = 169`);
+      check(/142/.test(total), `${label}: subtotal 2×35 + 7 + 65 = 142`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-cart.png` });
       await page.click("#cart-next");
       await page.fill('input[name="name"]', "Test Client");
@@ -364,11 +376,11 @@ async function main() {
       await page.fill('textarea[name="notes"]', "Sans oignon");
       await page.click("#send-btn");
       const m1 = await sentMessage(page);
-      check(m1 && m1.to === "/212634235350", `${label}: pickup order opens WhatsApp to +212634235350`);
-      const pickupOk = m1 && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /169/.test(m1.text) && /Sans oignon/.test(m1.text) && /(Cordon bleu|كوردون بلو)/.test(m1.text) && !/30 (DH|درهم)/.test(m1.text);
-      check(pickupOk, `${label}: pickup message has items, sauces, soda brand, option, notes, total 169 and no delivery fee`);
+      check(m1 && m1.to === "/212634385931", `${label}: pickup order opens the Sidi Moumen WhatsApp, +212634385931`);
+      const pickupOk = m1 && /(Sidi Moumen|سيدي مومن)/.test(m1.text) && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /142/.test(m1.text) && /Sans oignon/.test(m1.text) && /(Cordon bleu|كوردون بلو)/.test(m1.text) && !/10 (DH|درهم)/.test(m1.text);
+      check(pickupOk, `${label}: pickup message names the restaurant, has items, sauces, soda brand, option, notes, total 142 and no delivery fee`);
 
-      // Delivery: needs a position, refuses beyond 3 km, accepts inside with a 30 DH fee.
+      // Delivery: needs a position, refuses beyond 3 km, accepts inside with a 10 DH fee.
       await pick(page, 'input[name="mode"][value="delivery"]');
       await page.waitForSelector("#delivery-map.leaflet-container", { state: "attached", timeout: 8000 });
       check(await page.evaluate(() => getComputedStyle(document.querySelector("#gps-btn")).backgroundColor === "rgb(225, 6, 15)" && document.querySelectorAll(".mode__opt .mode__icon").length === 2), `${label}: « Utiliser ma position » in red, icons on both modes`);
@@ -379,7 +391,7 @@ async function main() {
       check(!(await sentMessage(page)), `${label}: delivery without a position is not sent`);
       await page.waitForTimeout(700);
       const totalDelivery = await page.textContent("#totals");
-      check(/199/.test(totalDelivery), `${label}: total with 30 DH delivery = 199`);
+      check(/152/.test(totalDelivery), `${label}: total with 10 DH delivery = 152`);
       // Tap the map 1 km east of the restaurant.
       const pt = await page.evaluate(() => {
         const map = document.querySelector("#delivery-map");
@@ -391,8 +403,8 @@ async function main() {
       await page.fill('input[name="address"]', "Rue 12, immeuble 3");
       await page.click("#send-btn");
       const m2 = await sentMessage(page);
-      const deliveryOk = m2 && /30 (DH|درهم)/.test(m2.text) && /199/.test(m2.text) && /maps\.google\.com\/\?q=33\.\d+,-7\.\d+/.test(m2.text) && /Rue 12/.test(m2.text);
-      check(deliveryOk, `${label}: delivery message has fee, total 199, address and map link`);
+      const deliveryOk = m2 && /10 (DH|درهم)/.test(m2.text) && /152/.test(m2.text) && /maps\.google\.com\/\?q=33\.\d+,-7\.\d+/.test(m2.text) && /Rue 12/.test(m2.text);
+      check(deliveryOk, `${label}: delivery message has fee, total 152, address and map link`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-delivery.png` });
 
       // Far point: GPS position about 7 km away.
@@ -412,7 +424,7 @@ async function main() {
       const want = lang === "ar" ? "fr" : "ar";
       check(after.lang === want && (want === "ar" ? after.url === "?lang=ar" : after.url === "") && after.canonical.endsWith(want === "ar" ? "/?lang=ar" : "/"), `${label}: toggle switches to ${want}, address "${after.url || "/"}"`);
       const rebuilt = await page.evaluate((want) => ({ tiles: document.querySelectorAll(".cat-tile").length, chips: document.querySelectorAll(".chip").length, name: document.querySelector("#menu-list .category__title")?.textContent || "" }), want);
-      check(rebuilt.tiles === 13 && rebuilt.chips === 13 && rebuilt.name.length > 0, `${label}: categories rebuilt after switching language (« ${rebuilt.name.trim()} »)`);
+      check(rebuilt.tiles === 14 && rebuilt.chips === 14 && rebuilt.name.length > 0, `${label}: categories rebuilt after switching language (« ${rebuilt.name.trim()} »)`);
       if (s.name === "desktop") {
         check(await page.$("#header.is-floating"), `${label}: header gets its shadow once the page scrolls`);
         await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
@@ -494,6 +506,7 @@ async function main() {
       .replace("@supports not (aspect-ratio: 1 / 1)", "@media all")
       .replace(/aspect-ratio:[^;{}]+;/g, "");
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    await presetSite(context);
     const page = await context.newPage();
     await page.route("**/css/style.css*", (r) => r.fulfill({ body: css, contentType: "text/css" }));
     await page.goto(base + "/#categorie-tacos");
@@ -512,6 +525,7 @@ async function main() {
   console.log("\nautoplay blocked (simulated)");
   {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    await presetSite(context);
     const page = await context.newPage();
     await page.addInitScript(() => {
       HTMLMediaElement.prototype.play = function () { return Promise.reject(new DOMException("blocked", "NotAllowedError")); };
@@ -544,6 +558,103 @@ async function main() {
     check(r.btnAnim === "none", "button border trails stopped");
     await page.waitForTimeout(600);
     check(await page.$eval("#hero-plate video", (v) => !v.paused), "the slow plate still turns (it is the point of the hero; nothing flashes)");
+    check(errors.length === 0, "no JavaScript errors");
+    await context.close();
+  }
+
+  // First visit: the restaurant must be chosen; the nearest one is found with the GPS.
+  for (const lang of ["fr", "ar"]) {
+    const label = `choosing the restaurant ${lang}`;
+    console.log("\n" + label);
+    // A customer about 700 m from Bouchaib Doukkali, 5 km from Sidi Moumen.
+    const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang, site: null, geo: { latitude: 33.5700, longitude: -7.5800 } });
+    await waitIntro(page);
+    await page.waitForSelector("#site-dialog[open]", { timeout: 3000 });
+    const first = await page.evaluate(() => ({ cards: document.querySelectorAll("#site-list [data-site]").length, close: !document.querySelector("#site-close").hidden }));
+    check(first.cards === 2 && !first.close, `${label}: after the intro, the 2 restaurants are offered and the sheet has no ✕`);
+    await page.keyboard.press("Escape");
+    await page.mouse.click(5, 5);
+    await page.waitForTimeout(200);
+    check(await page.$("#site-dialog[open]"), `${label}: Escape or a tap outside does not skip the choice`);
+    await page.click("#site-gps");
+    await page.waitForSelector("#site-list .is-nearest", { timeout: 5000 });
+    const near = await page.evaluate(() => ({ id: document.querySelector("#site-list .is-nearest").dataset.site, tag: document.querySelector("#site-list .is-nearest .site-card__tag").textContent }));
+    check(near.id === "bouchaib-doukkali" && /0[,.]\d (km|كلم)/.test(near.tag), `${label}: « Trouver le plus proche » marks Bouchaib Doukkali (« ${near.tag.trim()} »)`);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/site-${lang}-chooser.png` });
+    await page.click("#site-list .is-nearest");
+    await page.waitForTimeout(300);
+    const links = await page.evaluate(() => ({
+      open: !!document.querySelector("#site-dialog[open]"), saved: localStorage.getItem("chickenamine.location.v1"),
+      ig: document.querySelector("#ig-float").href, phone: document.querySelector("#info-phone").href, header: document.querySelector("#site-btn-name").textContent,
+      maps: document.querySelector("#location-btn").href, embed: document.querySelector("#map-embed").src,
+    }));
+    check(!links.open && links.saved === "bouchaib-doukkali", `${label}: the choice closes the sheet and is remembered`);
+    check(links.ig === "https://www.instagram.com/chicken_amine_2/", `${label}: the Instagram button opens @chicken_amine_2`);
+    check(links.phone === "tel:+212664496296" && /Bouchaib|بوشعيب/.test(links.header), `${label}: phone 06 64 49 62 96, header shows « ${links.header} »`);
+    check(/Chicken\+Amine\+2/.test(links.maps) && /33\.5673/.test(links.embed), `${label}: location button and map show Chicken Amine 2`);
+    // A delivery order goes to this restaurant's WhatsApp, measured from it.
+    await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
+    await addDish(page, "burgers", "bg-cheese", []);
+    await page.click("#cart-bar");
+    await page.click("#cart-next");
+    check(/Bouchaib|بوشعيب/.test(await page.textContent("#checkout-site")), `${label}: the checkout names the restaurant`);
+    await pick(page, 'input[name="mode"][value="delivery"]');
+    await page.waitForSelector("#delivery-map.leaflet-container", { state: "attached", timeout: 8000 });
+    await page.waitForTimeout(300);
+    const st = await page.textContent("#delivery-status");
+    check(/0[,.]\d (km|كلم)/.test(st), `${label}: the position found for the choice is the delivery point, measured from Bouchaib Doukkali ("${st.trim()}")`);
+    await page.fill('input[name="name"]', "A");
+    await page.fill('input[name="phone"]', "0600000000");
+    await page.click("#send-btn");
+    const m = await sentMessage(page);
+    check(m && m.to === "/212664496296" && /(Bouchaib Doukkali|بوشعيب الدكالي)/.test(m.text) && /35 (DH|درهم)/.test(m.text), `${label}: the order goes to WhatsApp +212664496296, 25 + 10 DH delivery`);
+    // Changing restaurant from the checkout moves the delivery area.
+    await page.click("#checkout-form [data-change-site]");
+    await page.waitForSelector("#site-dialog[open]");
+    check(await page.isVisible("#site-close"), `${label}: when changing, the sheet can be closed`);
+    await page.click('#site-list [data-site="sidi-moumen"]');
+    await page.waitForTimeout(300);
+    const far = await page.textContent("#delivery-status");
+    check(/3 /.test(far) && (await page.$("#delivery-status.is-error")), `${label}: from Sidi Moumen the same point is too far ("${far.trim().slice(0, 50)}…")`);
+    check((await page.$eval("#ig-float", (a) => a.href)) === "https://www.instagram.com/chicken__amine__1/", `${label}: the Instagram button follows: @chicken__amine__1`);
+    // Next visit: no question.
+    await page.reload();
+    await waitIntro(page);
+    await page.waitForTimeout(300);
+    check(!(await page.$("#site-dialog[open]")) && (await page.evaluate(() => window.__chickenAmine.site())) === "sidi-moumen", `${label}: on the next visit the remembered restaurant is used without asking`);
+    check(errors.length === 0, `${label}: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
+    await context.close();
+  }
+
+  // The couscous: Friday 12:00 – 17:00 only.
+  console.log("\ncouscous on Fridays");
+  {
+    const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
+    await waitIntro(page);
+    await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
+    await openCat(page, "couscous");
+    const wed = await page.evaluate(() => ({ off: document.querySelector('.item[data-item="cs-poulet"] [data-add]').disabled, note: document.querySelector(".category__note").textContent }));
+    check(wed.off && /Vendredi uniquement, 12:00 – 17:00/.test(wed.note), `couscous cannot be added on a Wednesday (« ${wed.note} »)`);
+    await context.close();
+  }
+  {
+    const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "ar", time: FRIDAY_LUNCH });
+    await waitIntro(page);
+    await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
+    await openCat(page, "couscous");
+    check(!(await page.isDisabled('.item[data-item="cs-viande"] [data-add]')), "couscous can be added on Friday at 14:00");
+    await page.click('.item[data-item="cs-viande"] [data-add]');
+    await page.waitForTimeout(200);
+    check(!(await page.$("#sauce-dialog[open]")), "no sauce sheet for the couscous");
+    // Still in the cart after 17:00: the order is held back.
+    await page.clock.setFixedTime(FRIDAY_EVENING);
+    await page.click("#cart-bar");
+    await page.click("#cart-next");
+    await page.fill('input[name="name"]', "A");
+    await page.fill('input[name="phone"]', "0600000000");
+    await page.click("#send-btn");
+    const err = await page.textContent("#checkout-error");
+    check(!(await sentMessage(page)) && /الجمعة/.test(err), `couscous left in the order after 17:00 is not sent ("${err.trim()}")`);
     check(errors.length === 0, "no JavaScript errors");
     await context.close();
   }

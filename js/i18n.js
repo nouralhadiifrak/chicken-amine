@@ -2,9 +2,9 @@
 window.I18N = {
   fr: {
     meta: {
-      title: "Chicken Amine · Tacos, broasters, burgers et pizzas à Sidi Moumen, Casablanca",
+      title: "Chicken Amine · Tacos, broasters, burgers et pizzas à Sidi Moumen et Bouchaib Doukkali, Casablanca",
       description:
-        "Chicken Amine à Sidi Moumen Al Houda, Casablanca : tacos, tacos gratinés, broasters, chawarmas, burgers, paninis, pizzas et plats. Ouvert tous les jours de 12h à minuit, à emporter ou en livraison, commande sur WhatsApp.",
+        "Chicken Amine, 2 restaurants à Casablanca (Sidi Moumen Al Houda et avenue Bouchaib Doukkali) : tacos, tacos gratinés, broasters, chawarmas, burgers, paninis, pizzas et plats. Ouvert tous les jours de 12h à minuit, à emporter ou en livraison, commande sur WhatsApp.",
     },
     langToggle: "العربية",
     langToggleLabel: "Afficher le site en arabe",
@@ -31,6 +31,21 @@ window.I18N = {
       dishes: "{n} choix",
       from: "dès {price}",
       open: "Voir {name}",
+      onlyOn: "{days} uniquement, {from} – {to}",
+      notNow: "Disponible le {days} de {from} à {to}",
+    },
+    days: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"],
+    site: {
+      title: "Choisissez votre Chicken Amine",
+      intro: "Nous avons 2 restaurants à Casablanca. Commandez au plus proche de chez vous : même menu, mêmes prix.",
+      nearest: "Trouver le plus proche",
+      locating: "Recherche de votre position…",
+      gpsError: "Position introuvable. Choisissez le restaurant vous-même.",
+      nearestTag: "Le plus proche",
+      away: "à {km} km",
+      choose: "Commander ici",
+      change: "Changer de restaurant",
+      current: "Restaurant : {name}",
     },
     sauce: {
       title: "Vos sauces",
@@ -83,9 +98,11 @@ window.I18N = {
       required: "Champ obligatoire",
       restaurant: "Restaurant",
       you: "Vous",
+      unavailable: "« {name} » n'est disponible que le {days} de {from} à {to}. Retirez-le de la commande.",
     },
     message: {
       title: "Nouvelle commande · Chicken Amine",
+      restaurant: "Restaurant",
       mode: "Mode",
       name: "Nom",
       phone: "Téléphone",
@@ -107,16 +124,16 @@ window.I18N = {
       directions: "Itinéraire",
       mapTitle: "Carte : Chicken Amine sur Google Maps",
     },
-    footer: "© {year} Chicken Amine · Sidi Moumen, Casablanca",
+    footer: "© {year} Chicken Amine · Sidi Moumen et Bouchaib Doukkali, Casablanca",
     instagramButton: "Chicken Amine sur Instagram",
     skip: "Aller au menu",
   },
 
   ar: {
     meta: {
-      title: "Chicken Amine · طاكوس، بروستر، برغر وبيتزا في سيدي مومن، الدار البيضاء",
+      title: "Chicken Amine · طاكوس، بروستر، برغر وبيتزا في سيدي مومن وبوشعيب الدكالي، الدار البيضاء",
       description:
-        "Chicken Amine في سيدي مومن الهدى، الدار البيضاء: طاكوس، طاكوس غراتيني، بروستر، شاورما، برغر، بانيني، بيتزا وأطباق. مفتوح كل يوم من 12 زوالا إلى منتصف الليل، للأخذ أو التوصيل، والطلب عبر واتساب.",
+        "Chicken Amine، مطعمان في الدار البيضاء (سيدي مومن الهدى وشارع بوشعيب الدكالي): طاكوس، طاكوس غراتيني، بروستر، شاورما، برغر، بانيني، بيتزا وأطباق. مفتوح كل يوم من 12 زوالا إلى منتصف الليل، للأخذ أو التوصيل، والطلب عبر واتساب.",
     },
     langToggle: "Français",
     langToggleLabel: "عرض الموقع بالفرنسية",
@@ -143,6 +160,21 @@ window.I18N = {
       dishes: "{n} اختيار",
       from: "ابتداء من {price}",
       open: "عرض {name}",
+      onlyOn: "يوم {days} فقط، {from} – {to}",
+      notNow: "متوفر يوم {days} من {from} إلى {to}",
+    },
+    days: ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
+    site: {
+      title: "اختر مطعم Chicken Amine",
+      intro: "لدينا مطعمان في الدار البيضاء. اطلب من الأقرب إليك: نفس القائمة ونفس الأثمنة.",
+      nearest: "ابحث عن الأقرب",
+      locating: "جار تحديد موقعك…",
+      gpsError: "تعذر تحديد موقعك. اختر المطعم بنفسك.",
+      nearestTag: "الأقرب إليك",
+      away: "على بعد {km} كلم",
+      choose: "اطلب من هنا",
+      change: "تغيير المطعم",
+      current: "المطعم: {name}",
     },
     sauce: {
       title: "الصلصات",
@@ -195,9 +227,11 @@ window.I18N = {
       required: "خانة إجبارية",
       restaurant: "المطعم",
       you: "أنت",
+      unavailable: "«{name}» متوفر فقط يوم {days} من {from} إلى {to}. احذفه من الطلب.",
     },
     message: {
       title: "طلب جديد · Chicken Amine",
+      restaurant: "المطعم",
       mode: "الطريقة",
       name: "الاسم",
       phone: "الهاتف",
@@ -219,7 +253,7 @@ window.I18N = {
       directions: "الاتجاهات",
       mapTitle: "الخريطة: Chicken Amine على خرائط Google",
     },
-    footer: "© {year} Chicken Amine · سيدي مومن، الدار البيضاء",
+    footer: "© {year} Chicken Amine · سيدي مومن وبوشعيب الدكالي، الدار البيضاء",
     instagramButton: "Chicken Amine على إنستغرام",
     skip: "انتقل إلى القائمة",
   },

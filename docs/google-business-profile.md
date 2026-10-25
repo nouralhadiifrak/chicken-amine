@@ -11,15 +11,14 @@ that manages the listing (or search "Chicken Amine" on Google while signed in an
 | Name | Chicken Amine (the real sign name only; no keywords like "tacos Casablanca", Google suspends listings for that) |
 | Primary category | Restaurant de restauration rapide (Fast food restaurant) |
 | Secondary categories | Restaurant de poulet (Chicken restaurant), Restaurant de tacos, Pizzeria, Sandwicherie, Restaurant de hamburgers, Bar à jus |
-| Phone | 06 34 23 53 50 |
+| Phone | Sidi Moumen 06 34 38 59 31 · Bouchaib Doukkali 06 64 49 62 96 (one listing per restaurant) |
 | Website | https://chicken-amine-theta.vercel.app (replace with the domain once bought) |
 | Menu link | https://chicken-amine-theta.vercel.app/#menu |
 | Order link ("Commander en ligne") | https://chicken-amine-theta.vercel.app/#menu |
 | Address | Sidi Moumen Al Houda, Casablanca 22500. Check the pin is exactly on the shop front |
 | Hours | Every day 12:00 – 00:00. Add special hours for Ramadan and holidays |
 
-> The phone number on the delivery-platform menu (+212 634-385931) is different from the one on the site.
-> Use one number everywhere: Google compares them.
+> Each listing must show the same number as the site and the paper menu: Google compares them.
 
 ## 2. Description (750 characters max)
 

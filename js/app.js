@@ -7,6 +7,7 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const CART_KEY = "chickenamine.cart.v1";
   const FORM_KEY = "chickenamine.customer.v1";
+  const SITE_KEY = "chickenamine.location.v1";
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -30,6 +31,15 @@
   }
   const L = (obj) => (obj ? obj[lang] || obj.fr : "");
   const money = (n) => `${n} ${C.currency[lang]}`;
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  /* ---------- The restaurant the customer orders from (two locations) ---------- */
+  let site = loadSite();
+  function loadSite() {
+    try { const id = localStorage.getItem(SITE_KEY); return C.locations.find((l) => l.id === id) || null; } catch (e) { return null; }
+  }
+  // The chosen restaurant; the first one until the customer picks.
+  const S = () => site || C.locations[0];
 
   /* ---------- Opening hours (Casablanca time) ---------- */
   function casablancaMinutes(date = new Date()) {
@@ -39,6 +49,10 @@
     return h * 60 + m;
   }
   const toMin = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
+  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function casablancaDay(date = new Date()) {
+    return WEEKDAYS.indexOf(new Intl.DateTimeFormat("en-US", { timeZone: C.timeZone, weekday: "short" }).format(date));
+  }
   function isOpen(now = casablancaMinutes()) {
     const o = toMin(C.hours.open), c = toMin(C.hours.close);
     return c > o ? now >= o && now < c : now >= o || now < c; // a close at or before open is after midnight
@@ -83,7 +97,7 @@
     $("#cart-btn").setAttribute("aria-label", t("cart.title"));
     $("#ig-float").setAttribute("aria-label", t("instagramButton"));
     $("#map-embed").title = t("infos.mapTitle");
-    $("#info-address").innerHTML = rich(L(C.address));
+    applySite();
     $("#info-hours").innerHTML = rich(t("infos.hoursValue", { open: C.hours.open, close: C.hours.close }));
     $("#footer-text").innerHTML = rich(t("footer", { year: new Date().getFullYear() }));
 
@@ -140,16 +154,77 @@
     });
   }
 
-  /* ---------- Static links ---------- */
-  function setupLinks() {
-    $("#location-btn").href = C.googleMapsUrl;
-    $("#directions-btn").href = C.googleMapsUrl;
-    $("#info-phone").href = "tel:" + C.phoneIntl;
-    $("#info-phone").textContent = C.phone.replace(/(\d{2})(?=\d)/g, "$1 ").trim();
-    $("#info-instagram").href = C.instagram;
-    $("#info-instagram").textContent = C.instagramHandle;
-    $("#ig-float").href = C.instagram;
-    $("#map-embed").src = "https://maps.google.com/maps?q=" + encodeURIComponent(C.googleMapsQuery) + "&z=16&output=embed";
+  /* ---------- The chosen restaurant's links: map, phone, Instagram, address ---------- */
+  const phoneText = (p) => p.replace(/(\d{2})(?=\d)/g, "$1 ").trim();
+  function applySite() {
+    const s = S();
+    $("#location-btn").href = s.googleMapsUrl;
+    $("#directions-btn").href = s.googleMapsUrl;
+    $("#info-phone").href = "tel:" + s.phoneIntl;
+    $("#info-phone").textContent = phoneText(s.phone);
+    $("#info-instagram").href = s.instagram;
+    $("#info-instagram").textContent = s.instagramHandle;
+    $("#ig-float").href = s.instagram;
+    $("#info-address").innerHTML = rich(L(s.address));
+    const embed = `https://maps.google.com/maps?q=${s.location.lat},${s.location.lng}&z=16&output=embed`;
+    if ($("#map-embed").getAttribute("src") !== embed) $("#map-embed").src = embed;
+    $("#site-btn-name").textContent = L(s.short);
+    $("#site-btn").setAttribute("aria-label", `${t("site.change")} · ${L(s.short)}`);
+    $("#checkout-site").innerHTML = rich(t("site.current", { name: L(s.name) }));
+    moveMapToSite();
+  }
+
+  /* ---------- Choosing the restaurant: on the first visit (required), or from the header ---------- */
+  let sitePos = null; // the customer's position, when they let us find the nearest restaurant
+  function renderSites() {
+    const near = sitePos && C.locations.reduce((a, b) => (distanceKm(sitePos, a.location) <= distanceKm(sitePos, b.location) ? a : b));
+    $("#site-list").innerHTML = C.locations.map((l) => {
+      const km = sitePos ? distanceKm(sitePos, l.location) : null;
+      const tags = [l === near ? t("site.nearestTag") : "", km !== null ? t("site.away", { km: kmText(km) }) : ""].filter(Boolean).join(" · ");
+      return `<li><button class="site-card${l === near ? " is-nearest" : ""}${site === l ? " is-current" : ""}" type="button" data-site="${l.id}">
+        <span class="site-card__name">${rich(L(l.short))}</span>
+        <span class="site-card__addr">${rich(L(l.address))}</span>
+        <span class="site-card__phone" dir="ltr">${esc(phoneText(l.phone))}</span>
+        ${tags ? `<span class="site-card__tag">${rich(tags)}</span>` : ""}
+        <span class="site-card__go">${esc(t("site.choose"))}</span>
+      </button></li>`;
+    }).join("");
+  }
+  function openSites() {
+    const d = $("#site-dialog");
+    // The first time, a restaurant must be chosen: the sheet cannot be closed without one.
+    d.dataset.locked = site ? "" : "1";
+    $("#site-close").hidden = !site;
+    renderSites();
+    openDialog(d);
+  }
+  function chooseSite(id) {
+    const l = C.locations.find((x) => x.id === id);
+    if (!l) return;
+    site = l;
+    try { localStorage.setItem(SITE_KEY, l.id); } catch (e) { /* storage unavailable */ }
+    applySite();
+    if (!$("#checkout-form").hidden) renderCheckout();
+    closeDialog($("#site-dialog"));
+  }
+  function findNearestSite() {
+    const el = $("#site-status");
+    el.classList.remove("is-error");
+    if (!navigator.geolocation) { el.textContent = t("site.gpsError"); el.classList.add("is-error"); return; }
+    el.textContent = t("site.locating");
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        sitePos = { lat: p.coords.latitude, lng: p.coords.longitude };
+        el.textContent = "";
+        renderSites();
+        // It is also the most likely delivery point.
+        if (!youPos) youPos = { ...sitePos };
+        const best = $("#site-list .is-nearest");
+        if (best) best.focus();
+      },
+      () => { el.textContent = t("site.gpsError"); el.classList.add("is-error"); },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
   }
 
   /* ---------- Hero: the turning plate ---------- */
@@ -207,6 +282,7 @@
       target.style.opacity = "";
       intro.classList.add("is-done");
       document.documentElement.classList.add("no-intro");
+      if (!site) openSites();
       writeTitle();
       SpringText.observe(document.querySelector("main"));
     };
@@ -307,6 +383,18 @@
   const hasSauces = (it) => SAUCES.length > 0 && (it.sauces !== undefined ? !!it.sauces : !!it.cat.sauces);
   const needsDialog = (it) => !!(it.prices || (it.options && it.options.length));
   const basePrice = (it) => (it.prices ? Math.min(...Object.values(it.prices)) : it.price);
+  // Dishes served on some days only (the couscous on Fridays): { days, from, to }, Casablanca time.
+  const availOf = (it) => it.available || it.cat.available || null;
+  function isAvailable(it, now = new Date()) {
+    const a = availOf(it);
+    if (!a) return true;
+    const m = casablancaMinutes(now);
+    return a.days.indexOf(casablancaDay(now)) !== -1 && m >= toMin(a.from) && m < toMin(a.to);
+  }
+  function availText(a, key, vars) {
+    const D = window.I18N[lang].days;
+    return t(key, { ...vars, days: a.days.map((d) => D[d]).join(lang === "ar" ? " و" : ", "), from: a.from, to: a.to });
+  }
 
   function priceLabel(it) {
     if (it.prices) return Object.entries(it.prices).map(([s, p]) => `<span class="price">${esc(s)} ${esc(money(p))}</span>`).join(" ");
@@ -318,7 +406,12 @@
   function controlFor(it) {
     const qty = qtyOf(it.id);
     const label = needsDialog(it) ? t("menu.choose") : t("menu.add");
-    return `${qty ? `<span class="in-cart" aria-label="${esc(t("menu.inCart", { n: qty }))}">${qty}</span>` : ""}<button class="add-btn" type="button" data-add="${it.id}" aria-label="${esc(label + " · " + L(it))}">${PLUS_ICON}</button>`;
+    const inCart = qty ? `<span class="in-cart" aria-label="${esc(t("menu.inCart", { n: qty }))}">${qty}</span>` : "";
+    if (!isAvailable(itemById.get(it.id))) {
+      const why = availText(availOf(itemById.get(it.id)), "menu.notNow");
+      return `${inCart}<button class="add-btn" type="button" data-add="${it.id}" disabled title="${esc(why)}" aria-label="${esc(L(it) + " · " + why)}">${PLUS_ICON}</button>`;
+    }
+    return `${inCart}<button class="add-btn" type="button" data-add="${it.id}" aria-label="${esc(label + " · " + L(it))}">${PLUS_ICON}</button>`;
   }
 
   // A photo of the dish when it has one (item.image), otherwise its emoji on a tile.
@@ -362,6 +455,7 @@
       <article class="panel category" id="cat-${c.id}" data-cat="${c.id}">
         <div class="category__media">${c.image ? `<img src="${esc(c.image)}" alt="${esc(L(c))}" width="1200" height="571">` : illustration(c.icon)}</div>
         <h3 class="category__title">${esc(L(c))}</h3>
+        ${c.available ? `<p class="category__note">${rich(cap(availText(c.available, "menu.onlyOn")))}</p>` : ""}
         <div class="category__body">${sections(c).map(([g, items], i) => `
           ${g && !(i === 0 && L(g) === L(c)) ? `<h4 class="items__group">${rich(L(g))}</h4>` : ""}
           <ul class="items">${items.map((it) => `
@@ -601,6 +695,7 @@
 
   function onAdd(id, btn) {
     const it = itemById.get(id);
+    if (!isAvailable(it)) return;
     if (needsDialog(it)) { openOptions(id, btn); return; }
     // Sauces are chosen first; the dish goes into the order (and the emojis fly) once that is settled.
     if (hasSauces(it)) { openSauces(it, btn); return; }
@@ -761,7 +856,7 @@
   }
 
   /* ---------- Delivery map (Leaflet, loaded on demand) ---------- */
-  let map = null, youMarker = null, youPos = null;
+  let map = null, youMarker = null, youPos = null, restoMarker = null, restoCircle = null;
   let leafletLoading = null;
   function loadLeaflet() {
     if (window.L && window.L.map) return Promise.resolve();
@@ -780,17 +875,25 @@
   function setupMap() {
     loadLeaflet().then(() => {
       const Lf = window.L;
-      const resto = [C.location.lat, C.location.lng];
+      const resto = [S().location.lat, S().location.lng];
       if (!map) {
         map = Lf.map("delivery-map", { zoomControl: true, attributionControl: true }).setView(resto, 14);
         Lf.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
-        Lf.marker(resto, { icon: pinIcon("pin--resto"), title: t("checkout.restaurant") }).addTo(map);
-        Lf.circle(resto, { radius: C.delivery.maxKm * 1000, color: "#e1060f", weight: 2, fillOpacity: 0.06 }).addTo(map);
+        restoMarker = Lf.marker(resto, { icon: pinIcon("pin--resto"), title: t("checkout.restaurant") }).addTo(map);
+        restoCircle = Lf.circle(resto, { radius: C.delivery.maxKm * 1000, color: "#e1060f", weight: 2, fillOpacity: 0.06 }).addTo(map);
         map.on("click", (e) => setYou(e.latlng.lat, e.latlng.lng));
         if (youPos) setYou(youPos.lat, youPos.lng, false);
       }
       setTimeout(() => map.invalidateSize(), 60);
     }).catch(() => {});
+  }
+  // After a change of restaurant, the pin and the delivery circle move to it.
+  function moveMapToSite() {
+    if (!map) return;
+    const resto = [S().location.lat, S().location.lng];
+    restoMarker.setLatLng(resto);
+    restoCircle.setLatLng(resto);
+    map.setView(youPos ? [youPos.lat, youPos.lng] : resto, 14);
   }
   function setYou(lat, lng, pan = true) {
     youPos = { lat, lng };
@@ -811,7 +914,7 @@
   function deliveryState() {
     if (mode() !== "delivery") return { ok: true };
     if (!youPos) return { ok: false, msg: t("checkout.needLocation") };
-    const km = distanceKm(C.location, youPos);
+    const km = distanceKm(S().location, youPos);
     if (km > C.delivery.maxKm) return { ok: false, km, msg: t("checkout.tooFar", { max: C.delivery.maxKm, km: kmText(km) }) };
     return { ok: true, km, msg: t("checkout.distance", { km: kmText(km) }) };
   }
@@ -849,7 +952,7 @@
   function buildMessage(data, st) {
     const M = (k) => t("message." + k);
     const sep = lang === "ar" ? ": " : " : ";
-    const lines = [`*${M("title")}*`];
+    const lines = [`*${M("title")}*`, `${M("restaurant")}${sep}${L(S().name)}`];
     if (!isOpen()) lines.push(M("closed"));
     lines.push("");
     lines.push(`${M("mode")}${sep}${data.mode === "delivery" ? t("checkout.delivery") : t("checkout.pickup")}`);
@@ -896,10 +999,12 @@
       f.elements[missing[0]].focus();
       return;
     }
+    const off = cart.map((l) => itemById.get(l.id)).find((it) => !isAvailable(it));
+    if (off) { err.textContent = availText(availOf(off), "checkout.unavailable", { name: L(off) }); return; }
     const st = updateDeliveryStatus();
     if (!st.ok) { err.textContent = st.msg; return; }
     saveCustomer(data);
-    const url = `https://wa.me/${C.whatsapp}?text=${encodeURIComponent(buildMessage(data, st))}`;
+    const url = `https://wa.me/${S().whatsapp}?text=${encodeURIComponent(buildMessage(data, st))}`;
     const w = window.open(url, "_blank", "noopener");
     if (!w) location.href = url;
   }
@@ -938,18 +1043,24 @@
     $("#checkout-form").addEventListener("change", (e) => { if (e.target.name === "mode") renderCheckout(); });
     $("#checkout-form").addEventListener("submit", (e) => { e.preventDefault(); send(); });
     $("#gps-btn").addEventListener("click", useGps);
+    $("#site-btn").addEventListener("click", openSites);
+    $("#site-gps").addEventListener("click", findNearestSite);
+    $("#site-close").addEventListener("click", () => closeDialog($("#site-dialog")));
+    $("#site-list").addEventListener("click", (e) => { const b = e.target.closest("[data-site]"); if (b) chooseSite(b.dataset.site); });
+    $$("[data-change-site]").forEach((b) => b.addEventListener("click", openSites));
+    // Escape cannot dismiss the first choice of restaurant.
+    $("#site-dialog").addEventListener("cancel", (e) => { if ($("#site-dialog").dataset.locked) e.preventDefault(); });
     $("#send-btn").addEventListener("click", send);
     $$("dialog").forEach((d) => {
       d.addEventListener("close", onDialogClose);
-      d.addEventListener("click", (e) => { if (e.target === d) closeDialog(d); }); // click on the backdrop
+      d.addEventListener("click", (e) => { if (e.target === d && !d.dataset.locked) closeDialog(d); }); // click on the backdrop
     });
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", onScroll);
-    setInterval(updateStatus, 30000);
+    setInterval(() => { updateStatus(); refreshControls(); }, 30000);
   }
 
   /* ---------- Start ---------- */
-  setupLinks();
   setupHero();
   bind();
   loadCustomer();
@@ -960,5 +1071,5 @@
   if (currentCat) requestAnimationFrame(scrollToMenu);
 
   // Exposed for the automated tests.
-  window.__chickenAmine = { isOpen, distanceKm, cart: () => cart, lineKey };
+  window.__chickenAmine = { isOpen, isAvailable: (id) => isAvailable(itemById.get(id)), distanceKm, cart: () => cart, lineKey, site: () => site && site.id };
 })();

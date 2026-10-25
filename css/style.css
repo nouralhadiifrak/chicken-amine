@@ -149,6 +149,32 @@ html.no-intro .intro { display: none; }
 .header__nav a[aria-current="true"] { color: var(--red); text-decoration: underline; text-decoration-color: var(--red); }
 .lang-link[lang="ar"] { font-family: "Cairo", sans-serif; font-size: 1.02rem; }
 .lang-link[lang="fr"] { font-family: "Poppins", sans-serif; }
+/* The chosen restaurant (pin and short name); tapping it opens the choice again. */
+.site-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  min-width: 0;
+  max-width: 31vw;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.site-btn svg { width: 18px; height: 18px; flex: none; fill: var(--red); }
+/* a long name wraps on two short lines on phones */
+.site-btn span { overflow: hidden; line-height: 1.15; text-align: start; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.site-btn:hover { color: var(--red); }
+@media (min-width: 760px) {
+  .site-btn { max-width: none; font-size: 0.95rem; margin-inline-start: 4px; }
+  .site-btn span { white-space: nowrap; }
+}
 .cart-btn {
   position: relative;
   display: inline-flex;
@@ -637,6 +663,19 @@ html.no-intro .intro { display: none; }
 }
 .add-btn:active { transform: scale(0.9); }
 .add-btn:hover { background: var(--red-dark); }
+/* a dish that cannot be ordered right now (the couscous outside Friday lunch) */
+.add-btn[disabled] { background: #bdbdbd; box-shadow: none; cursor: not-allowed; transform: none; }
+.category__note {
+  margin: 0 18px 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: inline-block;
+  background: var(--yellow);
+  color: var(--black);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+@media (max-width: 899px) { .category__note { margin: 0 4px 14px; } }
 .stepper { display: inline-flex; align-items: center; gap: 6px; }
 .stepper button {
   width: 34px;
@@ -1004,6 +1043,61 @@ button.band__item:focus-visible { outline: 3px solid var(--red); outline-offset:
 .totals .is-total { color: var(--ink); font-weight: 800; font-size: 1.1rem; }
 
 .checkout { display: flex; flex-direction: column; gap: 14px; }
+.checkout-site { margin: 0; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--red);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.infos__card .link-btn { margin-top: 6px; }
+
+/* ---------- Choosing the restaurant ---------- */
+.site-intro { margin: 0 0 14px; color: var(--muted); }
+.site-gps { display: inline-flex; align-items: center; gap: 8px; }
+.site-gps svg { width: 18px; height: 18px; fill: currentColor; }
+.site-status { margin: 10px 0 0; font-weight: 600; }
+.site-status:empty { display: none; }
+.site-status.is-error { color: var(--red); }
+.site-list { list-style: none; margin: 14px 0 4px; padding: 0; display: grid; gap: 12px; }
+.site-card {
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.site-card:hover,
+.site-card:focus-visible { border-color: var(--red); }
+.site-card:active { transform: scale(0.98); }
+.site-card.is-nearest { border-color: var(--red); background: var(--yellow-soft); }
+.site-card__name { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: var(--red); }
+.site-card__addr { color: var(--muted); font-size: 0.92rem; }
+.site-card__phone { font-weight: 600; justify-self: start; }
+.site-card__tag { justify-self: start; margin-top: 4px; padding: 2px 10px; border-radius: 999px; background: var(--yellow); color: var(--black); font-size: 0.85rem; font-weight: 700; }
+.site-card__go {
+  justify-self: start;
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
 .notice { margin: 0; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--yellow-soft); color: var(--black); font-weight: 600; }
 .mode { display: flex; gap: 10px; border: 0; margin: 0; padding: 0; }
 .mode legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
