@@ -142,7 +142,7 @@ ${json}
   </style>
 </head>
 <body>
-  <header class="top"><a href="/"><img src="/assets/logo.png" alt="${esc(C.name)}" width="640" height="332"></a></header>
+  <header class="top"><a href="/"><img src="/assets/logo-header.webp" alt="${esc(C.name)}" width="360" height="187"></a></header>
   <main>
     <article class="card">
       <h1>${esc(l.googleName)} · ${esc(l.short.fr)}</h1>
@@ -221,7 +221,7 @@ function reviewChoice() {
 </head>
 <body>
   <main class="card" id="choose">
-    <img src="/assets/logo.png" alt="${esc(C.name)}" width="640" height="332">
+    <img src="/assets/logo-header.webp" alt="${esc(C.name)}" width="360" height="187">
     <h1>Votre avis compte !</h1>
     <p>Dans quel restaurant avez-vous mangé ?</p>
     <p lang="ar">في أي مطعم تناولت وجبتك؟</p>

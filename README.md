@@ -78,6 +78,14 @@ poster `hero-plate-poster.jpg`, set in `plateVideo` in `js/config.js`), cut from
 video without its drawn-in title and buttons; the real title and buttons sit above and below it on
 phones, and to its left on PC. The hero background matches the video's dark backdrop.
 
+## Speed on phones
+
+The first screen loads light: the fonts and the delivery map's styles don't hold up the first paint; the hero
+shows the plate's still frame (`hero-plate-poster-480.webp` on phones) and fetches the video only once the page
+has loaded (a 480 px copy, `hero-plate-480.*`, on phones); category tiles use 480 px copies (`cat-*-480.webp`);
+the header logo is `logo-header.webp`; the Google map at the bottom loads when the customer scrolls near it.
+After changing a category cover, make its 480 px copy too.
+
 ## After changing the code
 
 Raise the `?v=` number on the stylesheet and script links in `index.html` so phones fetch the new files.

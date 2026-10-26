@@ -59,8 +59,12 @@ window.CONFIG = {
   currency: { fr: "DH", ar: "درهم" },
   // Delivery, the same at both restaurants: flat fee in MAD and maximum straight-line distance from the restaurant.
   delivery: { fee: 10, maxKm: 3 },
-  // The hero video: the turning plate with flying fries on a dark background (720x760; MP4, WebM, poster).
-  plateVideo: { mp4: "/assets/video/hero-plate.mp4", webm: "/assets/video/hero-plate.webm", poster: "/assets/video/hero-plate-poster.jpg" },
+  // The hero video: the turning plate with flying fries on a dark background (720x760; MP4, WebM, poster), and a
+  // lighter 480 px copy for phones (smallMp4, smallWebm, smallPoster).
+  plateVideo: {
+    mp4: "/assets/video/hero-plate.mp4", webm: "/assets/video/hero-plate.webm", poster: "/assets/video/hero-plate-poster.webp",
+    smallMp4: "/assets/video/hero-plate-480.mp4", smallWebm: "/assets/video/hero-plate-480.webm", smallPoster: "/assets/video/hero-plate-poster-480.webp",
+  },
   // Share-preview image (WhatsApp, Facebook): the turning plate and the logo, 1200 x 630.
   shareImage: "assets/share.jpg",
 };
