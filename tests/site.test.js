@@ -224,7 +224,7 @@ async function main() {
       const layers = await page.$$eval(".intro__layer", (ls) => ls.map((l) => [l.classList[1].replace("intro__", ""), l.naturalWidth > 0, getComputedStyle(l).opacity]));
       check(layers.length === 4 && layers.every(([, ok, op]) => ok && op === "1"), `${label}: intro built the logo from its layers (${layers.map(([n]) => n).join(", ")})`);
       const video = await page.$eval("#hero-plate video", (v) => ({ src: v.currentSrc.split("/").pop(), paused: v.paused, poster: !!v.poster })).catch(() => null);
-      check(video && /^hero-plate\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: the plate turns in the hero (${video && video.src})`);
+      check(video && /^hero-plate(-480)?\.(webm|mp4)$/.test(video.src) && !video.paused && video.poster, `${label}: the plate turns in the hero (${video && video.src})`);
       const lay = await page.evaluate(() => {
         const r = (sel) => document.querySelector(sel).getBoundingClientRect();
         const t = r(".hero__title"), p = r("#hero-plate"), a = r(".hero__actions");
@@ -617,6 +617,9 @@ async function main() {
     check(near.id === "bouchaib-doukkali" && /0[,.]\d (km|كلم)/.test(near.tag), `${label}: « Trouver le plus proche » marks Bouchaib Doukkali (« ${near.tag.trim()} »)`);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/site-${lang}-chooser.png` });
     await page.click("#site-list .is-nearest");
+    await page.waitForTimeout(300);
+    // The Google map loads when the customer scrolls near it.
+    await page.evaluate(() => document.querySelector("#infos").scrollIntoView());
     await page.waitForTimeout(300);
     const links = await page.evaluate(() => ({
       open: !!document.querySelector("#site-dialog[open]"), saved: localStorage.getItem("chickenamine.location.v1"),

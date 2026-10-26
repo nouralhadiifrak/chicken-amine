@@ -178,11 +178,28 @@
     $("#ig-float").href = s.instagram;
     $("#info-address").innerHTML = rich(L(s.address));
     const embed = `https://maps.google.com/maps?q=${s.location.lat},${s.location.lng}&z=16&output=embed`;
-    if ($("#map-embed").getAttribute("src") !== embed) $("#map-embed").src = embed;
+    showMapWhenNear(embed);
     $("#site-btn-name").textContent = L(s.short);
     $("#site-btn").setAttribute("aria-label", `${t("site.change")} · ${L(s.short)}`);
     $("#checkout-site").innerHTML = rich(t("site.current", { name: L(s.name) }));
     moveMapToSite();
+  }
+
+  // Google's map weighs about 600 KB: it is loaded only when the customer scrolls near it.
+  let mapNear = !("IntersectionObserver" in window), mapWanted = "";
+  function showMapWhenNear(embed) {
+    mapWanted = embed;
+    const frame = $("#map-embed");
+    if (mapNear) { if (frame.getAttribute("src") !== embed) frame.src = embed; return; }
+    if (frame.dataset.watched) return;
+    frame.dataset.watched = "1";
+    const io = new IntersectionObserver((es) => {
+      if (!es.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      mapNear = true;
+      frame.src = mapWanted;
+    }, { rootMargin: "600px 0px" });
+    io.observe(frame);
   }
 
   /* ---------- Choosing the restaurant: on the first visit (required), or from the header ---------- */
@@ -243,20 +260,33 @@
     const v = C.plateVideo || {};
     if (!v.mp4 && !v.webm) return;
     const media = $("#hero-plate");
+    // Phones get the lighter 480 px copy.
+    const small = innerWidth < 760 && v.smallWebm;
     const video = document.createElement("video");
     // Phones only autoplay a video that is muted inline from the start: set it as attributes too.
     ["muted", "autoplay", "loop", "playsinline", "webkit-playsinline"].forEach((a) => video.setAttribute(a, ""));
     video.muted = video.defaultMuted = video.loop = video.playsInline = video.autoplay = true;
     video.preload = "auto";
-    if (v.poster) video.poster = v.poster;
-    if (v.webm) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.webm)}" type="video/webm">`);
-    if (v.mp4) video.insertAdjacentHTML("beforeend", `<source src="${esc(v.mp4)}" type="video/mp4">`);
+    const poster = small ? v.smallPoster : v.poster;
+    if (poster) video.poster = poster;
     media.insertAdjacentHTML("afterbegin", '<div class="hero__light"></div>');
     media.appendChild(video);
+    // The video is fetched once the page has loaded, so the menu and the first screen come first (the still frame
+    // shows until then, and looks the same).
+    const loadVideo = () => {
+      const webm = small ? v.smallWebm : v.webm, mp4 = small ? v.smallMp4 : v.mp4;
+      if (webm) video.insertAdjacentHTML("beforeend", `<source src="${esc(webm)}" type="video/webm">`);
+      if (mp4) video.insertAdjacentHTML("beforeend", `<source src="${esc(mp4)}" type="video/mp4">`);
+      video.load();
+      tryPlay();
+      // If the video still will not play, turn the plate of the still frame instead.
+      setTimeout(() => { if (video.paused) media.classList.add("is-spinning"); }, 2500);
+    };
+    if (document.readyState === "complete") setTimeout(loadVideo, 300);
+    else addEventListener("load", () => setTimeout(loadVideo, 300), { once: true });
     // The slow turn is the point of the hero, so it runs even with reduced motion (nothing flashes or moves
     // across the screen).
-    const tryPlay = () => { const p = video.play(); if (p && p.catch) p.catch(() => {}); };
-    tryPlay();
+    const tryPlay = () => { if (!video.currentSrc && !video.querySelector("source")) return; const p = video.play(); if (p && p.catch) p.catch(() => {}); };
     // Some browsers (data or battery savers) only allow it after a touch, or once the video is on screen.
     ["touchstart", "pointerdown", "scroll", "keydown"].forEach((ev) => addEventListener(ev, tryPlay, { passive: true, once: true }));
     document.addEventListener("visibilitychange", () => { if (!document.hidden) tryPlay(); });
@@ -274,12 +304,11 @@
     crumbs.innerHTML = CRUMBS.map(([n, x, y, w, d]) =>
       `<img src="/assets/crumbs/${n}.webp" alt="" style="--x:${x};--y:${y};--w:${(w / 720 * 100).toFixed(2)}%;--d:${d}s">`).join("");
     media.appendChild(crumbs);
-    // If the video still will not play, turn the plate of the still frame instead.
+    // The still frame's plate that turns when the video cannot play (see loadVideo).
     const spin = document.createElement("div");
     spin.className = "hero__spin";
     media.appendChild(spin);
     video.addEventListener("playing", () => media.classList.remove("is-spinning"));
-    setTimeout(() => { if (video.paused) media.classList.add("is-spinning"); }, 2500);
   }
 
   /* ---------- Intro: the rooster, the name typed out, the sprig, then a glide into the header ---------- */
@@ -434,11 +463,13 @@
 
   let currentCat = null;
 
+  // Category covers have a 480 px copy (cat-*-480.webp) for the small tiles on phones.
+  const smallCover = (src) => (/\/cat-[^/]+\.webp$/.test(src) ? ` srcset="${esc(src.replace(/\.webp$/, "-480.webp"))} 480w, ${esc(src)} 1000w"` : "");
   function renderHome() {
     $("#cat-grid").innerHTML = MENU.map((c) => {
       const from = Math.min(...c.items.map(basePrice));
       return `<button class="cat-tile" type="button" data-open-cat="${c.id}" aria-label="${esc(t("menu.open", { name: L(c) }))}">
-        <span class="cat-tile__media">${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy" width="600" height="400">` : illustration(c.icon)}</span>
+        <span class="cat-tile__media">${c.image ? `<img src="${esc(c.image)}"${smallCover(c.image)} sizes="(max-width: 639px) 50vw, (max-width: 999px) 33vw, 260px" alt="" loading="lazy" width="600" height="400">` : illustration(c.icon)}</span>
         <span class="cat-tile__text"><span class="cat-tile__name">${rich(L(c))}</span>
         <span class="cat-tile__meta">${esc(t("menu.dishes", { n: c.items.length }))} · ${esc(t("menu.from", { price: money(from) }))}</span></span>
       </button>`;
@@ -949,6 +980,11 @@
   function loadLeaflet() {
     if (window.L && window.L.map) return Promise.resolve();
     if (!leafletLoading) {
+      // its styles too: only the delivery map needs them
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = "/vendor/leaflet/leaflet.css";
+      document.head.appendChild(css);
       leafletLoading = new Promise((res, rej) => {
         const s = document.createElement("script");
         s.src = "/vendor/leaflet/leaflet.js";

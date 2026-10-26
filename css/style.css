@@ -458,7 +458,8 @@ html.no-intro .intro { display: none; }
 .hero__plate video,
 .hero__plate::after { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .hero__plate video { display: block; object-fit: cover; }
-.hero__plate::after { content: ""; background: url("/assets/video/hero-plate-poster.jpg") center / cover; z-index: -1; }
+.hero__plate::after { content: ""; background: url("/assets/video/hero-plate-poster.webp") center / cover; z-index: -1; }
+@media (max-width: 759px) { .hero__plate::after { background-image: url("/assets/video/hero-plate-poster-480.webp"); } }
 /* Fallback when a browser will not play the video: the plate of the still frame turns (clockwise, one
    turn in 15 s like the video). The circle covers the whole plate and its bowl (centre 349.5 / 346, radius
    282 of 720 x 760); behind it, a still frame with the plate painted out, so no piece of it stays still. */
@@ -470,7 +471,7 @@ html.no-intro .intro { display: none; }
   width: 78.33%;
   height: 74.21%;
   border-radius: 50%;
-  background: url("/assets/video/hero-plate-poster.jpg") 43.27% 32.65% / 127.66% 134.75% no-repeat;
+  background: url("/assets/video/hero-plate-poster.webp") 43.27% 32.65% / 127.66% 134.75% no-repeat;
   -webkit-mask-image: radial-gradient(closest-side, #000 95%, transparent 100%);
   mask-image: radial-gradient(closest-side, #000 95%, transparent 100%);
   animation: plate-turn 15s linear infinite;
