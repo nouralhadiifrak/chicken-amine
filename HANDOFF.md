@@ -22,6 +22,7 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 - If autoplay is blocked, a CSS-turned still image replaces the plate video.
 - Torn white paper strip with the categories moving across it.
 - Each restaurant has its own page for its Google Business Profile (/sidi-moumen/, /bouchaib-doukkali/, built by tools/build-locations.js) and its own review link (/avis/<id>/); names, addresses and phones match Google exactly. Hours 12:00 – 01:00.
+- Installable app (PWA): site.webmanifest + sw.js (offline copy); install button in the header and a banner after browsing (Android prompt, iPhone steps). Next step if wanted: a Google Play version built from it.
 - Two restaurants: chosen on the first visit (GPS finds the nearest), remembered, changeable from the header pin. Phone, WhatsApp, Instagram, map and delivery area follow the choice.
 - Menu: 14 photo tiles; on phones, dishes are 2-per-row cards. Couscous only on Fridays 12:00 – 17:00.
 - Dish photos: only the restaurant's own (Yassir and photos sent by the owner); a dish may reuse a photo of the same kind of dish; dishes without one show emoji tiles. Never use photos from elsewhere. A long press (phone) or a click (PC) shows a dish photo big.

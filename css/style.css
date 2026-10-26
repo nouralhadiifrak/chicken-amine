@@ -175,6 +175,42 @@ html.no-intro .intro { display: none; }
   .site-btn { max-width: none; font-size: 0.95rem; margin-inline-start: 4px; }
   .site-btn span { white-space: nowrap; }
 }
+/* Install as an app: a small download button in the header, shown only where installing is possible. */
+.install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  min-width: 40px;
+  justify-content: center;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--yellow-soft);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex: none;
+}
+.install-btn[hidden] { display: none; }
+.install-btn svg { width: 20px; height: 20px; color: var(--red); }
+.install-btn span { display: none; }
+.install-btn:hover { background: #ffe9a3; }
+@media (min-width: 760px) {
+  .install-btn { padding: 0 14px; margin-inline-start: 4px; }
+  .install-btn span { display: inline; }
+}
+/* Phones: the logo, the restaurant, the install button, the language and the cart share one row. */
+@media (max-width: 459px) {
+  .header__inner { padding: 0 10px; gap: 2px; }
+  .header__logo img { height: 40px; }
+  .install-btn { min-width: 36px; min-height: 36px; padding: 0; }
+  .lang-link { padding: 0 6px; }
+  .cart-btn { padding: 0 10px 0 9px; margin-inline-start: 2px; }
+  .site-btn { padding: 0 4px; max-width: 34vw; }
+}
 .cart-btn {
   position: relative;
   display: inline-flex;
@@ -845,6 +881,35 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .cart-bar__label { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
 .cart-bar .cart-ico { width: 24px; height: 24px; flex: none; }
 .cart-bar__meta { display: inline-flex; align-items: baseline; gap: 0.3em; color: var(--yellow); white-space: nowrap; font-size: 0.95em; }
+
+/* The invitation to install the app, just under the header. */
+.install-banner {
+  position: fixed;
+  top: calc(var(--header-h) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 38;
+  width: min(94vw, 520px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border-radius: 18px;
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 16px 34px -14px rgba(0, 0, 0, 0.6);
+}
+.install-banner[hidden] { display: none; }
+.install-banner img { width: 44px; height: 44px; border-radius: 12px; flex: none; }
+.install-banner__text { margin: 0; flex: 1; min-width: 0; font-size: 0.85rem; line-height: 1.3; }
+.install-banner__text strong { display: block; color: var(--red); font-size: 0.95rem; }
+.install-banner .btn { flex: none; }
+.install-banner__close { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: #f2f2f2; color: var(--ink); cursor: pointer; }
+.ios-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 14px; }
+.ios-steps li { display: flex; align-items: center; gap: 12px; }
+.ios-steps__icon { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px; background: #f2f2f2; color: #0a84ff; }
+.ios-steps__icon svg { width: 26px; height: 26px; }
+.ios-steps__icon img { border-radius: 7px; }
 
 /* ---------- Dialogs ---------- */
 .sheet {

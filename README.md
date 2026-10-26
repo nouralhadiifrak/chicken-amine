@@ -17,6 +17,18 @@ The site lives at https://chickenamine.ma (domain at Capconnect: two A records t
 In Vercel, `www.chickenamine.ma` redirects to it, and `vercel.json` redirects the old `chicken-amine-theta.vercel.app`
 address to it permanently.
 
+## Installable app (PWA)
+
+The site installs as an app (home-screen icon, full screen): `site.webmanifest` (name, colours, icons, maskable
+icons, shortcuts to order from each restaurant) and `sw.js`, which keeps a copy of the site so the app opens on a
+weak or missing connection. Pages, styles and scripts come from the network first (menu and prices stay fresh,
+the saved copy only if the network fails or takes over 4 s); photos, icons and fonts from the saved copy, refreshed
+in the background. Raise `VERSION` in `sw.js` to drop every saved copy.
+
+Android browsers offer their own install prompt: the site keeps it for its header button and for a banner shown
+once the customer has opened a category (or after 40 s; « Plus tard » hides it for two weeks). iPhone Safari has
+no prompt, so the same button shows the three Safari steps. Where installing isn't possible, nothing is shown.
+
 ## Run locally
 
 ```sh

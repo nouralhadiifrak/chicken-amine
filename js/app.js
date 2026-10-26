@@ -8,6 +8,7 @@
   const CART_KEY = "chickenamine.cart.v1";
   const FORM_KEY = "chickenamine.customer.v1";
   const SITE_KEY = "chickenamine.location.v1";
+  const INSTALL_KEY = "chickenamine.install-later.v1";
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -525,6 +526,7 @@
     renderMenu();
     if (window.SpringText) { SpringText.observe($("#menu-list")); SpringText.play($(".category__title")); }
     scrollToMenu();
+    setTimeout(offerInstall, 1500);
   }
   function showCategories(push = true) {
     const was = currentCat;
@@ -859,6 +861,53 @@
     $("#photo-dialog").addEventListener("click", () => closeDialog($("#photo-dialog")));
   }
 
+  /* ---------- Installing the site as an app (home-screen icon, full screen) ---------- */
+  // Android browsers offer their own install prompt (kept for our buttons); iPhone Safari has none, so its steps are shown.
+  let installPrompt = null;
+  const BANNER_PAUSE = 14 * 24 * 3600 * 1000; // after « Plus tard », not again for two weeks
+  const isInstalled = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const canInstall = () => !isInstalled() && (!!installPrompt || isIos());
+  function renderInstall() {
+    $("#install-btn").hidden = !canInstall();
+    if (!canInstall()) hideInstallBanner();
+  }
+  // The banner comes once the customer has looked around (opened a category, or after a while), never over a sheet.
+  function offerInstall() {
+    if (!canInstall() || !$("#install-banner").hidden || $$("dialog").some((d) => d.open)) return;
+    try { if (Date.now() - (+localStorage.getItem(INSTALL_KEY) || 0) < BANNER_PAUSE) return; } catch (e) { /* storage unavailable */ }
+    $("#install-banner").hidden = false;
+  }
+  function hideInstallBanner() { $("#install-banner").hidden = true; }
+  function laterInstall() {
+    hideInstallBanner();
+    try { localStorage.setItem(INSTALL_KEY, String(Date.now())); } catch (e) { /* storage unavailable */ }
+  }
+  function install() {
+    hideInstallBanner();
+    if (installPrompt) {
+      const p = installPrompt;
+      installPrompt = null;
+      p.prompt();
+      if (p.userChoice) p.userChoice.then(renderInstall, renderInstall); else renderInstall();
+    } else if (isIos()) openDialog($("#ios-dialog"));
+  }
+  function setupInstall() {
+    addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; renderInstall(); });
+    addEventListener("appinstalled", () => { installPrompt = null; renderInstall(); });
+    $("#install-btn").addEventListener("click", install);
+    $("#install-banner-btn").addEventListener("click", install);
+    $("#install-close").addEventListener("click", laterInstall);
+    $("#ios-close").addEventListener("click", () => closeDialog($("#ios-dialog")));
+    $("#ios-ok").addEventListener("click", () => closeDialog($("#ios-dialog")));
+    setTimeout(offerInstall, 40000);
+    renderInstall();
+    // Saved copy of the site, so the installed app opens on a weak connection (sw.js).
+    if ("serviceWorker" in navigator && window.isSecureContext) {
+      addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+    }
+  }
+
   /* ---------- Dialog helpers ---------- */
   function openDialog(d) { if (!d.open) d.showModal(); document.body.classList.add("is-locked"); }
   function closeDialog(d) { if (d.open) d.close(); }
@@ -1103,6 +1152,7 @@
   /* ---------- Start ---------- */
   setupHero();
   bind();
+  setupInstall();
   loadCustomer();
   currentCat = catFromHash();
   applyLanguage();
