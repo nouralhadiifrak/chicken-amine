@@ -14,9 +14,9 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 
 ## Built so far
 
-- Intro: logo builds from 4 layers, flower grows from its stem, logo glides into the header.
+- Intro (about 1.8 s): logo builds from 4 layers, flower grows from its stem, logo glides into the header.
 - Hero: dark slate background with a light under the plate.
-- Hero title: "Les meilleurs plats à Casablanca", handwritten in Great Vibes (Aref Ruqaa in Arabic).
+- Hero title: "Les meilleurs plats à Casablanca" in Great Vibes (Aref Ruqaa in Arabic), plain text (no writing animation).
 - Hero has 2 buttons, a turning plate video and 12 floating crumbs.
 - Hero layout: phone = title / plate / buttons, PC = text left, plate right.
 - If autoplay is blocked, a CSS-turned still image replaces the plate video.

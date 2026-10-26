@@ -385,30 +385,6 @@ html.no-intro .intro { display: none; }
   z-index: 1;
 }
 [dir="rtl"] .hero__title { font-family: "Aref Ruqaa", "Cairo", serif; font-weight: 700; font-size: clamp(2.3rem, 10vw, 4.4rem); line-height: 1.5; }
-/* written in like a signature: revealed along the line */
-/* Handwritten: nothing shows until it is written; each line is then inked along the writing direction
-   behind a soft pen edge (a moving mask), one line after the other. */
-.hero__title { visibility: hidden; }
-.hero__title.is-writing { visibility: visible; }
-.hw-line {
-  display: block;
-  -webkit-mask-image: linear-gradient(90deg, #000 42%, transparent 58%);
-  mask-image: linear-gradient(90deg, #000 42%, transparent 58%);
-  -webkit-mask-size: 260% 100%;
-  mask-size: 260% 100%;
-  -webkit-mask-position: 100% 0;
-  mask-position: 100% 0;
-}
-.is-writing .hw-line { animation: write var(--hw-time) var(--hw-delay) cubic-bezier(.45,.05,.55,.95) forwards; }
-[dir="rtl"] .hw-line {
-  -webkit-mask-image: linear-gradient(270deg, #000 42%, transparent 58%);
-  mask-image: linear-gradient(270deg, #000 42%, transparent 58%);
-  -webkit-mask-position: 0 0;
-  mask-position: 0 0;
-}
-[dir="rtl"] .is-writing .hw-line { animation-name: write-rtl; }
-@keyframes write { from { -webkit-mask-position: 100% 0; mask-position: 100% 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
-@keyframes write-rtl { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: 100% 0; mask-position: 100% 0; } }
 .hero__plate {
   grid-area: plate;
   position: relative;
@@ -1237,7 +1213,6 @@ html { scrollbar-color: var(--yellow) var(--red-dark); }
   .st-pending .st-unit { opacity: 1; }
   .cart-ico__body { animation: none !important; }
   #options-dialog[open], #sauce-dialog[open], .bump { animation: none !important; }
-  .hw-line { -webkit-mask-image: none !important; mask-image: none !important; }
   .band__track { animation: none; }
 }
 

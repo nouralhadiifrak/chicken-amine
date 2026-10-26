@@ -119,45 +119,12 @@
     if (window.SpringText) SpringText.observe(document.querySelector("main"));
   }
 
-  // The hero title is handwritten: hidden until it is written, then each line is inked in turn along the
-  // writing direction, as if with a pen (again after a language switch). Words are never cut, so the
-  // joined-up script stays intact.
-  let writeRun = 0;
-  async function writeTitle() {
-    const run = ++writeRun;
-    const title = $(".hero__title");
-    title.classList.remove("is-writing");
-    const text = t("hero.title");
-    if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
-    if (run !== writeRun) return;
-    // find the lines as the browser wraps them
-    title.innerHTML = text.split(/\s+/).map((w) => `<span class="hw-word">${esc(w)}</span>`).join(" ");
-    const lines = [];
-    $$(".hw-word", title).forEach((w) => {
-      const last = lines[lines.length - 1];
-      if (last && Math.abs(last.top - w.offsetTop) < 4) last.words.push(w.textContent);
-      else lines.push({ top: w.offsetTop, words: [w.textContent] });
-    });
-    // each line takes time in proportion to its length, the next starts as the pen reaches the end
-    let at = 0;
-    title.innerHTML = lines.map((l) => {
-      const s = l.words.join(" ");
-      const ms = Math.round(380 + s.length * 70);
-      const html = `<span class="hw-line" style="--hw-delay:${at}ms;--hw-time:${ms}ms">${esc(s)}</span>`;
-      at += ms - 120;
-      return html;
-    }).join(" ");
-    void title.offsetWidth;
-    title.classList.add("is-writing");
-  }
-
   function switchLanguage() {
     lang = lang === "ar" ? "fr" : "ar";
     const url = new URL(location.href);
     if (lang === "ar") url.searchParams.set("lang", "ar"); else url.searchParams.delete("lang");
     history.replaceState(null, "", url.pathname + url.search + url.hash);
     applyLanguage();
-    writeTitle();
     // Headings already on screen replay at once.
     $$("main h1, main h2, main h3").forEach((h) => {
       const r = h.getBoundingClientRect();
@@ -311,7 +278,7 @@
     video.addEventListener("playing", () => media.classList.remove("is-spinning"));
   }
 
-  /* ---------- Intro: the rooster, the name typed out, the sprig, then a glide into the header ---------- */
+  /* ---------- Intro (about 1.8 s): the rooster, the name slides in, the sprig, then a glide into the header ---------- */
   function runIntro() {
     const intro = $("#intro");
     const target = $("#header-logo");
@@ -323,7 +290,6 @@
       intro.classList.add("is-done");
       document.documentElement.classList.add("no-intro");
       if (!site) openSites();
-      writeTitle();
       SpringText.observe(document.querySelector("main"));
     };
     if (reducedMotion.matches || !intro.animate) { finish(); return; }
@@ -345,47 +311,49 @@
         { opacity: 0, transform: `${centre} scale(.3) rotate(-14deg)` },
         { opacity: 1, transform: `${centre} scale(1.12) rotate(5deg)`, offset: 0.7 },
         { opacity: 1, transform: `${centre} scale(1) rotate(0)` },
-      ], { duration: 480 });
-      await wait(140);
+      ], { duration: 280 });
+      await wait(40);
 
-      // 2. "hicken" slides in from the right while the rooster steps aside to its place.
-      show(layer("rooster"), [{ transform: `${centre}` }, { transform: "none" }], { duration: 560 });
-      await show(layer("hicken"), [
+      // 2. "hicken" slides in from the right while the rooster steps aside to its place; "AMINE" follows
+      //    before "hicken" has landed.
+      show(layer("rooster"), [{ transform: `${centre}` }, { transform: "none" }], { duration: 320 });
+      show(layer("hicken"), [
         { opacity: 0, transform: "translateX(70vw) skewX(-12deg)" },
         { opacity: 1, transform: "translateX(-2%) skewX(4deg)", offset: 0.75 },
         { opacity: 1, transform: "none" },
-      ], { duration: 600, easing: slide });
+      ], { duration: 340, easing: slide });
+      await wait(200);
 
       // 3. "AMINE" slides in from the right.
       await show(layer("amine"), [
         { opacity: 0, transform: "translateX(70vw) skewX(-12deg)" },
         { opacity: 1, transform: "translateX(-2%) skewX(4deg)", offset: 0.75 },
         { opacity: 1, transform: "none" },
-      ], { duration: 560, easing: slide });
+      ], { duration: 320, easing: slide });
 
-      // 4. The flower grows slowly out of the logo, from its stem (the layer's transform-origin) up.
+      // 4. The flower grows out of the logo, from its stem (the layer's transform-origin) up.
       await show(layer("sprig"), [
         { opacity: 0, transform: "scale(.02) rotate(-12deg)" },
         { opacity: 1, transform: "scale(.25) rotate(-9deg)", offset: 0.15 },
         { opacity: 1, transform: "scale(.8) rotate(-2deg)", offset: 0.7 },
         { opacity: 1, transform: "none" },
-      ], { duration: 1500, easing: "cubic-bezier(.33,0,.25,1)" });
-      await wait(260);
+      ], { duration: 520, easing: "cubic-bezier(.33,0,.25,1)" });
+      await wait(60);
 
       // 5. The finished logo glides into its place in the header.
       const from = stage.getBoundingClientRect();
       const to = target.getBoundingClientRect();
       const k = to.width / from.width;
       target.style.opacity = "0";
-      intro.animate([{ backgroundColor: "rgba(255,255,255,1)" }, { backgroundColor: "rgba(255,255,255,0)" }], { duration: 520, easing: ease, fill: "forwards" });
+      intro.animate([{ backgroundColor: "rgba(255,255,255,1)" }, { backgroundColor: "rgba(255,255,255,0)" }], { duration: 360, easing: ease, fill: "forwards" });
       await stage.animate(
         [{ transform: "none" }, { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${k})` }],
-        { duration: 600, easing: ease, fill: "forwards" }
+        { duration: 400, easing: ease, fill: "forwards" }
       ).finished;
       finish();
     })().catch(finish);
     // Safety net: never keep the page covered.
-    setTimeout(finish, 6500);
+    setTimeout(finish, 3500);
   }
 
   /* ---------- Placeholder illustrations ---------- */
