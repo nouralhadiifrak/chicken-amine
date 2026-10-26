@@ -2,8 +2,7 @@
 window.CONFIG = {
   name: "Chicken Amine",
   // Public address of the site, used for canonical links, the sitemap, share previews and the table-card QR code.
-  // No domain yet: this is the Vercel address. Change it here when the domain is bought.
-  siteUrl: "https://chicken-amine-theta.vercel.app",
+  siteUrl: "https://chickenamine.ma",
   // The two restaurants. On the first visit the customer picks one (the nearest, with their GPS); its phone,
   // WhatsApp (orders are sent there), Instagram, map and delivery area are then used everywhere on the site.
   // The first one is the default for search engines and the table card.

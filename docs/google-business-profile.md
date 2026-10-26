@@ -12,9 +12,9 @@ that manages the listing (or search "Chicken Amine" on Google while signed in an
 | Primary category | Restaurant de restauration rapide (Fast food restaurant) |
 | Secondary categories | Restaurant de poulet (Chicken restaurant), Restaurant de tacos, Pizzeria, Sandwicherie, Restaurant de hamburgers, Bar à jus |
 | Phone | Sidi Moumen 06 34 38 59 31 · Bouchaib Doukkali 06 64 49 62 96 (one listing per restaurant) |
-| Website | https://chicken-amine-theta.vercel.app (replace with the domain once bought) |
-| Menu link | https://chicken-amine-theta.vercel.app/#menu |
-| Order link ("Commander en ligne") | https://chicken-amine-theta.vercel.app/#menu |
+| Website | https://chickenamine.ma |
+| Menu link | https://chickenamine.ma/#menu |
+| Order link ("Commander en ligne") | https://chickenamine.ma/#menu |
 | Address | Sidi Moumen Al Houda, Casablanca 22500. Check the pin is exactly on the shop front |
 | Hours | Every day 12:00 – 00:00. Add special hours for Ramadan and holidays |
 
