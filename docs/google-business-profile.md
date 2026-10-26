@@ -1,24 +1,30 @@
 # Google Business Profile: setup guide for Chicken Amine
 
-The listing on Google Maps is where most local customers find the restaurant. This guide covers what
-to fill in, in the order to do it. Open the profile at <https://business.google.com> with the account
-that manages the listing (or search "Chicken Amine" on Google while signed in and click "Modifier le profil").
+The listings on Google Maps are where most local customers find the restaurants. There are two, one per
+restaurant; each links to its own page of the site. This guide covers what to fill in, in the order to do it.
+Open a profile at <https://business.google.com> with an account that manages it (owner or manager).
+
+> In October 2026 "Chicken Amine 2" was **not claimed** ("Revendiquer cet établissement"): the owner should
+> claim it first, then add the site's manager as **Gestionnaire**. "Chicken Amine" had `superesto.ma` as its
+> website: replace it with the link below.
 
 ## 1. Name, categories, contact
 
-| Field | Value |
-| --- | --- |
-| Name | Chicken Amine (the real sign name only; no keywords like "tacos Casablanca", Google suspends listings for that) |
-| Primary category | Restaurant de restauration rapide (Fast food restaurant) |
-| Secondary categories | Restaurant de poulet (Chicken restaurant), Restaurant de tacos, Pizzeria, Sandwicherie, Restaurant de hamburgers, Bar à jus |
-| Phone | Sidi Moumen 06 34 38 59 31 · Bouchaib Doukkali 06 64 49 62 96 (one listing per restaurant) |
-| Website | https://chickenamine.ma |
-| Menu link | https://chickenamine.ma/#menu |
-| Order link ("Commander en ligne") | https://chickenamine.ma/#menu |
-| Address | Sidi Moumen Al Houda, Casablanca 22500. Check the pin is exactly on the shop front |
-| Hours | Every day 12:00 – 00:00. Add special hours for Ramadan and holidays |
+| Field | Chicken Amine (Sidi Moumen) | Chicken Amine 2 (Bouchaib Doukkali) |
+| --- | --- | --- |
+| Name | Chicken Amine | Chicken Amine 2 |
+| Phone | 06 34 38 59 31 | 06 64 49 62 96 |
+| Address | Sidi Moumen Al Houda, Casablanca | 173 Bd Abou Chouaib Doukkali, Casablanca 20320 |
+| Hours | Every day 12:00 – 01:00 | Every day 12:00 – 01:00 |
+| Website | https://chickenamine.ma/sidi-moumen/ | https://chickenamine.ma/bouchaib-doukkali/ |
+| Menu link | https://chickenamine.ma/?restaurant=sidi-moumen#menu | https://chickenamine.ma/?restaurant=bouchaib-doukkali#menu |
+| Order link ("Commander") | same as the menu link | same as the menu link |
 
-> Each listing must show the same number as the site and the paper menu: Google compares them.
+- Primary category: Restaurant de restauration rapide (Fast food restaurant). Secondary: Restaurant de
+  poulet, Restaurant de tacos, Pizzeria, Sandwicherie, Restaurant de hamburgers.
+- Names: the real sign name only; no keywords like "tacos Casablanca" (Google suspends listings for that).
+- The site writes the names, addresses and phones exactly as above (`googleName`, `address`, `phone` in
+  `js/config.js`): keep both the same, Google compares them. Check each pin is on the shop front.
 
 ## 2. Description (750 characters max)
 
@@ -26,8 +32,10 @@ Keep it factual. A starting point:
 
 > Chicken Amine, restaurant de restauration rapide à Sidi Moumen Al Houda, Casablanca. Tacos et tacos
 > gratinés, broasters, crunchy's, chawarmas, burgers, paninis, pizzas, pâtes, pasticcios, plats et jus
-> frais. Ouvert tous les jours de 12h à minuit. Sur place, à emporter ou en livraison ; commande sur
+> frais. Ouvert tous les jours de 12h à 1h du matin. Sur place, à emporter ou en livraison ; commande sur
 > WhatsApp depuis notre site.
+
+(For Chicken Amine 2, the same with "boulevard Abou Chouaib Doukkali".)
 
 ## 3. Attributes
 
@@ -51,18 +59,17 @@ Photos make the biggest difference in clicks. Upload, from a phone in daylight o
 
 No stock photos and no text over photos.
 
-## 5. Review link and table cards
+## 5. Review links and table cards
 
-1. In the profile, open **"Demander des avis" / "Ask for reviews"** and copy the link (it looks like
-   `https://g.page/r/XXXX/review`).
-2. Paste it in `js/config.js` as `googleReviewUrl`. The page `/avis/` then forwards to it; until then it
-   shows "Bientôt disponible".
-3. Print the table card `print/table-card.pdf` (A6, 105 × 148 mm). Its QR code opens `/avis/`, so the
-   printed cards keep working even if the review link changes.
-4. Reply to every review, good or bad, within a few days.
+1. Each restaurant has its own review page: `/avis/sidi-moumen/` and `/avis/bouchaib-doukkali/` open its
+   Google review form directly (built from the listing's Place ID, `placeId` in `js/config.js`).
+   `/avis/` asks which restaurant (cards printed earlier point there).
+2. Print the table cards `print/table-card.pdf` (A6, 105 × 148 mm, one page per restaurant): each QR code
+   opens that restaurant's review page. Put each card in its own restaurant.
+3. Reply to every review, good or bad, within a few days.
 
-If the site address changes (new domain), update `siteUrl` in `js/config.js`, then run
-`node tools/build-seo.js` and `python3 tools/table-card.py` and print new cards.
+After changing the restaurants' details or the site address in `js/config.js`, run
+`node tools/build-seo.js`, `node tools/build-locations.js` and `python3 tools/table-card.py`.
 
 ## 6. Keep it alive
 

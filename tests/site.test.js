@@ -695,12 +695,46 @@ async function main() {
   }
 
   // Review page.
-  console.log("\n/avis/");
+  console.log("\nreview pages");
   {
     const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
+    // The review forms are on Google: stop there and only note where each page goes.
+    const sent = [];
+    await page.route("https://search.google.com/**", (route) => { sent.push(route.request().url()); route.fulfill({ body: "ok", contentType: "text/plain" }); });
     await page.goto(base + "/avis/");
-    check(await page.isVisible("#coming-soon"), "review page shows « Bientôt disponible » while no link is set");
+    const choices = await page.$$eval("#choose a", (as) => as.map((a) => a.getAttribute("href")));
+    check(choices.join() === "/avis/sidi-moumen/,/avis/bouchaib-doukkali/", `/avis/ asks which restaurant (${choices.join(", ")})`);
+    for (const [id, place] of [["sidi-moumen", "ChIJJUTi5A7Npw0RKclHxm17wbo"], ["bouchaib-doukkali", "ChIJG61xOQDNpw0RrRWHPdj3FrM"]]) {
+      await page.goto(base + `/avis/${id}/`).catch(() => {});
+      await page.waitForTimeout(400);
+      check(sent.some((u) => u.includes(`writereview?placeid=${place}`)), `/avis/${id}/ opens that restaurant's Google review form`);
+    }
     check(errors.length === 0, "no JavaScript errors");
+    await context.close();
+  }
+
+  // Each restaurant's own page (the one its Google Business Profile links to).
+  console.log("\nrestaurant pages");
+  for (const [id, name, phone, address] of [["sidi-moumen", "Chicken Amine", "+212634385931", "Sidi Moumen Al Houda"], ["bouchaib-doukkali", "Chicken Amine 2", "+212664496296", "173 Bd Abou Chouaib Doukkali"]]) {
+    const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr", site: null });
+    await page.goto(base + `/${id}/`);
+    const info = await page.evaluate(() => {
+      const ld = JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent)["@graph"][0];
+      return { h1: document.querySelector("h1").textContent, canonical: document.querySelector('link[rel="canonical"]').href, ld,
+        order: document.querySelector(".actions a").getAttribute("href"), text: document.body.textContent,
+        wide: document.documentElement.scrollWidth > innerWidth + 1 };
+    });
+    check(info.ld.name === name && info.ld.telephone === phone && info.ld.address.streetAddress === address && info.ld.openingHoursSpecification[0].closes === "01:00",
+      `/${id}/: Google data names « ${info.ld.name} », ${info.ld.telephone}, « ${info.ld.address.streetAddress} », open until 01:00`);
+    check(info.h1.startsWith(name) && info.canonical.endsWith(`/${id}/`) && info.text.includes(address) && !info.wide, `/${id}/: title « ${info.h1} », own canonical address, fits a phone`);
+    // Its order button opens the menu with that restaurant already chosen, without asking.
+    await page.click(".actions a");
+    await page.waitForFunction(() => document.querySelector("#intro").classList.contains("is-done"), null, { timeout: 8000 });
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(() => ({ site: window.__chickenAmine.site(), asked: !!document.querySelector("#site-dialog[open]"), search: location.search, hash: location.hash }));
+    check(info.order === `/?restaurant=${id}#menu` && after.site === id && !after.asked && after.search === "" && after.hash === "#menu",
+      `/${id}/: « Commander » opens the menu for that restaurant without asking (address tidied to ${after.hash})`);
+    check(errors.length === 0, `/${id}/: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
     await context.close();
   }
 
