@@ -11,6 +11,12 @@ Plain HTML, CSS and JavaScript with no build step, hosted on Vercel from this re
 - Open/closed status in Casablanca time, Google map, phone, Instagram
 - `/avis/` forwards the table cards' QR code to the Google review link
 
+## Domain
+
+The site lives at https://chickenamine.ma (domain at Capconnect: two A records to Vercel for `@`, a CNAME for `www`).
+In Vercel, `www.chickenamine.ma` redirects to it, and `vercel.json` redirects the old `chicken-amine-theta.vercel.app`
+address to it permanently.
+
 ## Run locally
 
 ```sh

@@ -1,5 +1,13 @@
 {
   "trailingSlash": true,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "chicken-amine-theta.vercel.app" }],
+      "destination": "https://chickenamine.ma/:path*",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/(css|js)/(.*)",
