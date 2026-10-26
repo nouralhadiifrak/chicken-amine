@@ -34,9 +34,19 @@
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
   /* ---------- The restaurant the customer orders from (two locations) ---------- */
-  let site = loadSite();
+  let site = siteFromLink() || loadSite();
   function loadSite() {
     try { const id = localStorage.getItem(SITE_KEY); return C.locations.find((l) => l.id === id) || null; } catch (e) { return null; }
+  }
+  // A link from a restaurant's own page (?restaurant=sidi-moumen) chooses that restaurant; the address is then tidied.
+  function siteFromLink() {
+    const url = new URL(location.href);
+    const l = C.locations.find((x) => x.id === url.searchParams.get("restaurant"));
+    if (!l) return null;
+    try { localStorage.setItem(SITE_KEY, l.id); } catch (e) { /* storage unavailable */ }
+    url.searchParams.delete("restaurant");
+    history.replaceState(null, "", url.pathname + url.search + url.hash);
+    return l;
   }
   // The chosen restaurant; the first one until the customer picks.
   const S = () => site || C.locations[0];

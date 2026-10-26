@@ -74,6 +74,7 @@ Raise the `?v=` number on the stylesheet and script links in `index.html` so pho
 
 ```sh
 node tools/build-seo.js       # schema.org data in index.html, sitemap.xml, robots.txt, head tags
+node tools/build-locations.js # each restaurant's page (/sidi-moumen/, /bouchaib-doukkali/) and review links (/avis/)
 python3 tools/table-card.py   # table card with its QR code (print/table-card.html and .pdf)
 ```
 

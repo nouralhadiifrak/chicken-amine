@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Builds the table card: print/table-card.html (QR code to <siteUrl>/avis/) and the print-ready
-print/table-card.pdf (A6, 105 x 148 mm, one card per page).
+Builds the table cards, one per restaurant: print/table-card.html (QR code to <siteUrl>/avis/<restaurant>/,
+which opens that restaurant's Google review form) and the print-ready print/table-card.pdf
+(A6, 105 x 148 mm, one card per page).
 
-Run after changing siteUrl in js/config.js:  python3 tools/table-card.py
+Run after changing siteUrl or the restaurants in js/config.js:  python3 tools/table-card.py
 Needs: pip install "qrcode[pil]", and Chromium (or Google Chrome) for the PDF.
 """
+import json
 import os
 import re
 import shutil
@@ -18,14 +20,33 @@ import qrcode.image.svg
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 config = open(os.path.join(ROOT, "js", "config.js"), encoding="utf-8").read()
 site = re.search(r'siteUrl:\s*"([^"]+)"', config).group(1).rstrip("/")
-target = f"{site}/avis/"
+locations = json.loads(subprocess.run(
+    ["node", "-e", "global.window={};require(process.argv[1]);console.log(JSON.stringify(window.CONFIG.locations))",
+     os.path.join(ROOT, "js", "config.js")], check=True, capture_output=True, text=True).stdout)
 
-qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=2)
-qr.add_data(target)
-qr.make(fit=True)
-svg = qr.make_image(image_factory=qrcode.image.svg.SvgPathImage).to_string(encoding="unicode")
-svg = re.sub(r"<\?xml[^>]*\?>", "", svg)
-svg = re.sub(r'width="[^"]*" height="[^"]*"', 'class="qr" role="img" aria-label="QR code"', svg, count=1)
+
+def qr_svg(target):
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=2)
+    qr.add_data(target)
+    qr.make(fit=True)
+    svg = qr.make_image(image_factory=qrcode.image.svg.SvgPathImage).to_string(encoding="unicode")
+    svg = re.sub(r"<\?xml[^>]*\?>", "", svg)
+    return re.sub(r'width="[^"]*" height="[^"]*"', 'class="qr" role="img" aria-label="QR code"', svg, count=1)
+
+CARD = """  <section class="card">
+    <div class="inner">
+      <img class="logo" src="../assets/logo.png" alt="Chicken Amine">
+      <p class="place">{name} · {place}</p>
+      <h1>Votre avis compte !</h1>
+      <p class="ar">رأيك يهمنا!</p>
+      {svg}
+      <p class="hint">Scannez pour laisser un avis Google</p>
+      <p class="hint ar" style="font-size:9pt;font-weight:600">امسح الرمز لتترك رأيك على <span dir="ltr">Google</span></p>
+      <div class="stars">★★★★★</div>
+    </div>
+  </section>"""
+targets = [f"{site}/avis/{l['id']}/" for l in locations]
+cards = "\n".join(CARD.format(name=l["googleName"], place=l["short"]["fr"], svg=qr_svg(t)) for l, t in zip(locations, targets))
 
 html = f"""<!doctype html>
 <html lang="fr">
@@ -39,7 +60,9 @@ html = f"""<!doctype html>
   * {{ box-sizing: border-box; }}
   html, body {{ margin: 0; }}
   body {{ font-family: "Poppins", sans-serif; background: #ddd; }}
-  .card {{ width: 105mm; height: 148mm; margin: 0 auto; background: #e1060f; padding: 7mm; display: flex; flex-direction: column; }}
+  .card {{ width: 105mm; height: 148mm; margin: 0 auto; background: #e1060f; padding: 7mm; display: flex; flex-direction: column; break-after: page; }}
+  .card:last-child {{ break-after: auto; }}
+  .place {{ font-weight: 600; font-size: 9.5pt; color: #444; margin: 0 0 1mm; }}
   .inner {{ flex: 1; background: #fff; border-radius: 6mm; padding: 6mm 6mm 5mm; display: flex; flex-direction: column; align-items: center; text-align: center; }}
   .logo {{ width: 58mm; height: auto; }}
   h1 {{ font-family: "Baloo 2", sans-serif; color: #e1060f; font-size: 17pt; line-height: 1.1; margin: 3mm 0 1mm; }}
@@ -52,24 +75,14 @@ html = f"""<!doctype html>
 </style>
 </head>
 <body>
-  <section class="card">
-    <div class="inner">
-      <img class="logo" src="../assets/logo.png" alt="Chicken Amine">
-      <h1>Votre avis compte !</h1>
-      <p class="ar">رأيك يهمنا!</p>
-      {svg}
-      <p class="hint">Scannez pour laisser un avis Google</p>
-      <p class="hint ar" style="font-size:9pt;font-weight:600">امسح الرمز لتترك رأيك على <span dir="ltr">Google</span></p>
-      <div class="stars">★★★★★</div>
-    </div>
-  </section>
+{cards}
 </body>
 </html>
 """
 out_html = os.path.join(ROOT, "print", "table-card.html")
 os.makedirs(os.path.dirname(out_html), exist_ok=True)
 open(out_html, "w", encoding="utf-8").write(html)
-print("print/table-card.html ->", target)
+print("print/table-card.html ->", " ".join(targets))
 
 chrome = next((c for c in [os.environ.get("CHROME"), "/opt/pw-browsers/chromium", shutil.which("chromium"),
                            shutil.which("google-chrome"), shutil.which("chromium-browser")] if c and os.path.exists(c)), None)

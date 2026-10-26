@@ -43,11 +43,12 @@ const menu = {
     }),
   })),
 };
+// The same Restaurant entries as on each restaurant's own page (tools/build-locations.js), named as on Google.
 const restaurant = (loc, i) => ({
   "@type": "Restaurant",
-  "@id": site + "/#" + loc.id,
-  name: C.name + " " + loc.short.fr,
-  url: site + "/",
+  "@id": `${site}/${loc.id}/#restaurant`,
+  name: loc.googleName,
+  url: `${site}/${loc.id}/`,
   logo: site + "/assets/logo-1200.png",
   image: site + "/" + C.shareImage,
   telephone: loc.phoneIntl,
@@ -68,7 +69,7 @@ const restaurant = (loc, i) => ({
     "@type": "OpeningHoursSpecification",
     dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
     opens: C.hours.open,
-    closes: C.hours.close === "00:00" ? "23:59" : C.hours.close,
+    closes: C.hours.close,
   }],
   acceptsReservations: false,
   hasMenu: i === 0 ? menu : { "@id": menu["@id"] },
@@ -112,7 +113,11 @@ fs.writeFileSync(path.join(root, "sitemap.xml"), `<?xml version="1.0" encoding="
     <loc>${site}/?lang=ar</loc>
     <lastmod>${today}</lastmod>${alt}
   </url>
-</urlset>
+${C.locations.map((l) => `  <url>
+    <loc>${site}/${l.id}/</loc>
+    <lastmod>${today}</lastmod>
+  </url>
+`).join("")}</urlset>
 `);
 
 fs.writeFileSync(path.join(root, "robots.txt"), `User-agent: *

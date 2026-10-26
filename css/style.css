@@ -800,6 +800,8 @@ html.no-intro .intro { display: none; }
 
 .footer { text-align: center; padding: 20px 18px 120px; font-size: 0.9rem; background: var(--red-dark); }
 .footer p { margin: 0; }
+.footer__places { margin-top: 8px !important; font-size: 0.85rem; }
+.footer__places a { color: inherit; }
 
 /* ---------- Floating buttons ---------- */
 .ig-float {

@@ -4,7 +4,7 @@ window.I18N = {
     meta: {
       title: "Chicken Amine · Tacos, broasters, burgers et pizzas à Sidi Moumen et Bouchaib Doukkali, Casablanca",
       description:
-        "Chicken Amine, 2 restaurants à Casablanca (Sidi Moumen Al Houda et avenue Bouchaib Doukkali) : tacos, tacos gratinés, broasters, chawarmas, burgers, paninis, pizzas et plats. Ouvert tous les jours de 12h à minuit, à emporter ou en livraison, commande sur WhatsApp.",
+        "Chicken Amine, 2 restaurants à Casablanca (Sidi Moumen Al Houda et avenue Bouchaib Doukkali) : tacos, tacos gratinés, broasters, chawarmas, burgers, paninis, pizzas et plats. Ouvert tous les jours de 12h à 1h du matin, à emporter ou en livraison, commande sur WhatsApp.",
     },
     langToggle: "العربية",
     langToggleLabel: "Afficher le site en arabe",
@@ -133,7 +133,7 @@ window.I18N = {
     meta: {
       title: "Chicken Amine · طاكوس، بروستر، برغر وبيتزا في سيدي مومن وبوشعيب الدكالي، الدار البيضاء",
       description:
-        "Chicken Amine، مطعمان في الدار البيضاء (سيدي مومن الهدى وشارع بوشعيب الدكالي): طاكوس، طاكوس غراتيني، بروستر، شاورما، برغر، بانيني، بيتزا وأطباق. مفتوح كل يوم من 12 زوالا إلى منتصف الليل، للأخذ أو التوصيل، والطلب عبر واتساب.",
+        "Chicken Amine، مطعمان في الدار البيضاء (سيدي مومن الهدى وشارع بوشعيب الدكالي): طاكوس، طاكوس غراتيني، بروستر، شاورما، برغر، بانيني، بيتزا وأطباق. مفتوح كل يوم من 12 زوالا إلى الواحدة صباحا، للأخذ أو التوصيل، والطلب عبر واتساب.",
     },
     langToggle: "Français",
     langToggleLabel: "عرض الموقع بالفرنسية",
