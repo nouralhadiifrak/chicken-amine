@@ -4,7 +4,7 @@ Paste this into a new Claude Code session, or tell it: "Read HANDOFF.md first."
 
 Project: Chicken Amine restaurant website, two locations in Casablanca (Sidi Moumen and Avenue Bouchaib Doukkali).
 Repo: nouralhadiifrak/chicken-amine. Work on branch claude/serene-hypatia-bipryk, open a PR for every change, merge only when I say "merge it".
-Live: https://chicken-amine-theta.vercel.app (Vercel auto-deploys ~30 s after a merge into main).
+Live: https://chickenamine.ma (domain at Capconnect, DNS pointing to Vercel; www and the old vercel.app address redirect to it). Vercel auto-deploys ~30 s after a merge into main.
 
 Stack: plain HTML/CSS/JS, no framework.
 Files: index.html, css/style.css, js/config.js, js/menu-data.js (14 categories, 138 dishes, prices from the October 2026 paper menu), js/i18n.js, js/app.js, js/kit.js, js/spring-text.js.
@@ -43,4 +43,3 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 - Are the Yassir "Ain Sbaa" photos the same restaurant?
 - Plate video may come from Al-Omda.
 - Vercel Hobby plan is non-commercial; Pro may be needed.
-- Custom domain.
