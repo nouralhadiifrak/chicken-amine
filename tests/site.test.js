@@ -13,7 +13,7 @@ const { chromium } = require("playwright");
 
 const ROOT = path.join(__dirname, "..");
 const SHOTS = process.env.SHOTS || "";
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon", ".xml": "application/xml", ".webmanifest": "application/manifest+json", ".txt": "text/plain", ".svg": "image/svg+xml", ".pdf": "application/pdf" };
+const TYPES = { ".webp": "image/webp", ".jpg": "image/jpeg", ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon", ".xml": "application/xml", ".webmanifest": "application/manifest+json", ".txt": "text/plain", ".svg": "image/svg+xml", ".pdf": "application/pdf" };
 
 function serve() {
   return new Promise((resolve) => {
@@ -695,6 +695,121 @@ async function main() {
   }
 
   // Review page.
+  // Installing as an app (PWA): manifest, the Android prompt behind our buttons, the iPhone steps, offline.
+  console.log("\ninstall as an app");
+  {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "site.webmanifest"), "utf8"));
+    const icons = manifest.icons.map((i) => i.purpose + ":" + i.sizes).join();
+    check(manifest.display === "standalone" && manifest.name === "Chicken Amine" && manifest.start_url === "/" && /maskable:512x512/.test(icons) && /any:192x192/.test(icons)
+      && manifest.icons.every((i) => fs.existsSync(path.join(ROOT, i.src))) && manifest.shortcuts.length === 2,
+      `manifest: full-screen app « ${manifest.name} », icons (${icons}), ${manifest.shortcuts.length} shortcuts`);
+
+    // Android: the browser's install prompt is kept and shown from our buttons.
+    for (const width of [390, 360]) {
+      const context = await browser.newContext({ viewport: { width, height: 800 }, serviceWorkers: "block" });
+      await presetSite(context);
+      await context.addInitScript(() => {
+        window.__prompted = 0;
+        addEventListener("load", () => setTimeout(() => {
+          const e = new Event("beforeinstallprompt", { cancelable: true });
+          e.prompt = () => { window.__prompted++; };
+          e.userChoice = Promise.resolve({ outcome: "accepted" });
+          dispatchEvent(e);
+        }, 200));
+      });
+      const page = await context.newPage();
+      const errors = [];
+      page.on("pageerror", (e) => errors.push(e.message));
+      await page.goto(base + "/");
+      await waitIntro(page);
+      await page.waitForTimeout(500);
+      const head = await page.evaluate(() => {
+        const name = document.querySelector("#site-btn-name");
+        return { btn: !document.querySelector("#install-btn").hidden, banner: !document.querySelector("#install-banner").hidden,
+          fits: document.querySelector(".header__inner").scrollWidth <= innerWidth + 1 && name.scrollHeight <= name.clientHeight + 3 };
+      });
+      check(head.btn && !head.banner && head.fits, `${width} px: the install button is in the header, no banner yet, the header still fits`);
+      if (width === 390) {
+        await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
+        await page.click('.cat-tile[data-open-cat="burgers"]');
+        await page.waitForSelector("#install-banner:not([hidden])", { timeout: 4000 }).catch(() => {});
+        check(await page.isVisible("#install-banner"), "after a category is opened, the banner invites to install");
+        await page.click("#install-banner-btn");
+        await page.waitForTimeout(200);
+        check(await page.evaluate(() => window.__prompted) === 1 && !(await page.isVisible("#install-banner")), "« Installer » opens the phone's install prompt and the banner goes");
+        // « Plus tard » is remembered.
+        await page.evaluate(() => { localStorage.removeItem("chickenamine.install-later.v1"); });
+      }
+      if (width === 360) {
+        // Without opening anything, the banner comes by itself after 10 seconds.
+        await page.waitForSelector("#install-banner:not([hidden])", { timeout: 11000 }).catch(() => {});
+        check(await page.isVisible("#install-banner"), "the banner also comes by itself after 10 seconds");
+      }
+      check(errors.length === 0, `${width} px: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
+      await context.close();
+    }
+    {
+      const context = await browser.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: "block" });
+      await presetSite(context);
+      await context.addInitScript(() => addEventListener("load", () => setTimeout(() => {
+        const e = new Event("beforeinstallprompt", { cancelable: true }); e.prompt = () => {}; dispatchEvent(e);
+      }, 200)));
+      const page = await context.newPage();
+      await page.goto(base + "/");
+      await waitIntro(page);
+      await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
+      await page.click('.cat-tile[data-open-cat="burgers"]');
+      await page.waitForSelector("#install-banner:not([hidden])", { timeout: 4000 }).catch(() => {});
+      await page.click("#install-close");
+      await page.goto(base + "/");
+      await waitIntro(page);
+      await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
+      await page.click('.cat-tile[data-open-cat="pizzas"]');
+      await page.waitForTimeout(2200);
+      check(!(await page.isVisible("#install-banner")) && await page.isVisible("#install-btn"), "after « Plus tard » the banner stays away (the header button remains)");
+      await context.close();
+    }
+    // iPhone: no install prompt in Safari, so the button shows the steps.
+    {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block",
+        userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" });
+      await presetSite(context);
+      const page = await context.newPage();
+      await page.goto(base + "/?lang=ar");
+      await waitIntro(page);
+      await page.click("#install-btn");
+      await page.waitForTimeout(300);
+      check(!!(await page.$("#ios-dialog[open]")) && (await page.$$eval(".ios-steps li", (l) => l.length)) === 3 && /iPhone/.test(await page.textContent("#ios-title")),
+        "iPhone: the install button shows the 3 Safari steps (in Arabic too)");
+      await context.close();
+    }
+    // A computer browser that cannot install: nothing is shown.
+    {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
+      await presetSite(context);
+      const page = await context.newPage();
+      await page.goto(base + "/");
+      await waitIntro(page);
+      check(!(await page.isVisible("#install-btn")) && !(await page.isVisible("#install-banner")), "where installing is not possible, no button and no banner");
+      await context.close();
+    }
+    // The saved copy: after one visit, the app opens without a connection.
+    {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      await presetSite(context);
+      const page = await context.newPage();
+      await page.goto(base + "/");
+      await page.evaluate(() => navigator.serviceWorker.ready);
+      await page.waitForTimeout(1500);
+      await context.setOffline(true);
+      await page.reload();
+      await page.waitForSelector(".cat-tile", { timeout: 8000 }).catch(() => {});
+      const off = await page.evaluate(() => ({ tiles: document.querySelectorAll(".cat-tile").length, photos: [...document.querySelectorAll(".cat-tile img")].filter((i) => i.complete && i.naturalWidth).length }));
+      check(off.tiles === 14 && off.photos > 0, `offline after a first visit: the menu still opens (${off.tiles} categories, ${off.photos} photos)`);
+      await context.close();
+    }
+  }
+
   console.log("\nreview pages");
   {
     const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });

@@ -1,13 +1,35 @@
 {
+  "id": "/",
   "name": "Chicken Amine",
   "short_name": "Chicken Amine",
+  "description": "Le menu de Chicken Amine (Sidi Moumen et Bouchaib Doukkali, Casablanca) : tacos, broasters, burgers, pizzas et plats. Commande à emporter ou en livraison.",
   "lang": "fr",
+  "dir": "ltr",
   "start_url": "/",
-  "display": "browser",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#e1060f",
   "theme_color": "#e1060f",
+  "categories": ["food", "shopping"],
   "icons": [
-    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Commander à Sidi Moumen",
+      "short_name": "Sidi Moumen",
+      "url": "/?restaurant=sidi-moumen#menu",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Commander à Bouchaib Doukkali",
+      "short_name": "Bouchaib Doukkali",
+      "url": "/?restaurant=bouchaib-doukkali#menu",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
   ]
 }
