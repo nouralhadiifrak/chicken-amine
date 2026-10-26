@@ -900,7 +900,7 @@
     $("#install-close").addEventListener("click", laterInstall);
     $("#ios-close").addEventListener("click", () => closeDialog($("#ios-dialog")));
     $("#ios-ok").addEventListener("click", () => closeDialog($("#ios-dialog")));
-    setTimeout(offerInstall, 40000);
+    setTimeout(offerInstall, 10000);
     renderInstall();
     // Saved copy of the site, so the installed app opens on a weak connection (sw.js).
     if ("serviceWorker" in navigator && window.isSecureContext) {

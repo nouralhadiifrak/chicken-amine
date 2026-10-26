@@ -740,6 +740,11 @@ async function main() {
         // « Plus tard » is remembered.
         await page.evaluate(() => { localStorage.removeItem("chickenamine.install-later.v1"); });
       }
+      if (width === 360) {
+        // Without opening anything, the banner comes by itself after 10 seconds.
+        await page.waitForSelector("#install-banner:not([hidden])", { timeout: 11000 }).catch(() => {});
+        check(await page.isVisible("#install-banner"), "the banner also comes by itself after 10 seconds");
+      }
       check(errors.length === 0, `${width} px: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
       await context.close();
     }

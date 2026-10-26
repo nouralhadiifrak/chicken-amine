@@ -26,7 +26,7 @@ the saved copy only if the network fails or takes over 4 s); photos, icons and f
 in the background. Raise `VERSION` in `sw.js` to drop every saved copy.
 
 Android browsers offer their own install prompt: the site keeps it for its header button and for a banner shown
-once the customer has opened a category (or after 40 s; « Plus tard » hides it for two weeks). iPhone Safari has
+once the customer has opened a category (or after 10 s; « Plus tard » hides it for two weeks). iPhone Safari has
 no prompt, so the same button shows the three Safari steps. Where installing isn't possible, nothing is shown.
 
 ## Run locally
