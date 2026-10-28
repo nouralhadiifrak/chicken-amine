@@ -29,6 +29,23 @@ Android browsers offer their own install prompt: the site keeps it for its heade
 once the customer has opened a category (or after 10 s; « Plus tard » hides it for two weeks). iPhone Safari has
 no prompt, so the same button shows the three Safari steps. Where installing isn't possible, nothing is shown.
 
+## Online orders (demo)
+
+A demo of ordering without WhatsApp, to show the owner. The real site does not change: only a tab opened at
+`/demo/` sends its order to the restaurant's screen instead of WhatsApp ("Commander"). The customer then follows the
+status live (sent, accepted with a time, ready, on the way, done, or refused with a reason) and, after
+`orders.callAfterMinutes` without an answer, is invited to call.
+
+The staff screen is `/commandes/`. Each restaurant signs in with its own account and sees only its own orders.
+« Démarrer le service » lets the page ring and keeps the screen awake. Each new order rings and fills the screen
+until it is accepted (10/20/30/45 min) or refused. « Effacer les commandes de test » removes the demo orders.
+
+The orders live in a free Supabase project, `chicken-amine-commandes`; `js/config.js` → `orders` holds its URL and
+public key. The tables and access rules are in `supabase/schema.sql`: customers can only add an order and read its
+status with its secret token, there are at most 5 orders per phone in 10 minutes, and staff accounts are linked to
+a restaurant in the `staff` table. To add a staff account, use Supabase → Authentication → Users → Add user, then run
+`insert into public.staff (user_id, location) values ('<user id>', 'sidi-moumen');`.
+
 ## Run locally
 
 ```sh

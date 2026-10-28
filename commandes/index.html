@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#141414">
+  <title>Chicken Amine · Commandes</title>
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/commandes/commandes.css?v=2026102802">
+</head>
+<body>
+  <!-- Staff sign-in: each restaurant has its own account. -->
+  <main class="login" id="login" hidden>
+    <form class="card login__card" id="login-form" novalidate>
+      <img src="/assets/logo-header.webp" alt="Chicken Amine" width="360" height="187">
+      <h1>Écran des commandes</h1>
+      <label class="field"><span>E-mail</span><input name="email" type="email" autocomplete="username" required dir="ltr"></label>
+      <label class="field"><span>Mot de passe</span><input name="password" type="password" autocomplete="current-password" required dir="ltr"></label>
+      <p class="error" id="login-error" role="alert"></p>
+      <button class="btn btn--red" id="login-btn" type="submit">Se connecter</button>
+    </form>
+  </main>
+
+  <!-- A tap is needed before the browser lets the page ring. -->
+  <main class="login" id="start" hidden>
+    <div class="card login__card">
+      <img src="/assets/logo-header.webp" alt="Chicken Amine" width="360" height="187">
+      <h1 id="start-place"></h1>
+      <p>Gardez cet écran ouvert et le son allumé : chaque nouvelle commande sonne et s'affiche en grand.</p>
+      <button class="btn btn--red btn--big" id="start-btn" type="button">Démarrer le service</button>
+      <button class="link-btn" id="start-logout" type="button">Se déconnecter</button>
+    </div>
+  </main>
+
+  <div class="app" id="app" hidden>
+    <header class="top">
+      <div class="top__place">
+        <span class="dot" id="live-dot" title="Connexion"></span>
+        <strong id="place"></strong>
+        <span class="top__clock" id="clock"></span>
+      </div>
+      <div class="top__actions">
+        <button class="btn btn--small btn--line" id="sound-btn" type="button">Tester le son</button>
+        <button class="btn btn--small btn--line" id="clear-btn" type="button">Effacer les commandes de test</button>
+        <button class="btn btn--small btn--ghost" id="logout-btn" type="button">Se déconnecter</button>
+      </div>
+    </header>
+    <p class="banner" id="offline" hidden>Connexion perdue. Les commandes s'afficheront dès son retour.</p>
+    <section class="summary" id="summary" aria-label="Résumé"></section>
+    <section class="board">
+      <div class="col"><h2>Nouvelles <span class="count" id="n-new"></span></h2><ul class="cards" id="col-new"></ul></div>
+      <div class="col"><h2>En préparation <span class="count" id="n-accepted"></span></h2><ul class="cards" id="col-accepted"></ul></div>
+      <div class="col"><h2>Prêtes / en route <span class="count" id="n-ready"></span></h2><ul class="cards" id="col-ready"></ul></div>
+      <div class="col col--past"><h2>Terminées <span class="count" id="n-past"></span></h2><ul class="cards" id="col-past"></ul></div>
+    </section>
+  </div>
+
+  <!-- A new order, full screen, until it is accepted or refused. -->
+  <div class="alert" id="alert" hidden role="alertdialog" aria-modal="true" aria-labelledby="alert-title">
+    <div class="alert__box">
+      <p class="alert__kicker">Nouvelle commande <span id="alert-more"></span></p>
+      <h2 class="alert__title" id="alert-title"></h2>
+      <div class="alert__order" id="alert-order"></div>
+      <div id="alert-main">
+        <p class="alert__label">Accepter · prête dans :</p>
+        <div class="alert__times" id="alert-times">
+          <button class="btn btn--green" type="button" data-eta="10">10 min</button>
+          <button class="btn btn--green" type="button" data-eta="20">20 min</button>
+          <button class="btn btn--green" type="button" data-eta="30">30 min</button>
+          <button class="btn btn--green" type="button" data-eta="45">45 min</button>
+        </div>
+        <button class="btn btn--line btn--refuse" id="alert-refuse" type="button">Refuser</button>
+      </div>
+      <div id="alert-reasons" hidden>
+        <p class="alert__label">Pourquoi ? (le client le verra)</p>
+        <div class="alert__reasons">
+          <button class="btn btn--line" type="button" data-reason="un produit n'est plus disponible">Produit plus disponible</button>
+          <button class="btn btn--line" type="button" data-reason="trop de commandes en ce moment">Trop de commandes</button>
+          <button class="btn btn--line" type="button" data-reason="adresse hors de la zone de livraison">Hors zone de livraison</button>
+          <button class="btn btn--line" type="button" data-reason="le restaurant est fermé">Restaurant fermé</button>
+          <button class="btn btn--line" type="button" data-reason="">Sans raison</button>
+        </div>
+        <button class="link-btn" id="alert-back" type="button">← Retour</button>
+      </div>
+      <p class="error" id="alert-error" role="alert"></p>
+    </div>
+  </div>
+
+  <script src="/js/config.js?v=2026102802"></script>
+  <script src="/vendor/supabase/supabase-2.117.2.js"></script>
+  <script src="/commandes/commandes.js?v=2026102802"></script>
+</body>
+</html>

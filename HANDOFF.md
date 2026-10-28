@@ -29,6 +29,7 @@ After any code change, raise the ?v= number on the CSS/JS links in index.html.
 - Plats: each has its description; plats with "pâtes sauce champignon ou blanche" ask for the sauce first (plus the tacos / burger / pasticcio for the Amine plats).
 - Ordering: round + buttons; sauces chosen first (max 2), then emojis fly to the cart; soda asks for its brand.
 - Cart: rolling numbers, bin icon at quantity 1; WhatsApp order, pickup or delivery (map, 3 km from the chosen restaurant, 10 DH).
+- Online orders demo (not for real customers yet): /demo/ orders go to the staff screen /commandes/ (Supabase project "chicken-amine-commandes", free plan, schema in supabase/schema.sql), with a pop-up and a sound; the customer follows the status. See README "Online orders (demo)". Test orders use the phone 0634235350.
 
 ## Important
 

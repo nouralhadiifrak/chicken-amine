@@ -65,6 +65,15 @@ window.CONFIG = {
     mp4: "/assets/video/hero-plate.mp4", webm: "/assets/video/hero-plate.webm", poster: "/assets/video/hero-plate-poster.webp",
     smallMp4: "/assets/video/hero-plate-480.mp4", smallWebm: "/assets/video/hero-plate-480.webm", smallPoster: "/assets/video/hero-plate-poster-480.webp",
   },
+  // Online orders (demo of the staff order screen, /commandes/): the Supabase project and its publishable key,
+  // which is public by design (the database's row level security decides what it can do; see supabase/schema.sql).
+  // Orders go there instead of WhatsApp only in demo mode (opened with /demo/); real customers still use WhatsApp.
+  orders: {
+    supabaseUrl: "https://azaimbixispnrwwnuwta.supabase.co",
+    publishableKey: "sb_publishable_NPJc46YnphSCaTFDyY6Uaw_kAT7KWzR",
+    // after this many minutes without an answer, the customer is invited to call the restaurant
+    callAfterMinutes: 5,
+  },
   // Share-preview image (WhatsApp, Facebook): the turning plate and the logo, 1200 x 630.
   shareImage: "assets/share.jpg",
 };
