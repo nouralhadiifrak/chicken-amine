@@ -9,6 +9,21 @@
   const FORM_KEY = "chickenamine.customer.v1";
   const SITE_KEY = "chickenamine.location.v1";
   const INSTALL_KEY = "chickenamine.install-later.v1";
+  const ORDER_KEY = "chickenamine.order.v1";
+  const DEMO_KEY = "chickenamine.demo.v1";
+  // Demo of online orders (opened with /demo/, for this tab only): the order goes to the restaurant's
+  // screen (/commandes/) instead of WhatsApp. Everyone else keeps ordering on WhatsApp.
+  const DEMO = (() => {
+    try {
+      const url = new URL(location.href);
+      if (url.searchParams.get("demo") === "1") {
+        sessionStorage.setItem(DEMO_KEY, "1");
+        url.searchParams.delete("demo");
+        history.replaceState(null, "", url.pathname + url.search + url.hash);
+      }
+      return sessionStorage.getItem(DEMO_KEY) === "1" && !!C.orders;
+    } catch (e) { return false; }
+  })();
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -116,6 +131,7 @@
     renderMenu();
     renderCart();
     if ($("#checkout-form").hidden === false) renderCheckout();
+    if (order) renderTrack();
     if (window.SpringText) SpringText.observe(document.querySelector("main"));
   }
 
@@ -921,7 +937,9 @@
     $("#cart-back").hidden = !checkout;
     $("#cart-next").hidden = checkout;
     $("#cart-clear").hidden = checkout || count() === 0;
-    $("#send-btn").hidden = !checkout;
+    $("#send-btn").hidden = !checkout || DEMO;
+    $("#order-send").hidden = !checkout || !DEMO;
+    $("#demo-notice").hidden = !DEMO;
     $("#cart-title").textContent = checkout ? t("checkout.title") : t("cart.title");
     if (checkout) renderCheckout();
     renderTotals();
@@ -1096,9 +1114,153 @@
     const st = updateDeliveryStatus();
     if (!st.ok) { err.textContent = st.msg; return; }
     saveCustomer(data);
+    if (DEMO) { sendOnline(data, st); return; }
     const url = `https://wa.me/${S().whatsapp}?text=${encodeURIComponent(buildMessage(data, st))}`;
     const w = window.open(url, "_blank", "noopener");
     if (!w) location.href = url;
+  }
+
+  /* ---------- Online order (demo mode) and its live status ---------- */
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
+  const ORDER_STEPS = ["new", "accepted", "ready", "on_the_way", "done"];
+  const STEP_LABEL = { new: "sent", accepted: "accepted", ready: "ready", on_the_way: "onTheWay", done: "done" };
+  let order = loadOrder(), orderTimer = null, sending = false;
+
+  function loadOrder() {
+    try {
+      const o = JSON.parse(localStorage.getItem(ORDER_KEY) || "null");
+      // an order is followed for 12 hours at most
+      return o && Date.now() - o.at < 12 * 3600e3 ? o : null;
+    } catch (e) { return null; }
+  }
+  function saveOrder() {
+    try { if (order) localStorage.setItem(ORDER_KEY, JSON.stringify(order)); else localStorage.removeItem(ORDER_KEY); } catch (e) { /* ignore */ }
+  }
+  function api(path, opts = {}) {
+    const o = C.orders;
+    return fetch(`${o.supabaseUrl}/rest/v1/${path}`, {
+      ...opts,
+      headers: { apikey: o.publishableKey, "Content-Type": "application/json", ...(opts.headers || {}) },
+    });
+  }
+
+  async function sendOnline(data, st) {
+    if (sending) return;
+    const err = $("#checkout-error");
+    const label = $("#order-send-label");
+    sending = true;
+    $("#order-send").disabled = true;
+    label.textContent = t("order.sending");
+    // The restaurant reads the order in French, whatever the customer's language.
+    const was = lang;
+    lang = "fr";
+    const items = cart.map((l) => {
+      const it = itemById.get(l.id);
+      return { name: L(it), qty: l.qty, details: lineDetails(l).filter((d) => !l.size || !d.startsWith(t("options.size"))), size: l.size || null, total: lineTotal(l) };
+    });
+    lang = was;
+    const delivery = data.mode === "delivery";
+    const sub = subtotal(), fee = delivery ? C.delivery.fee : 0;
+    const row = {
+      id: uuid(), token: uuid(), location: S().id, mode: data.mode,
+      customer_name: data.name.slice(0, 60), customer_phone: data.phone.slice(0, 20),
+      address: delivery ? data.address.slice(0, 200) || null : null,
+      lat: delivery ? youPos.lat : null, lng: delivery ? youPos.lng : null,
+      distance_km: delivery && st.km !== undefined ? Math.round(st.km * 100) / 100 : null,
+      notes: data.notes.slice(0, 300) || null, items, subtotal: sub, delivery_fee: fee, total: sub + fee, lang,
+    };
+    try {
+      const res = await api("orders", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(row) });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(/Trop de commandes/.test(body) ? "tooMany" : "failed");
+      }
+      order = { id: row.id, token: row.token, site: row.location, mode: row.mode, at: Date.now(), status: "new" };
+      saveOrder();
+      cart = [];
+      cartChanged();
+      closeDialog($("#cart-dialog"));
+      showStep("items");
+      openTrack();
+    } catch (e) {
+      err.textContent = t(e.message === "tooMany" ? "order.tooMany" : "order.failed");
+    } finally {
+      sending = false;
+      $("#order-send").disabled = false;
+      label.textContent = t("order.send");
+    }
+  }
+
+  async function pollOrder() {
+    if (!order) return;
+    try {
+      const res = await api(`orders?id=eq.${order.id}&select=status,eta_minutes,accepted_at,refuse_reason`, { headers: { "x-order-token": order.token } });
+      if (!res.ok) return;
+      const rows = await res.json();
+      // gone: seen before, then cleared by the staff (test orders)
+      if (rows.length) Object.assign(order, rows[0], { seen: true });
+      else if (order.seen) order.status = "gone";
+      saveOrder();
+    } catch (e) { /* offline: try again later */ }
+    renderTrack();
+  }
+
+  function trackText() {
+    const o = order;
+    if (o.status === "accepted") {
+      if (!o.eta_minutes || !o.accepted_at) return t("order.acceptedSoon");
+      const left = Math.ceil((new Date(o.accepted_at).getTime() + o.eta_minutes * 60e3 - Date.now()) / 60e3);
+      return left > 0 ? t("order.accepted", { min: left }) : t("order.acceptedSoon");
+    }
+    if (o.status === "refused") return o.refuse_reason ? t("order.refusedWhy", { reason: o.refuse_reason }) : t("order.refused");
+    if (o.status === "ready") return t(o.mode === "delivery" ? "order.readyDelivery" : "order.readyPickup");
+    if (o.status === "on_the_way") return t("order.onTheWay");
+    if (o.status === "done") return t("order.done");
+    if (o.status === "gone") return t("order.gone");
+    return t("order.new");
+  }
+
+  function renderTrack() {
+    const bar = $("#track-bar");
+    bar.hidden = !order;
+    document.body.classList.toggle("has-track", !!order);
+    if (!order) return;
+    const site = C.locations.find((l) => l.id === order.site) || S();
+    const final = ["refused", "done", "gone"].includes(order.status);
+    bar.classList.toggle("is-final", final);
+    $("#track-bar-status").textContent = order.status === "new" ? t("order.steps.sent") : order.status === "gone" ? "" : t("order.steps." + (STEP_LABEL[order.status] || "sent"));
+    $("#track-place").innerHTML = rich(t("order.place", { name: L(site.name), num: order.id.slice(0, 4).toUpperCase() }));
+    const steps = ORDER_STEPS.filter((s) => s !== "on_the_way" || order.mode === "delivery");
+    const at = steps.indexOf(order.status);
+    $("#track-steps").hidden = order.status === "refused" || order.status === "gone";
+    $("#track-steps").innerHTML = steps.map((s, i) =>
+      `<li class="${i < at || order.status === "done" ? "is-done" : i === at ? "is-now" : ""}">${esc(t("order.steps." + STEP_LABEL[s]))}</li>`).join("");
+    const status = $("#track-status");
+    status.textContent = trackText();
+    status.className = "track-status" + (order.status === "refused" ? " is-error" : "");
+    const late = order.status === "new" && Date.now() - order.at > (C.orders.callAfterMinutes || 5) * 60e3;
+    $("#track-help").hidden = !late;
+    const call = $("#track-call");
+    call.href = `tel:${site.phoneIntl}`;
+    call.hidden = !(late || order.status === "refused" || order.status === "accepted" || order.status === "ready");
+    if (final) stopPolling(); else startPolling();
+  }
+  function startPolling() { if (!orderTimer) orderTimer = setInterval(pollOrder, 4000); }
+  function stopPolling() { clearInterval(orderTimer); orderTimer = null; }
+  function openTrack() { renderTrack(); openDialog($("#track-dialog")); pollOrder(); }
+  function closeTrack() {
+    closeDialog($("#track-dialog"));
+    // a finished order is no longer followed once the customer has seen it
+    if (order && ["refused", "done", "gone"].includes(order.status)) { order = null; saveOrder(); renderTrack(); }
+  }
+  function setupTrack() {
+    $("#order-send").addEventListener("click", send);
+    $("#track-bar").addEventListener("click", openTrack);
+    $("#track-close").addEventListener("click", closeTrack);
+    $("#track-ok").addEventListener("click", closeTrack);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && order) pollOrder(); });
+    if (order) { renderTrack(); pollOrder(); }
   }
 
   /* ---------- Events ---------- */
@@ -1157,6 +1319,7 @@
   setupHero();
   bind();
   setupInstall();
+  setupTrack();
   loadCustomer();
   currentCat = catFromHash();
   applyLanguage();

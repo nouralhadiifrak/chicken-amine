@@ -859,6 +859,26 @@ body.has-cart .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .cart-bar .cart-ico { width: 24px; height: 24px; flex: none; }
 .cart-bar__meta { display: inline-flex; align-items: baseline; gap: 0.3em; color: var(--yellow); white-space: nowrap; font-size: 0.95em; }
 
+/* Online order (demo mode): the bar to follow it, above the cart bar when both show. */
+.track-bar { background: var(--red); }
+.track-bar .cart-bar__meta { color: var(--white); }
+.track-bar.is-final { background: var(--black); }
+body.has-cart .track-bar { bottom: calc(80px + env(safe-area-inset-bottom)); }
+body.has-track .ig-float { bottom: calc(84px + env(safe-area-inset-bottom)); }
+body.has-track.has-cart .ig-float { bottom: calc(150px + env(safe-area-inset-bottom)); }
+.track-bar__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--yellow); flex: none; animation: track-pulse 1.4s ease-in-out infinite; }
+.track-bar.is-final .track-bar__dot { animation: none; }
+@keyframes track-pulse { 50% { opacity: 0.25; } }
+.track-place { margin: 0 0 14px; font-weight: 600; color: var(--muted); }
+.track-steps { list-style: none; margin: 0 0 16px; padding: 0; display: flex; gap: 6px; }
+.track-steps li { flex: 1; padding-top: 10px; border-top: 5px solid var(--line); font-size: 0.82rem; font-weight: 600; color: var(--muted); text-align: center; }
+.track-steps li.is-done { border-color: var(--red); color: var(--ink); }
+.track-steps li.is-now { border-color: var(--yellow); color: var(--ink); }
+.track-status { margin: 0 0 12px; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
+.track-status.is-error { color: var(--red-dark); }
+.notice--demo { margin-bottom: 12px; }
+@media (prefers-reduced-motion: reduce) { .track-bar__dot { animation: none; } }
+
 /* The invitation to install the app, just under the header. */
 .install-banner {
   position: fixed;
