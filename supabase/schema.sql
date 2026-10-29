@@ -195,3 +195,8 @@ create index orders_location_status_created_idx on public.orders (location, stat
 select cron.schedule('orders-keep-two-years', '17 3 * * *', $$
   delete from public.orders where created_at < now() - interval '2 years'
 $$);
+
+-- ---------- October 30: saving a phone for notifications ----------
+-- (applied as the migration "push_subscriptions_upsert") The app saves a phone with an "insert or update" that
+-- rewrites every column it sends, endpoint included; without this the save was refused (403).
+grant update (endpoint, p256dh, auth) on table public.push_subscriptions to authenticated;
