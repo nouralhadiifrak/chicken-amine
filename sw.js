@@ -6,7 +6,7 @@
  *   - everything else (maps, WhatsApp, Google) is left alone
  * Raise VERSION to drop every saved copy (e.g. after removing files).
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "chickenamine-" + VERSION;
 const NETWORK_TIMEOUT = 4000;
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];

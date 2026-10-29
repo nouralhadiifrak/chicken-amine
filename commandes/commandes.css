@@ -111,6 +111,37 @@ a { color: var(--red-dark); }
 .btn--refuse { width: 100%; color: var(--red-dark); }
 @media (prefers-reduced-motion: reduce) { .alert__box, .alert__kicker { animation: none; } }
 
+/* Tabs, the install button, the driver button */
+.tabs { display: flex; gap: 6px; }
+.tab { min-height: 38px; padding: 6px 16px; border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 999px; background: transparent; color: var(--white); font: 800 1rem "Baloo 2", system-ui, sans-serif; cursor: pointer; }
+.tab.is-on { background: var(--yellow); border-color: var(--yellow); color: var(--black); }
+.btn--install, .btn--wa { background: var(--green); color: var(--white); }
+.tag--site { background: var(--black); color: var(--white); }
+.btn--print.is-on { background: var(--yellow); border-color: var(--yellow); color: var(--black); }
+.print-frame { position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0; visibility: hidden; }
+
+/* Statistics */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 0; }
+.chips .btn { min-height: 38px; padding: 6px 14px; font-size: 0.95rem; }
+.chips .is-on { background: var(--black); border-color: var(--black); color: var(--white); }
+.stat--hl { background: var(--black); color: var(--white); }
+.stat--hl b { color: var(--yellow); }
+.stat--hl span { color: #dddddd; }
+#stats-body > .empty, #stats-body > .error { padding: 14px 16px; }
+.panels { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 16px 40px; }
+.panel { flex: 1 1 380px; background: var(--white); border-radius: 16px; padding: 14px 16px; }
+.panel h2 { font-size: 1.3rem; margin-bottom: 8px; }
+.panel .panel__h2 { margin-top: 18px; }
+.panel__note { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
+.rank { list-style: none; margin: 0; padding: 0; }
+.rank li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+.rank li:first-child { border-top: 0; }
+.rank li > div { flex: 1; min-width: 0; }
+.rank__n { width: 26px; flex: none; font: 800 1.2rem "Baloo 2", system-ui, sans-serif; color: var(--red); }
+.rank .num { flex: none; min-width: 44px; text-align: right; font-weight: 700; }
+.rank .num:last-child { min-width: 84px; }
+.bar { height: 10px; margin-top: 4px; border-radius: 6px; }
+
 @media (max-width: 640px) {
   .board { flex-direction: column; overflow: visible; }
   .col { min-width: 0; width: 100%; flex: none; }

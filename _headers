@@ -1,0 +1,27 @@
+# Cloudflare Pages: the same caching rules as vercel.json.
+# Pages, styles, scripts, the service worker and the manifest are checked on every visit (menu and prices stay
+# fresh; the ?v= number in index.html changes after each code change); photos, videos and libraries are kept 7 days.
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/site.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=0, must-revalidate
+
+/commandes/staff.webmanifest
+  Content-Type: application/manifest+json
+
+/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/commandes/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=604800
+
+/vendor/*
+  Cache-Control: public, max-age=604800

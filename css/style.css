@@ -876,7 +876,7 @@ body.has-track.has-cart .ig-float { bottom: calc(150px + env(safe-area-inset-bot
 .track-steps li.is-now { border-color: var(--yellow); color: var(--ink); }
 .track-status { margin: 0 0 12px; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
 .track-status.is-error { color: var(--red-dark); }
-.notice--demo { margin-bottom: 12px; }
+.track-wa { width: 100%; margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) { .track-bar__dot { animation: none; } }
 
 /* The invitation to install the app, just under the header. */

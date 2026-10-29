@@ -7,10 +7,14 @@
   <meta name="theme-color" content="#141414">
   <title>Chicken Amine · Commandes</title>
   <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <!-- The staff app (installable from the « Installer l'app » button once signed in). -->
+  <link rel="manifest" href="/commandes/staff.webmanifest">
+  <link rel="apple-touch-icon" href="/assets/icons/staff-192.png">
+  <meta name="apple-mobile-web-app-title" content="CA Commandes">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/commandes/commandes.css?v=2026102802">
+  <link rel="stylesheet" href="/commandes/commandes.css?v=2026102903">
 </head>
 <body>
   <!-- Staff sign-in: each restaurant has its own account. -->
@@ -43,13 +47,20 @@
         <strong id="place"></strong>
         <span class="top__clock" id="clock"></span>
       </div>
+      <div class="tabs" role="tablist">
+        <button class="tab is-on" type="button" data-tab="orders">Commandes</button>
+        <button class="tab" type="button" data-tab="stats">Statistiques</button>
+      </div>
       <div class="top__actions">
+        <button class="btn btn--small btn--install" id="install-btn" type="button" hidden>⬇ Installer l'app</button>
+        <button class="btn btn--small btn--line btn--print" id="print-btn" type="button">🖨 Impression auto : non</button>
         <button class="btn btn--small btn--line" id="sound-btn" type="button">Tester le son</button>
         <button class="btn btn--small btn--line" id="clear-btn" type="button">Effacer les commandes de test</button>
         <button class="btn btn--small btn--ghost" id="logout-btn" type="button">Se déconnecter</button>
       </div>
     </header>
     <p class="banner" id="offline" hidden>Connexion perdue. Les commandes s'afficheront dès son retour.</p>
+    <div id="tab-orders">
     <section class="summary" id="summary" aria-label="Résumé"></section>
     <section class="board">
       <div class="col"><h2>Nouvelles <span class="count" id="n-new"></span></h2><ul class="cards" id="col-new"></ul></div>
@@ -57,6 +68,24 @@
       <div class="col"><h2>Prêtes / en route <span class="count" id="n-ready"></span></h2><ul class="cards" id="col-ready"></ul></div>
       <div class="col col--past"><h2>Terminées <span class="count" id="n-past"></span></h2><ul class="cards" id="col-past"></ul></div>
     </section>
+    </div>
+
+    <!-- What the app collected and what sold most (finished orders only). -->
+    <div id="tab-stats" hidden>
+      <div class="chips" id="stats-sites" hidden>
+        <button class="btn btn--line is-on" type="button" data-site="all">Les deux restaurants</button>
+        <button class="btn btn--line" type="button" data-site="sidi-moumen">Sidi Moumen</button>
+        <button class="btn btn--line" type="button" data-site="bouchaib-doukkali">Bouchaib Doukkali</button>
+      </div>
+      <div class="chips" id="stats-periods">
+        <button class="btn btn--line is-on" type="button" data-period="today">Aujourd'hui</button>
+        <button class="btn btn--line" type="button" data-period="yesterday">Hier</button>
+        <button class="btn btn--line" type="button" data-period="week">7 jours</button>
+        <button class="btn btn--line" type="button" data-period="month">Ce mois</button>
+        <button class="btn btn--line" type="button" data-period="lastmonth">Mois dernier</button>
+      </div>
+      <div id="stats-body"></div>
+    </div>
   </div>
 
   <!-- A new order, full screen, until it is accepted or refused. -->
@@ -90,8 +119,8 @@
     </div>
   </div>
 
-  <script src="/js/config.js?v=2026102802"></script>
+  <script src="/js/config.js?v=2026102901"></script>
   <script src="/vendor/supabase/supabase-2.117.2.js"></script>
-  <script src="/commandes/commandes.js?v=2026102802"></script>
+  <script src="/commandes/commandes.js?v=2026102903"></script>
 </body>
 </html>

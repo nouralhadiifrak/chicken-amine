@@ -141,3 +141,39 @@ create trigger orders_touch
 -- ---------- Realtime: new and changed orders reach the staff screen live ----------
 
 alter publication supabase_realtime add table public.orders;
+
+-- ---------- October 29: online ordering becomes official ----------
+-- (applied as the migration "orders_official_owner_role")
+
+-- The owner: one account that sees both restaurants (location left empty).
+alter table public.staff add column role text not null default 'staff' check (role in ('staff', 'owner'));
+alter table public.staff alter column location drop not null;
+alter table public.staff add constraint staff_location_required check (role = 'owner' or location is not null);
+
+drop policy "staff see their restaurant's orders" on public.orders;
+drop policy "staff update their restaurant's orders" on public.orders;
+drop policy "staff clear their restaurant's test orders" on public.orders;
+
+create policy "staff see their restaurant's orders" on public.orders
+  for select to authenticated
+  using (exists (select 1 from public.staff s
+                 where s.user_id = (select auth.uid()) and (s.role = 'owner' or s.location = orders.location)));
+create policy "staff update their restaurant's orders" on public.orders
+  for update to authenticated
+  using (exists (select 1 from public.staff s
+                 where s.user_id = (select auth.uid()) and (s.role = 'owner' or s.location = orders.location)))
+  with check (exists (select 1 from public.staff s
+                      where s.user_id = (select auth.uid()) and (s.role = 'owner' or s.location = orders.location)));
+create policy "staff clear their restaurant's test orders" on public.orders
+  for delete to authenticated
+  using (demo and exists (select 1 from public.staff s
+                          where s.user_id = (select auth.uid()) and (s.role = 'owner' or s.location = orders.location)));
+
+-- Online ordering is now the real thing: new orders are real orders.
+alter table public.orders alter column demo set default false;
+
+-- The statistics read orders of a whole month by restaurant and status.
+create index orders_location_status_created_idx on public.orders (location, status, created_at desc);
+
+-- To make an account the owner (after creating it in Authentication → Users):
+--   insert into public.staff (user_id, role) values ('<user id>', 'owner');

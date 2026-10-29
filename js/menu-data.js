@@ -59,22 +59,10 @@ const PATES = { id: "pates", fr: "Sauce des pâtes", ar: "صلصة المعكر�
   { id: "blanche", fr: "Sauce blanche", ar: "الصلصة البيضاء" },
   { id: "champignon", fr: "Sauce champignon", ar: "صلصة الفطر" },
 ] };
-// The tacos of the Chicken Tacos Amine.
-const TACOS_AMINE = { id: "tacos", fr: "Tacos au choix", ar: "اختر الطاكوس", choices: [
-  { id: "poulet", fr: "Poulet", ar: "دجاج" },
-  { id: "nuggets", fr: "Nuggets", ar: "ناجتس" },
-  { id: "chicken", fr: "Chicken", ar: "تشيكن" },
-  { id: "viande", fr: "Viande hachée", ar: "لحم مفروم" },
-  { id: "sepia", fr: "Sépia", ar: "سيبيا" },
-  { id: "mixte", fr: "Mixte", ar: "ميكس" },
-] };
 // The burger of the Chicken Burger Amine.
 const BURGERS_AMINE = { id: "burger", fr: "Burger au choix", ar: "اختر البرغر", choices: [
-  { id: "cheese", fr: "Cheese Burger", ar: "تشيز برغر" },
   { id: "chicken", fr: "Chicken Burger", ar: "تشيكن برغر" },
-  { id: "biggy", fr: "Biggy Burger", ar: "بيغي برغر" },
-  { id: "chicken-biggy", fr: "Chicken Biggy Burger", ar: "تشيكن بيغي برغر" },
-  { id: "country", fr: "Chicken Country Burger", ar: "تشيكن كانتري برغر" },
+  { id: "cheese", fr: "Cheese Burger", ar: "تشيز برغر" },
 ] };
 // The pasticcio of the Chicken Pasticcio.
 const PASTICCIOS = { id: "pasticcio", fr: "Pasticcio au choix", ar: "اختر الباستيتشيو", choices: [
@@ -206,8 +194,8 @@ window.MENU = [
       { id: "pl-broch-poulet", group: "plats-brochettes", image: "/assets/photos/pl-broch-poulet.webp", emoji: "🍢", fr: "Brochettes Poulet", ar: "بروشيت دجاج", price: 50,
         desc: { fr: "Pâtes sauce blanche et champignons, riz, légumes sautés, frites", ar: "معكرونة بالصلصة البيضاء والفطر، أرز، خضر مشوحة، فريت" } },
       { id: "pl-escalope", group: "plats", image: "/assets/photos/pl-escalope.webp", fr: "Escalope Gratinée", ar: "إسكالوب غراتيني", price: 50, desc: { fr: "Escalope de poulet gratinée, pâtes sauce champignon, pâtes sauce blanche, riz, légumes sautés, frites", ar: "إسكالوب دجاج غراتيني، معكرونة بصلصة الفطر، معكرونة بالصلصة البيضاء، أرز، خضر مشوحة، فريت" } },
-      { id: "pl-tacos-amine", group: "plats", image: "/assets/photos/pl-tacos-amine.webp", sauces: true, emoji: "🌮", fr: "Chicken Tacos Amine", ar: "تشيكن طاكوس أمين", price: 55, desc: { fr: "2 pièces chicken, tacos, pâtes sauce champignon ou sauce blanche, frites", ar: "قطعتان تشيكن، طاكوس، معكرونة بصلصة الفطر أو الصلصة البيضاء، فريت" }, options: [TACOS_AMINE, PATES] },
-      { id: "pl-burger-amine", group: "plats", image: "/assets/photos/pl-burger-amine.webp", sauces: true, emoji: "🍔", fr: "Chicken Burger Amine", ar: "تشيكن برغر أمين", price: 55, desc: { fr: "2 pièces chicken, burger, pâtes sauce champignon ou sauce blanche, frites", ar: "قطعتان تشيكن، برغر، معكرونة بصلصة الفطر أو الصلصة البيضاء، فريت" }, options: [BURGERS_AMINE, PATES] },
+      { id: "pl-tacos-amine", group: "plats", image: "/assets/photos/pl-tacos-amine.webp", sauces: true, emoji: "🌮", fr: "Chicken Tacos Amine", ar: "تشيكن طاكوس أمين", price: 55, desc: { fr: "2 pièces chicken, tacos poulet, pâtes sauce champignon ou sauce blanche, frites", ar: "قطعتان تشيكن، طاكوس دجاج، معكرونة بصلصة الفطر أو الصلصة البيضاء، فريت" }, options: [PATES] },
+      { id: "pl-burger-amine", group: "plats", image: "/assets/photos/pl-burger-amine.webp", sauces: true, emoji: "🍔", fr: "Chicken Burger Amine", ar: "تشيكن برغر أمين", price: 55, desc: { fr: "2 pièces chicken, chicken burger ou cheese burger, pâtes sauce champignon ou sauce blanche, frites", ar: "قطعتان تشيكن، تشيكن برغر أو تشيز برغر، معكرونة بصلصة الفطر أو الصلصة البيضاء، فريت" }, options: [BURGERS_AMINE, PATES] },
       { id: "pl-emince-boeuf", image: "/assets/photos/pl-emince-boeuf.webp", group: "plats", fr: "Émincé de Bœuf", ar: "إمانسي البقر", price: 55, desc: { fr: "Émincé de bœuf, pâtes sauce blanche ou champignon, riz, légumes sautés, frites", ar: "إمانسي البقر، معكرونة بالصلصة البيضاء أو صلصة الفطر، أرز، خضر مشوحة، فريت" }, options: [PATES] },
       { id: "pl-pasticcio", group: "plats", image: "/assets/photos/pl-pasticcio.webp", fr: "Chicken Pasticcio", ar: "تشيكن باستيتشيو", price: 59,
         desc: { fr: "2 pièces chicken, pasticcio, pâtes sauce champignon ou sauce blanche, frites", ar: "قطعتان تشيكن، باستيتشيو، معكرونة بصلصة الفطر أو الصلصة البيضاء، فريت" }, options: [PASTICCIOS, PATES] },

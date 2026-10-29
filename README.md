@@ -17,6 +17,9 @@ The site lives at https://chickenamine.ma (domain at Capconnect: two A records t
 In Vercel, `www.chickenamine.ma` redirects to it, and `vercel.json` redirects the old `chicken-amine-theta.vercel.app`
 address to it permanently.
 
+Moving to Cloudflare Pages (free, commercial use allowed): `_headers` holds the same caching rules as
+`vercel.json`. Pages settings: production branch `main`, no framework, no build command, output directory `/`.
+
 ## Installable app (PWA)
 
 The site installs as an app (home-screen icon, full screen): `site.webmanifest` (name, colours, icons, maskable
@@ -29,22 +32,38 @@ Android browsers offer their own install prompt: the site keeps it for its heade
 once the customer has opened a category (or after 10 s; « Plus tard » hides it for two weeks). iPhone Safari has
 no prompt, so the same button shows the three Safari steps. Where installing isn't possible, nothing is shown.
 
-## Online orders (demo)
+## Online orders
 
-A demo of ordering without WhatsApp, to show the owner. The real site does not change: only a tab opened at
-`/demo/` sends its order to the restaurant's screen instead of WhatsApp ("Commander"). The customer then follows the
-status live (sent, accepted with a time, ready, on the way, done, or refused with a reason) and, after
-`orders.callAfterMinutes` without an answer, is invited to call.
+Customers order with « Commander »: the order goes to the restaurant's screen, and the customer follows its status
+live (sent, accepted with a time, ready, on the way, done, or refused with a reason). WhatsApp is the way out: the
+WhatsApp button appears when the order cannot be sent, or when the restaurant has not answered after
+`orders.callAfterMinutes` (5) minutes, with the same order already written. (`/demo/`, the old demo address, opens the site.)
 
-The staff screen is `/commandes/`. Each restaurant signs in with its own account and sees only its own orders.
+**Delivery:** each restaurant has a zone (`js/zones.js`, drawn from the official arrondissement borders and the
+owner's sketch); a pin outside it is refused. Inside, the price goes by straight-line distance: 5 DH up to 1.5 km,
+10 DH up to 2.5 km, 15 DH beyond (`delivery` in `js/config.js`). The areas are listed on each restaurant's page
+(`deliveryAreas` in `js/config.js`, then `node tools/build-locations.js`).
+
+**Staff screen, `/commandes/`**, installable as its own app (« Installer l'app » once signed in; black icon).
+Each restaurant signs in with its own account and sees only its own orders; the owner's account sees both.
 « Démarrer le service » lets the page ring and keeps the screen awake. Each new order rings and fills the screen
-until it is accepted (10/20/30/45 min) or refused. « Effacer les commandes de test » removes the demo orders.
+until it is accepted (10/20/30/45 min) or refused. « Envoyer au livreur » opens WhatsApp with the delivery (client,
+address, 📍 map position, amount to collect); the staff pick the delivery guy's contact. The « Statistiques » tab
+adds up what was collected (finished orders), the best sellers, delivery vs takeaway and the busiest hours, for
+today, yesterday, 7 days, this month or last month (a service day runs from 06:00 to 06:00).
+
+**Receipt printer:** on the device the printer is connected to, press « 🖨 Impression auto » (off → 80 mm →
+58 mm paper; kept on that device only). Each accepted order then prints its receipt once (even if it was accepted on
+another screen), and « Réimprimer » prints it again. Browsers print through their print window; for printing
+with no window at all, run Chrome on that computer with `--kiosk-printing` (e.g. a shortcut to
+`chrome.exe --kiosk-printing https://chickenamine.ma/commandes/`) and make the receipt printer the default printer.
 
 The orders live in a free Supabase project, `chicken-amine-commandes`; `js/config.js` → `orders` holds its URL and
 public key. The tables and access rules are in `supabase/schema.sql`: customers can only add an order and read its
-status with its secret token, there are at most 5 orders per phone in 10 minutes, and staff accounts are linked to
-a restaurant in the `staff` table. To add a staff account, use Supabase → Authentication → Users → Add user, then run
-`insert into public.staff (user_id, location) values ('<user id>', 'sidi-moumen');`.
+status with its secret token, at most 5 orders per phone in 10 minutes. Accounts are made in Supabase →
+Authentication → Users → Add user, then linked in SQL:
+`insert into public.staff (user_id, location) values ('<user id>', 'sidi-moumen');` (a restaurant) or
+`insert into public.staff (user_id, role) values ('<user id>', 'owner');` (the owner, both restaurants).
 
 ## Run locally
 

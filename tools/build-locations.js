@@ -146,7 +146,7 @@ ${json}
   <main>
     <article class="card">
       <h1>${esc(l.googleName)} · ${esc(l.short.fr)}</h1>
-      <p class="lead">Restaurant de restauration rapide à ${esc(l.short.fr)}, Casablanca : tacos et tacos gratinés, broasters, chawarmas, burgers, paninis, pizzas, pâtes et plats. Sur place, à emporter ou en livraison (${C.delivery.maxKm} km autour du restaurant, ${C.delivery.fee} DH).</p>
+      <p class="lead">Restaurant de restauration rapide à ${esc(l.short.fr)}, Casablanca : tacos et tacos gratinés, broasters, chawarmas, burgers, paninis, pizzas, pâtes et plats. Sur place, à emporter ou en livraison (${esc(l.deliveryAreas)}).</p>
       <p class="lead" lang="ar">مطعم للوجبات السريعة في ${esc(l.short.ar)}، الدار البيضاء: طاكوس، بروستر، شاورما، برغر، بانيني، بيتزا، معكرونة وأطباق. في عين المكان، للأخذ أو التوصيل.</p>
       <div class="actions">
         <a class="btn btn--yellow" href="/?restaurant=${l.id}#menu">Commander · اطلب</a>
@@ -159,7 +159,7 @@ ${json}
         <li><b>Horaires</b><span>Tous les jours, ${C.hours.open} – ${C.hours.close}</span></li>
         <li><b>Téléphone</b><span><a href="tel:${l.phoneIntl}" dir="ltr">${phoneText(l.phone)}</a> · <a href="https://wa.me/${l.whatsapp}" target="_blank" rel="noopener">WhatsApp</a></span></li>
         <li><b>Instagram</b><span><a href="${esc(l.instagram)}" target="_blank" rel="noopener">${esc(l.instagramHandle)}</a></span></li>
-        <li><b>Livraison</b><span>Dans un rayon de ${C.delivery.maxKm} km · ${C.delivery.fee} DH</span></li>
+        <li><b>Livraison</b><span>${C.delivery.tiers.map((x) => `${x.fee} DH jusqu'à ${String(x.upToKm).replace(".", ",")} km`).join(" · ")} · ${C.delivery.farFee} DH au-delà, dans la zone : ${esc(l.deliveryAreas)}</span></li>
       </ul>
       <h2>Plan</h2>
       <iframe class="map" title="Carte : ${esc(l.googleName)} sur Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${l.location.lat},${l.location.lng}&amp;z=16&amp;output=embed"></iframe>

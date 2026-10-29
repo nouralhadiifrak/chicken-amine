@@ -1,0 +1,17 @@
+{
+  "id": "/commandes/",
+  "name": "Chicken Amine · Commandes",
+  "short_name": "CA Commandes",
+  "description": "L'écran des commandes de Chicken Amine, pour le personnel.",
+  "lang": "fr",
+  "start_url": "/commandes/",
+  "scope": "/commandes/",
+  "display": "standalone",
+  "background_color": "#141414",
+  "theme_color": "#141414",
+  "icons": [
+    { "src": "/assets/icons/staff-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/staff-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/staff-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
