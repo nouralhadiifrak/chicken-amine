@@ -156,6 +156,11 @@ window.I18N = {
       call: "Appeler le restaurant",
       ok: "OK",
     },
+    privacy: {
+      link: "Politique de confidentialité",
+      note: "Vos informations servent seulement à préparer et livrer votre commande.",
+      more: "En savoir plus",
+    },
     install: {
       short: "Installer l'app",
       header: "Installer l'application",
@@ -328,6 +333,11 @@ window.I18N = {
       review: "اترك تقييما على Google",
       call: "اتصل بالمطعم",
       ok: "حسنا",
+    },
+    privacy: {
+      link: "سياسة الخصوصية",
+      note: "تستعمل معلوماتك فقط لتحضير طلبك وتوصيله.",
+      more: "اعرف المزيد",
     },
     install: {
       short: "ثبّت التطبيق",

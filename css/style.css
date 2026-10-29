@@ -818,6 +818,8 @@ html.no-intro .intro { display: none; }
 .footer p { margin: 0; }
 .footer__places { margin-top: 8px !important; font-size: 0.85rem; }
 .footer__places a { color: inherit; }
+.checkout-privacy { margin: 4px 0 0; color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
+.checkout-privacy a { color: var(--red-dark); font-weight: 600; }
 
 /* ---------- Floating buttons ---------- */
 .ig-float {

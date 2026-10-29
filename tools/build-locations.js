@@ -172,7 +172,7 @@ ${photos.map((c) => `        <figure><a href="/?restaurant=${l.id}#categorie-${c
       <p><a href="/${other.id}/">${esc(other.googleName)} · ${esc(other.short.fr)}</a> : ${esc(other.address.fr)} · <a href="tel:${other.phoneIntl}" dir="ltr">${phoneText(other.phone)}</a></p>
     </article>
   </main>
-  <footer><p>© ${new Date().getFullYear()} ${esc(C.name)} · <a href="/">chickenamine.ma</a></p></footer>
+  <footer><p>© ${new Date().getFullYear()} ${esc(C.name)} · <a href="/">chickenamine.ma</a> · <a href="/confidentialite/">Politique de confidentialité</a></p></footer>
 </body>
 </html>
 `;
