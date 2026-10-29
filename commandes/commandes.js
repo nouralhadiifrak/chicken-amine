@@ -31,6 +31,13 @@
   let alertId = null;       // the order shown in the alert
   let channel = null, pollTimer = null, ringTimer = null, audio = null, wakeLock = null, installPrompt = null;
   let statsPeriod = "today", statsSite = "all";
+  // Receipt printer: set on the device the printer is connected to (off, 80 mm or 58 mm paper), kept in this browser.
+  const PRINT_KEY = "chickenamine.print.v1";
+  const PRINTED_KEY = "chickenamine.printed.v1";
+  let printMode = readStore(PRINT_KEY) || "off";
+  const printed = new Set(JSON.parse(readStore(PRINTED_KEY) || "[]"));
+  function readStore(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function writeStore(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } }
 
   function show(view) {
     ["login", "start", "app"].forEach((v) => { $("#" + v).hidden = v !== view; });
@@ -127,6 +134,7 @@
     list.forEach((o) => {
       orders.set(o.id, o);
       if (!lastSync || o.updated_at > lastSync) lastSync = o.updated_at;
+      autoPrint(o);
     });
   }
   // Every order of the last 24 hours (also drops the ones cleared on another screen).
@@ -209,6 +217,70 @@
     await load();
   }
 
+  /* ---------- Receipts: printed when the order is accepted (here or on another screen) ---------- */
+  function autoPrint(o) {
+    if (printMode === "off" || o.status !== "accepted" || printed.has(o.id) || !o.accepted_at) return;
+    // not the orders accepted long ago (when the screen is opened again later)
+    if (minutesSince(o.accepted_at) > 10) return;
+    printOrder(o);
+  }
+  function receiptHtml(o, width) {
+    const s = siteById(o.location);
+    const delivery = o.mode === "delivery";
+    const readyAt = o.accepted_at && o.eta_minutes ? time(new Date(new Date(o.accepted_at).getTime() + o.eta_minutes * 60e3).toISOString()) : "";
+    const date = new Date(o.created_at).toLocaleDateString("fr-FR", { timeZone: C.timeZone });
+    const line = (a, b, cls) => `<div class="row${cls ? " " + cls : ""}"><span>${a}</span><span>${b}</span></div>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><title>N° ${num(o)}</title><style>
+      @page { size: ${width}mm auto; margin: 0; }
+      * { box-sizing: border-box; }
+      body { width: ${width}mm; margin: 0; padding: 3mm ${width > 60 ? 4 : 2}mm 6mm; font: ${width > 60 ? 13 : 11}px/1.35 Arial, sans-serif; color: #000; }
+      h1 { font-size: 1.5em; text-align: center; margin: 0; } .c { text-align: center; } .big { font-size: 1.9em; font-weight: 700; text-align: center; margin: 2mm 0; }
+      hr { border: 0; border-top: 1px dashed #000; margin: 2mm 0; } .row { display: flex; justify-content: space-between; gap: 2mm; }
+      .det { padding-left: 5mm; font-size: 0.9em; } .tot { font-size: 1.3em; font-weight: 700; } .mode { font-size: 1.3em; font-weight: 700; text-align: center; border: 2px solid #000; padding: 1mm; }
+      .note { border: 1px solid #000; padding: 1mm 2mm; font-weight: 700; margin-top: 2mm; }
+    </style></head><body>
+      <h1>CHICKEN AMINE</h1><div class="c">${esc(s.name.fr)}<br>${esc(s.phone.replace(/(\d{2})(?=\d)/g, "$1 "))}</div><hr>
+      <div class="big">N° ${num(o)}</div><div class="c">${date} · ${time(o.created_at)}${readyAt ? ` · prête vers ${readyAt}` : ""}</div>
+      <div class="mode">${delivery ? "LIVRAISON" : "À EMPORTER"}</div><hr>
+      <div><b>${esc(o.customer_name)}</b> · ${esc(o.customer_phone)}</div>
+      ${delivery && o.address ? `<div>${esc(o.address)}</div>` : ""}${delivery && o.distance_km != null ? `<div>${String(o.distance_km).replace(".", ",")} km</div>` : ""}<hr>
+      ${(o.items || []).map((l) => line(`<b>${esc(l.qty)} ×</b> ${esc(l.name)}${l.size ? ` (${esc(l.size)})` : ""}`, money(l.total || 0)) + (l.details || []).map((d) => `<div class="det">${esc(d)}</div>`).join("")).join("")}
+      ${o.notes ? `<div class="note">Note : ${esc(o.notes)}</div>` : ""}<hr>
+      ${line("Sous-total", money(o.subtotal))}${o.delivery_fee ? line("Livraison", money(o.delivery_fee)) : ""}${line("TOTAL", money(o.total), "tot")}
+      <hr><div class="c">Merci et bon appétit !<br>chickenamine.ma</div>
+    </body></html>`;
+  }
+  // Prints through the browser: silently on a computer whose Chrome runs in kiosk-printing mode (see README),
+  // otherwise the print window opens on its own and one tap prints.
+  function printOrder(o) {
+    printed.add(o.id);
+    writeStore(PRINTED_KEY, JSON.stringify(Array.from(printed).slice(-200)));
+    const frame = document.createElement("iframe");
+    frame.className = "print-frame";
+    frame.setAttribute("aria-hidden", "true");
+    document.body.appendChild(frame);
+    const doc = frame.contentWindow.document;
+    doc.open();
+    doc.write(receiptHtml(o, printMode === "58" ? 58 : 80));
+    doc.close();
+    window.__receipts = (window.__receipts || 0) + 1;
+    setTimeout(() => {
+      try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { /* printing unavailable */ }
+      setTimeout(() => frame.remove(), 60000);
+    }, 250);
+  }
+  const PRINT_LABEL = { off: "🖨 Impression auto : non", 80: "🖨 Impression auto : 80 mm", 58: "🖨 Impression auto : 58 mm" };
+  function renderPrint() {
+    const b = $("#print-btn");
+    b.textContent = PRINT_LABEL[printMode];
+    b.classList.toggle("is-on", printMode !== "off");
+  }
+  function cyclePrint() {
+    printMode = printMode === "off" ? "80" : printMode === "80" ? "58" : "off";
+    writeStore(PRINT_KEY, printMode);
+    renderPrint();
+  }
+
   /* ---------- The delivery guy: the order on WhatsApp, with the customer's exact position ---------- */
   function driverMessage(o) {
     const lines = [`🛵 *Livraison N° ${num(o)}*`];
@@ -265,7 +337,8 @@
     const b = (status, label, cls) => `<button class="btn ${cls}" type="button" data-id="${o.id}" data-status="${status}">${label}</button>`;
     const driver = o.mode === "delivery" ? `<button class="btn btn--wa" type="button" data-driver="${o.id}">Envoyer au livreur</button>` : "";
     if (o.status === "new") return `<button class="btn btn--red" type="button" data-answer="${o.id}">Répondre</button>`;
-    if (o.status === "accepted") return driver + b("ready", "Prête", "btn--green");
+    const reprint = `<button class="btn btn--line" type="button" data-print="${o.id}">🖨 Réimprimer</button>`;
+    if (o.status === "accepted") return driver + reprint + b("ready", "Prête", "btn--green");
     if (o.status === "ready") return o.mode === "delivery" ? driver + b("on_the_way", "En route", "btn--yellow") : b("done", "Récupérée", "btn--green");
     if (o.status === "on_the_way") return driver + b("done", "Livrée", "btn--green");
     return "";
@@ -458,6 +531,8 @@
     $("#sound-btn").addEventListener("click", () => { unlockAudio(); beep(); });
     $("#clear-btn").addEventListener("click", clearTests);
     $("#install-btn").addEventListener("click", install);
+    $("#print-btn").addEventListener("click", cyclePrint);
+    renderPrint();
     $$(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
     $("#stats-periods").addEventListener("click", (e) => {
       const b = e.target.closest("[data-period]");
@@ -480,6 +555,8 @@
     $(".board").addEventListener("click", async (e) => {
       const ans = e.target.closest("[data-answer]");
       if (ans) { alertId = ans.dataset.answer; $("#alert").dataset.id = ""; render(); return; }
+      const pr = e.target.closest("[data-print]");
+      if (pr) { printOrder(orders.get(pr.dataset.print)); return; }
       const drv = e.target.closest("[data-driver]");
       if (drv) { sendToDriver(drv.dataset.driver); return; }
       const b = e.target.closest("[data-status]");

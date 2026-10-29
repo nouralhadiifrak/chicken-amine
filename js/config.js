@@ -32,7 +32,7 @@ window.CONFIG = {
       // The listing's pin: the embedded map and the delivery distance are measured from here.
       location: { lat: 33.585371, lng: -7.525908 },
       // Where it delivers (the exact outline is in js/zones.js), as written on its page.
-      deliveryAreas: "Sidi Moumen, Al Azhar, Sidi Bernoussi, Aïn Sebaâ, Hay Mohammadi, Moulay Rachid (Bournazel), Sidi Othmane",
+      deliveryAreas: "Sidi Moumen, Al Azhar, Sidi Bernoussi, Aïn Sebaâ, Hay Mohammadi, Moulay Rachid (Bournazel)",
     },
     {
       id: "bouchaib-doukkali",

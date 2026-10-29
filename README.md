@@ -52,6 +52,12 @@ address, 📍 map position, amount to collect); the staff pick the delivery guy'
 adds up what was collected (finished orders), the best sellers, delivery vs takeaway and the busiest hours, for
 today, yesterday, 7 days, this month or last month (a service day runs from 06:00 to 06:00).
 
+**Receipt printer:** on the device the printer is connected to, press « 🖨 Impression auto » (off → 80 mm →
+58 mm paper; kept on that device only). Each accepted order then prints its receipt once (even if it was accepted on
+another screen), and « Réimprimer » prints it again. Browsers print through their print window; for printing
+with no window at all, run Chrome on that computer with `--kiosk-printing` (e.g. a shortcut to
+`chrome.exe --kiosk-printing https://chickenamine.ma/commandes/`) and make the receipt printer the default printer.
+
 The orders live in a free Supabase project, `chicken-amine-commandes`; `js/config.js` → `orders` holds its URL and
 public key. The tables and access rules are in `supabase/schema.sql`: customers can only add an order and read its
 status with its secret token, at most 5 orders per phone in 10 minutes. Accounts are made in Supabase →

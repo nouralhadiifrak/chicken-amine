@@ -117,6 +117,8 @@ a { color: var(--red-dark); }
 .tab.is-on { background: var(--yellow); border-color: var(--yellow); color: var(--black); }
 .btn--install, .btn--wa { background: var(--green); color: var(--white); }
 .tag--site { background: var(--black); color: var(--white); }
+.btn--print.is-on { background: var(--yellow); border-color: var(--yellow); color: var(--black); }
+.print-frame { position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0; visibility: hidden; }
 
 /* Statistics */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 0; }
