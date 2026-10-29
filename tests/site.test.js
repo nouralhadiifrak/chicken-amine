@@ -1002,8 +1002,8 @@ async function main() {
         Notification.requestPermission = async () => { perm = "granted"; return perm; };
       }
       if (navigator.serviceWorker) {
-        const reg = { pushManager: { getSubscription: async () => null, subscribe: async () => ({ toJSON: () => ({ endpoint: "https://push.example/abc", keys: { p256dh: "p-key", auth: "a-key" } }) }) } };
-        navigator.serviceWorker.register = async () => reg;
+        const reg = { scope: location.origin + "/commandes/", active: {}, pushManager: { getSubscription: async () => null, subscribe: async () => ({ toJSON: () => ({ endpoint: "https://push.example/abc", keys: { p256dh: "p-key", auth: "a-key" } }) }) } };
+        navigator.serviceWorker.register = async (url, opts) => { (window.__swRegistered = window.__swRegistered || []).push([url, opts && opts.scope]); return reg; };
         navigator.serviceWorker.getRegistration = async () => reg;
         Object.defineProperty(navigator.serviceWorker, "ready", { get: () => Promise.resolve(reg) });
       }
@@ -1147,6 +1147,8 @@ async function main() {
     check(/activées/.test(await page.textContent("#notify-label")) && subscribed.length === 1 && subscribed[0].endpoint === "https://push.example/abc" && subscribed[0].p256dh === "p-key" && !("user_id" in subscribed[0]),
       `notifications: « Activer les notifications » subscribes this phone and saves it (${await page.textContent("#notify-label")})`);
     check(typeof subscribed[0].device === "string" && subscribed[0].device.length > 0, "notifications: the phone is saved with its browser's description (to tell phones apart)");
+    const sw = await page.evaluate(() => window.__swRegistered || []);
+    check(sw.length && sw.every(([u, sc]) => u === "/commandes/sw.js" && sc === "/commandes/"), "notifications: the staff app subscribes with its own service worker (scope /commandes/), so Android gives its notifications to the staff app");
     // « Envoyer une notification test »: the server rings this account's phones at once.
     let tested = null;
     await page.route(SUPA + "/functions/v1/push", (route) => { tested = { body: JSON.parse(route.request().postData() || "{}"), auth: route.request().headers()["authorization"] }; route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ phones: 1, results: [201] }) }); });
