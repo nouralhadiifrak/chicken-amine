@@ -1,6 +1,7 @@
 /*
  * End-to-end checks in headless Chromium (Playwright).
  *   npx playwright test is not needed: run with  node tests/site.test.js
+ *   (or against a deployed copy:  BASE=https://chicken-amine.pages.dev node tests/site.test.js)
  * Serves the site on a local port, then checks phone (390 px) and desktop widths, in French and Arabic:
  * language/SEO tags, the intro, the header, category tiles and the category view, emojis and the
  * sauce sheet, pickup and delivery orders sent to WhatsApp, the closed-hours warning, sizes/sauces/per-piece support, reduced motion and JS errors,
@@ -189,8 +190,9 @@ async function addDish(page, cat, id, sauces) {
 }
 
 async function main() {
-  const srv = await serve();
-  const base = `http://localhost:${srv.address().port}`;
+  // BASE=https://… runs the same checks against a deployed copy instead of a local server.
+  const srv = process.env.BASE ? null : await serve();
+  const base = process.env.BASE ? process.env.BASE.replace(/\/$/, "") : `http://localhost:${srv.address().port}`;
   const browser = await chromium.launch();
   const sizes = [{ name: "phone", width: 390, height: 844 }, { name: "desktop", width: 1280, height: 860 }];
 
@@ -1015,7 +1017,7 @@ async function main() {
   }
 
   await browser.close();
-  srv.close();
+  if (srv) srv.close();
   console.log(failures ? `\n${failures} check(s) failed` : "\nAll checks passed");
   process.exit(failures ? 1 : 0);
 }
