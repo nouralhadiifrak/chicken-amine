@@ -10,20 +10,9 @@
   const SITE_KEY = "chickenamine.location.v1";
   const INSTALL_KEY = "chickenamine.install-later.v1";
   const ORDER_KEY = "chickenamine.order.v1";
-  const DEMO_KEY = "chickenamine.demo.v1";
-  // Demo of online orders (opened with /demo/, for this tab only): the order goes to the restaurant's
-  // screen (/commandes/) instead of WhatsApp. Everyone else keeps ordering on WhatsApp.
-  const DEMO = (() => {
-    try {
-      const url = new URL(location.href);
-      if (url.searchParams.get("demo") === "1") {
-        sessionStorage.setItem(DEMO_KEY, "1");
-        url.searchParams.delete("demo");
-        history.replaceState(null, "", url.pathname + url.search + url.hash);
-      }
-      return sessionStorage.getItem(DEMO_KEY) === "1" && !!C.orders;
-    } catch (e) { return false; }
-  })();
+  // Orders go to the restaurant's screen (/commandes/). WhatsApp stays as the way out: when the order cannot be
+  // sent, and when the restaurant has not answered after CONFIG.orders.callAfterMinutes.
+  const ONLINE = !!C.orders;
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -687,7 +676,12 @@
   }
 
   function mode() { const r = $('input[name="mode"]:checked'); return r ? r.value : "pickup"; }
-  function deliveryFee() { return !$("#checkout-form").hidden && mode() === "delivery" ? C.delivery.fee : 0; }
+  // The delivery fee once the customer's position is known and inside the zone.
+  function deliveryFee() {
+    if ($("#checkout-form").hidden || mode() !== "delivery") return 0;
+    const st = deliveryState();
+    return st.ok ? st.fee : 0;
+  }
   function renderTotals() {
     const sub = subtotal(), fee = deliveryFee();
     const shown = {};
@@ -937,9 +931,8 @@
     $("#cart-back").hidden = !checkout;
     $("#cart-next").hidden = checkout;
     $("#cart-clear").hidden = checkout || count() === 0;
-    $("#send-btn").hidden = !checkout || DEMO;
-    $("#order-send").hidden = !checkout || !DEMO;
-    $("#demo-notice").hidden = !DEMO;
+    $("#send-btn").hidden = !checkout || ONLINE;
+    $("#order-send").hidden = !checkout || !ONLINE;
     $("#cart-title").textContent = checkout ? t("checkout.title") : t("cart.title");
     if (checkout) renderCheckout();
     renderTotals();
@@ -951,7 +944,8 @@
     const warn = $("#closed-warning");
     warn.hidden = isOpen();
     warn.textContent = t("checkout.closedWarning", { time: C.hours.open });
-    $("#delivery-info").innerHTML = rich(t("checkout.deliveryInfo", { km: C.delivery.maxKm, fee: money(C.delivery.fee) }));
+    const [near, mid] = C.delivery.tiers;
+    $("#delivery-info").innerHTML = rich(t("checkout.deliveryInfo", { km1: kmText(near.upToKm), fee1: money(near.fee), km2: kmText(mid.upToKm), fee2: money(mid.fee), fee3: money(C.delivery.farFee) }));
     const delivery = mode() === "delivery";
     $("#delivery-box").hidden = !delivery;
     $("#address-field").hidden = !delivery;
@@ -961,7 +955,7 @@
   }
 
   /* ---------- Delivery map (Leaflet, loaded on demand) ---------- */
-  let map = null, youMarker = null, youPos = null, restoMarker = null, restoCircle = null;
+  let map = null, youMarker = null, youPos = null, restoMarker = null, zoneShape = null;
   let leafletLoading = null;
   function loadLeaflet() {
     if (window.L && window.L.map) return Promise.resolve();
@@ -990,19 +984,25 @@
         map = Lf.map("delivery-map", { zoomControl: true, attributionControl: true }).setView(resto, 14);
         Lf.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
         restoMarker = Lf.marker(resto, { icon: pinIcon("pin--resto"), title: t("checkout.restaurant") }).addTo(map);
-        restoCircle = Lf.circle(resto, { radius: C.delivery.maxKm * 1000, color: "#e1060f", weight: 2, fillOpacity: 0.06 }).addTo(map);
+        drawZone();
         map.on("click", (e) => setYou(e.latlng.lat, e.latlng.lng));
         if (youPos) setYou(youPos.lat, youPos.lng, false);
       }
       setTimeout(() => map.invalidateSize(), 60);
     }).catch(() => {});
   }
-  // After a change of restaurant, the pin and the delivery circle move to it.
+  // The chosen restaurant's delivery zone, in red on the map.
+  function drawZone() {
+    if (zoneShape) zoneShape.remove();
+    const rings = (window.ZONES || {})[S().id];
+    zoneShape = rings ? window.L.polygon(rings, { color: "#e1060f", weight: 2, fillOpacity: 0.06, interactive: false }).addTo(map) : null;
+  }
+  // After a change of restaurant, the pin and the delivery zone move to it.
   function moveMapToSite() {
     if (!map) return;
     const resto = [S().location.lat, S().location.lng];
     restoMarker.setLatLng(resto);
-    restoCircle.setLatLng(resto);
+    drawZone();
     map.setView(youPos ? [youPos.lat, youPos.lng] : resto, 14);
   }
   function setYou(lat, lng, pan = true) {
@@ -1013,6 +1013,7 @@
       if (pan) map.panTo([lat, lng]);
     }
     updateDeliveryStatus();
+    renderTotals();
   }
   function distanceKm(a, b) {
     const R = 6371, rad = Math.PI / 180;
@@ -1025,8 +1026,26 @@
     if (mode() !== "delivery") return { ok: true };
     if (!youPos) return { ok: false, msg: t("checkout.needLocation") };
     const km = distanceKm(S().location, youPos);
-    if (km > C.delivery.maxKm) return { ok: false, km, msg: t("checkout.tooFar", { max: C.delivery.maxKm, km: kmText(km) }) };
-    return { ok: true, km, msg: t("checkout.distance", { km: kmText(km) }) };
+    if (!inZone(youPos, S().id)) return { ok: false, km, msg: t("checkout.outOfZone") };
+    const fee = feeFor(km);
+    return { ok: true, km, fee, msg: t("checkout.distance", { km: kmText(km), fee: money(fee) }) };
+  }
+  function feeFor(km) {
+    const tier = C.delivery.tiers.find((x) => km <= x.upToKm);
+    return tier ? tier.fee : C.delivery.farFee;
+  }
+  // Is the position inside the restaurant's delivery zone? (ray casting on the [lat, lng] outlines of js/zones.js)
+  function inZone(p, siteId) {
+    const rings = (window.ZONES || {})[siteId];
+    if (!rings) return false;
+    return rings.some((ring) => {
+      let inside = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [yi, xi] = ring[i], [yj, xj] = ring[j];
+        if ((yi > p.lat) !== (yj > p.lat) && p.lng < ((xj - xi) * (p.lat - yi)) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    });
   }
   function updateDeliveryStatus() {
     const st = deliveryState();
@@ -1076,7 +1095,7 @@
     });
     lines.push("");
     const sub = subtotal();
-    const fee = data.mode === "delivery" ? C.delivery.fee : 0;
+    const fee = data.mode === "delivery" ? st.fee : 0;
     lines.push(`${t("cart.subtotal")}${sep}${money(sub)}`);
     if (fee) lines.push(`${t("cart.deliveryFee")}${sep}${money(fee)}`);
     lines.push(`*${t("cart.total")}${sep}${money(sub + fee)}*`);
@@ -1090,7 +1109,8 @@
     return lines.join("\n");
   }
 
-  function send() {
+  // whatsapp: send on WhatsApp (offered when the online order could not be sent).
+  function send(whatsapp) {
     const f = $("#checkout-form");
     const err = $("#checkout-error");
     err.textContent = "";
@@ -1114,13 +1134,16 @@
     const st = updateDeliveryStatus();
     if (!st.ok) { err.textContent = st.msg; return; }
     saveCustomer(data);
-    if (DEMO) { sendOnline(data, st); return; }
-    const url = `https://wa.me/${S().whatsapp}?text=${encodeURIComponent(buildMessage(data, st))}`;
+    if (ONLINE && whatsapp !== true) { sendOnline(data, st); return; }
+    openWhatsApp(S().whatsapp, buildMessage(data, st));
+  }
+  function openWhatsApp(to, text) {
+    const url = `https://wa.me/${to}?text=${encodeURIComponent(text)}`;
     const w = window.open(url, "_blank", "noopener");
     if (!w) location.href = url;
   }
 
-  /* ---------- Online order (demo mode) and its live status ---------- */
+  /* ---------- Online order and its live status ---------- */
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
     : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
   const ORDER_STEPS = ["new", "accepted", "ready", "on_the_way", "done"];
@@ -1161,7 +1184,7 @@
     });
     lang = was;
     const delivery = data.mode === "delivery";
-    const sub = subtotal(), fee = delivery ? C.delivery.fee : 0;
+    const sub = subtotal(), fee = delivery ? st.fee : 0;
     const row = {
       id: uuid(), token: uuid(), location: S().id, mode: data.mode,
       customer_name: data.name.slice(0, 60), customer_phone: data.phone.slice(0, 20),
@@ -1176,7 +1199,8 @@
         const body = await res.text();
         throw new Error(/Trop de commandes/.test(body) ? "tooMany" : "failed");
       }
-      order = { id: row.id, token: row.token, site: row.location, mode: row.mode, at: Date.now(), status: "new" };
+      // the same order as a WhatsApp message, offered if the restaurant does not answer
+      order = { id: row.id, token: row.token, site: row.location, mode: row.mode, at: Date.now(), status: "new", wa: buildMessage(data, st) };
       saveOrder();
       cart = [];
       cartChanged();
@@ -1185,6 +1209,8 @@
       openTrack();
     } catch (e) {
       err.textContent = t(e.message === "tooMany" ? "order.tooMany" : "order.failed");
+      // the restaurant's screen cannot be reached: the order can still go on WhatsApp
+      if (e.message !== "tooMany") $("#send-btn").hidden = false;
     } finally {
       sending = false;
       $("#order-send").disabled = false;
@@ -1241,6 +1267,7 @@
     status.className = "track-status" + (order.status === "refused" ? " is-error" : "");
     const late = order.status === "new" && Date.now() - order.at > (C.orders.callAfterMinutes || 5) * 60e3;
     $("#track-help").hidden = !late;
+    $("#track-wa").hidden = !(late && order.wa);
     const call = $("#track-call");
     call.href = `tel:${site.phoneIntl}`;
     call.hidden = !(late || order.status === "refused" || order.status === "accepted" || order.status === "ready");
@@ -1255,7 +1282,11 @@
     if (order && ["refused", "done", "gone"].includes(order.status)) { order = null; saveOrder(); renderTrack(); }
   }
   function setupTrack() {
-    $("#order-send").addEventListener("click", send);
+    $("#order-send").addEventListener("click", () => send(false));
+    $("#track-wa").addEventListener("click", () => {
+      const site = C.locations.find((l) => l.id === order.site) || S();
+      openWhatsApp(site.whatsapp, order.wa);
+    });
     $("#track-bar").addEventListener("click", openTrack);
     $("#track-close").addEventListener("click", closeTrack);
     $("#track-ok").addEventListener("click", closeTrack);
@@ -1305,7 +1336,7 @@
     $$("[data-change-site]").forEach((b) => b.addEventListener("click", openSites));
     // Escape cannot dismiss the first choice of restaurant.
     $("#site-dialog").addEventListener("cancel", (e) => { if ($("#site-dialog").dataset.locked) e.preventDefault(); });
-    $("#send-btn").addEventListener("click", send);
+    $("#send-btn").addEventListener("click", () => send(true));
     $$("dialog").forEach((d) => {
       d.addEventListener("close", onDialogClose);
       d.addEventListener("click", (e) => { if (e.target === d && !d.dataset.locked) closeDialog(d); }); // click on the backdrop

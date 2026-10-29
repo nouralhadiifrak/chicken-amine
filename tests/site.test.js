@@ -364,17 +364,15 @@ async function main() {
         await waitIntro(page);
         await page.evaluate(() => document.querySelector("#menu").scrollIntoView());
       }
-      // Chicken Tacos Amine: the tacos and the pâtes sauce are chosen first.
+      // Chicken Tacos Amine: always tacos poulet; the pâtes sauce and the sauces are chosen first.
       await openCat(page, "plats");
       await page.click('.item[data-item="pl-tacos-amine"] [data-add]');
-      await pick(page, '#options-body input[name="opt-tacos"][value="poulet"]');
       await page.click("#options-dialog .icon-btn");
       await page.waitForTimeout(300);
       check(await page.evaluate(() => !JSON.parse(localStorage.getItem("chickenamine.cart.v1")).some((l) => l.id === "pl-tacos-amine")), `${label}: closing the options sheet with ✕ adds nothing`);
       await page.click('.item[data-item="pl-tacos-amine"] [data-add]');
-      const tacosChoices = await page.$$eval('#options-body input[name="opt-tacos"]', (b) => b.map((x) => x.value).join());
-      check(tacosChoices === "poulet,nuggets,chicken,viande,sepia,mixte" && await page.isVisible('#options-body input[name="sauce"]'), `${label}: Chicken Tacos Amine offers 6 tacos (${tacosChoices}) and the sauces`);
-      await pick(page, '#options-body input[name="opt-tacos"][value="nuggets"]');
+      const tacosChoices = await page.$$eval('#options-body input[name^="opt-"]', (b) => [...new Set(b.map((x) => x.name))].join());
+      check(tacosChoices === "opt-pates" && await page.isVisible('#options-body input[name="sauce"]'), `${label}: Chicken Tacos Amine asks only the pâtes sauce (no tacos choice) and the sauces`);
       await page.click("#options-submit");
       const reqErr = await page.textContent("#options-error");
       check(/pâtes|المعكرونة/.test(reqErr), `${label}: the pâtes sauce must be chosen ("${reqErr}")`);
@@ -410,8 +408,8 @@ async function main() {
       await page.click("#send-btn");
       const m1 = await sentMessage(page);
       check(m1 && m1.to === "/212634385931", `${label}: pickup order opens the Sidi Moumen WhatsApp, +212634385931`);
-      const pickupOk = m1 && /(Sidi Moumen|سيدي مومن)/.test(m1.text) && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /132/.test(m1.text) && /Sans oignon/.test(m1.text) && /(Nuggets|ناجتس)/.test(m1.text) && /(Sauce blanche|الصلصة البيضاء)/.test(m1.text) && !/10 (DH|درهم)/.test(m1.text);
-      check(pickupOk, `${label}: pickup message names the restaurant, has items, sauces, soda brand, tacos and pâtes choices, notes, total 132 and no delivery fee`);
+      const pickupOk = m1 && /(Sidi Moumen|سيدي مومن)/.test(m1.text) && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /132/.test(m1.text) && /Sans oignon/.test(m1.text) && !/(Nuggets|ناجتس)/.test(m1.text) && /(Sauce blanche|الصلصة البيضاء)/.test(m1.text) && !/10 (DH|درهم)/.test(m1.text);
+      check(pickupOk, `${label}: pickup message names the restaurant, has items, sauces, soda brand, the pâtes choice (no tacos choice), notes, total 132 and no delivery fee`);
 
       // Delivery: needs a position, refuses beyond 3 km, accepts inside with a 10 DH fee.
       await pick(page, 'input[name="mode"][value="delivery"]');
