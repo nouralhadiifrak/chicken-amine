@@ -581,7 +581,8 @@
   }
   async function saveSubscription(sub) {
     const j = sub.toJSON();
-    const { error } = await db.from("push_subscriptions").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: "endpoint" });
+    const { error } = await db.from("push_subscriptions").upsert(
+      { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, device: navigator.userAgent.slice(0, 300) }, { onConflict: "endpoint" });
     return !error;
   }
   async function enableNotifications() {
@@ -592,7 +593,13 @@
       const reg = await navigator.serviceWorker.register("/sw.js");
       // (never wait forever for the service worker)
       await Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(no, 10000))]);
-      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64Bytes(O.vapidPublicKey) }));
+      // a fresh subscription each time (an old one may have been dropped by the phone)
+      const old = await reg.pushManager.getSubscription();
+      if (old) {
+        await db.from("push_subscriptions").delete().eq("endpoint", old.endpoint);
+        await old.unsubscribe().catch(() => {});
+      }
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64Bytes(O.vapidPublicKey) });
       setNotify((await saveSubscription(sub)) ? "on" : "error");
     } catch (e) { setNotify("error"); }
   }
@@ -608,6 +615,19 @@
     } catch (e) { setNotify("off"); }
   }
 
+  // The server sends a notification to this account's phones right away.
+  async function testNotification() {
+    const label = $("#notify-test-label");
+    label.textContent = "Envoi…";
+    const { data, error } = await db.functions.invoke("push", { body: { mode: "test" } });
+    const ok = !error && data && data.results && data.results.some((s) => s >= 200 && s < 300);
+    label.textContent = ok ? "Envoyée ✓ — elle arrive dans quelques secondes"
+      : data && data.phones === 0 ? "Aucun téléphone enregistré : activez d'abord les notifications"
+      : "Échec de l'envoi : réactivez les notifications puis réessayez";
+    if (!ok && data && data.phones) setNotify("off");
+    setTimeout(() => { label.textContent = "Envoyer une notification test"; }, 8000);
+  }
+
   /* ---------- Events ---------- */
   function bind() {
     $("#login-form").addEventListener("submit", signIn);
@@ -618,9 +638,10 @@
     $("#menu-btn").addEventListener("click", openMenu);
     $("#menu-close").addEventListener("click", closeMenu);
     $("#menu-shade").addEventListener("click", closeMenu);
-    $("#menu").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && b.id !== "notify-btn" && b.id !== "print-btn") closeMenu(); });
+    $("#menu").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && !["notify-btn", "notify-test", "print-btn"].includes(b.id)) closeMenu(); });
     $("#menu-install").addEventListener("click", install);
     $("#notify-btn").addEventListener("click", enableNotifications);
+    $("#notify-test").addEventListener("click", testNotification);
     $("#cancel-reasons").addEventListener("click", (e) => { const b = e.target.closest("[data-reason]"); if (b) cancel(b.dataset.reason); });
     $("#cancel-back").addEventListener("click", () => { $("#cancel-box").hidden = true; });
     $("#clear-btn").addEventListener("click", clearTests);

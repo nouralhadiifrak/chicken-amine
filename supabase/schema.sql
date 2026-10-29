@@ -200,3 +200,17 @@ $$);
 -- (applied as the migration "push_subscriptions_upsert") The app saves a phone with an "insert or update" that
 -- rewrites every column it sends, endpoint included; without this the save was refused (403).
 grant update (endpoint, p256dh, auth) on table public.push_subscriptions to authenticated;
+
+-- ---------- October 30: notification diagnostics ----------
+-- (applied as the migration "push_diagnostics")
+alter table public.push_subscriptions add column device text check (char_length(device) <= 300);
+grant update (device) on table public.push_subscriptions to authenticated;
+-- push_log: every answer of the push services (status, detail), for diagnosis; a week is kept.
+--   select at, kind, status, detail, device from public.push_log order by at desc limit 20;
+create table public.push_log (
+  id bigint generated always as identity primary key, at timestamptz not null default now(), user_id uuid,
+  device text, endpoint text, status int, detail text, kind text not null default 'order'
+);
+alter table public.push_log enable row level security;
+revoke all on table public.push_log from anon, authenticated;
+select cron.schedule('push-log-week', '23 3 * * *', $$ delete from public.push_log where at < now() - interval '7 days' $$);

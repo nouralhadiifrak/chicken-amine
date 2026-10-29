@@ -839,6 +839,17 @@ async function main() {
     await context.close();
   }
 
+  // The category covers: lazy at first, then all loaded once the page has loaded (some phones never start them).
+  console.log("\ncategory covers");
+  {
+    const { page, context } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
+    await waitIntro(page);
+    await page.waitForTimeout(2500);
+    const cov = await page.evaluate(() => [...document.querySelectorAll("#cat-grid img")].map((i) => ({ eager: i.loading === "eager", ok: i.complete && i.naturalWidth > 0 })));
+    check(cov.length === 14 && cov.every((c) => c.eager && c.ok), `covers: all 14 category photos loaded without scrolling or opening a category (${cov.filter((c) => c.ok).length}/14)`);
+    await context.close();
+  }
+
   // The privacy page (loi 09-08), linked from the footer and the checkout.
   console.log("\nprivacy page");
   {
@@ -1135,6 +1146,13 @@ async function main() {
     await page.waitForFunction(() => /activées/.test(document.querySelector("#notify-label").textContent), null, { timeout: 5000 }).catch(() => {});
     check(/activées/.test(await page.textContent("#notify-label")) && subscribed.length === 1 && subscribed[0].endpoint === "https://push.example/abc" && subscribed[0].p256dh === "p-key" && !("user_id" in subscribed[0]),
       `notifications: « Activer les notifications » subscribes this phone and saves it (${await page.textContent("#notify-label")})`);
+    check(typeof subscribed[0].device === "string" && subscribed[0].device.length > 0, "notifications: the phone is saved with its browser's description (to tell phones apart)");
+    // « Envoyer une notification test »: the server rings this account's phones at once.
+    let tested = null;
+    await page.route(SUPA + "/functions/v1/push", (route) => { tested = { body: JSON.parse(route.request().postData() || "{}"), auth: route.request().headers()["authorization"] }; route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ phones: 1, results: [201] }) }); });
+    await page.click("#notify-test");
+    await page.waitForFunction(() => /Envoyée/.test(document.querySelector("#notify-test-label").textContent), null, { timeout: 4000 }).catch(() => {});
+    check(tested && tested.body.mode === "test" && /^Bearer /.test(tested.auth || "") && /Envoyée/.test(await page.textContent("#notify-test-label")), "notifications: « Envoyer une notification test » asks the server (signed in) and confirms");
     await page.click("#menu-close");
     // The staff app: installable once signed in.
     const manifest = await page.evaluate(async () => { const l = document.querySelector('link[rel="manifest"]'); return l && (await fetch(l.href)).json(); });

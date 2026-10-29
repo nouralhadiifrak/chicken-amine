@@ -438,11 +438,18 @@
 
   // Category covers have a 480 px copy (cat-*-480.webp) for the small tiles on phones.
   const smallCover = (src) => (/\/cat-[^/]+\.webp$/.test(src) ? ` srcset="${esc(src.replace(/\.webp$/, "-480.webp"))} 480w, ${esc(src)} 1000w"` : "");
+  // The covers load lazily, then all of them once the page has loaded: some phone browsers never start lazy
+  // images in this grid until it is rebuilt (they stayed empty until a category was opened and closed).
+  let coversNow = false;
+  function loadCovers() {
+    coversNow = true;
+    $$("#cat-grid img").forEach((img) => { img.loading = "eager"; });
+  }
   function renderHome() {
     $("#cat-grid").innerHTML = MENU.map((c) => {
       const from = Math.min(...c.items.map(basePrice));
       return `<button class="cat-tile" type="button" data-open-cat="${c.id}" aria-label="${esc(t("menu.open", { name: L(c) }))}">
-        <span class="cat-tile__media">${c.image ? `<img src="${esc(c.image)}"${smallCover(c.image)} sizes="(max-width: 639px) 50vw, (max-width: 999px) 33vw, 260px" alt="" loading="lazy" width="600" height="400">` : illustration(c.icon)}</span>
+        <span class="cat-tile__media">${c.image ? `<img src="${esc(c.image)}"${smallCover(c.image)} sizes="(max-width: 639px) 50vw, (max-width: 999px) 33vw, 260px" alt="" loading="${coversNow ? "eager" : "lazy"}" width="600" height="400">` : illustration(c.icon)}</span>
         <span class="cat-tile__text"><span class="cat-tile__name">${rich(L(c))}</span>
         <span class="cat-tile__meta">${esc(t("menu.dishes", { n: c.items.length }))} · ${esc(t("menu.from", { price: money(from) }))}</span></span>
       </button>`;
@@ -1379,6 +1386,7 @@
   /* ---------- Start ---------- */
   setupHero();
   bind();
+  addEventListener("load", () => setTimeout(loadCovers, 1200));
   setupInstall();
   setupTrack();
   loadCustomer();
