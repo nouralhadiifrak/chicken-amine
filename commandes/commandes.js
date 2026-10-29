@@ -585,14 +585,37 @@
       { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, device: navigator.userAgent.slice(0, 300) }, { onConflict: "endpoint" });
     return !error;
   }
+  // The staff app's own service worker (scope /commandes/): on Android its notifications then belong to the staff
+  // app (with the site's worker, scope /, they went to the customer app and the phone cancelled them).
+  const STAFF_SW = "/commandes/sw.js";
+  const STAFF_SCOPE = "/commandes/";
+  async function staffWorker() {
+    const reg = await navigator.serviceWorker.register(STAFF_SW, { scope: STAFF_SCOPE });
+    // (never wait forever for it to start)
+    await Promise.race([
+      new Promise((ok) => {
+        if (reg.active) return ok();
+        const w = reg.installing || reg.waiting;
+        if (w) w.addEventListener("statechange", () => { if (w.state === "activated") ok(); });
+        else ok();
+      }),
+      new Promise((_, no) => setTimeout(no, 10000)),
+    ]);
+    return reg;
+  }
   async function enableNotifications() {
     if (!pushSupported()) { setNotify("unsupported"); return; }
     const perm = await Notification.requestPermission();
     if (perm !== "granted") { setNotify(perm === "denied" ? "denied" : "off"); return; }
     try {
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      // (never wait forever for the service worker)
-      await Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(no, 10000))]);
+      // a subscription made earlier on the site's worker is dropped
+      const site = await navigator.serviceWorker.getRegistration("/");
+      const siteSub = site && site.scope === location.origin + "/" && (await site.pushManager.getSubscription());
+      if (siteSub) {
+        await db.from("push_subscriptions").delete().eq("endpoint", siteSub.endpoint);
+        await siteSub.unsubscribe().catch(() => {});
+      }
+      const reg = await staffWorker();
       // a fresh subscription each time (an old one may have been dropped by the phone)
       const old = await reg.pushManager.getSubscription();
       if (old) {
@@ -609,8 +632,8 @@
     if (Notification.permission === "denied") { setNotify("denied"); return; }
     if (Notification.permission !== "granted") { setNotify("off"); return; }
     try {
-      const reg = await navigator.serviceWorker.getRegistration("/");
-      const sub = reg && (await reg.pushManager.getSubscription());
+      const reg = await navigator.serviceWorker.getRegistration(STAFF_SCOPE);
+      const sub = reg && reg.scope.endsWith(STAFF_SCOPE) && (await reg.pushManager.getSubscription());
       if (sub && (await saveSubscription(sub))) setNotify("on"); else setNotify("off");
     } catch (e) { setNotify("off"); }
   }
@@ -691,9 +714,9 @@
     });
     addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; renderInstall(); });
     addEventListener("appinstalled", () => { installPrompt = null; renderInstall(); });
-    // The saved copy that makes the staff app installable and quick to open (the site's sw.js).
+    // The staff app's own worker: installable, quick to open, and its notifications.
     if ("serviceWorker" in navigator && window.isSecureContext) {
-      addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+      addEventListener("load", () => navigator.serviceWorker.register(STAFF_SW, { scope: STAFF_SCOPE }).catch(() => {}));
     }
   }
 

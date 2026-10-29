@@ -66,6 +66,9 @@ accepted order at any time, with a reason the customer sees. After delivery or p
 then ring that phone (a notification with sound, again every minute while the order waits, for 10 minutes); a
 tap opens the order. Restaurant accounts only, not the owner's. Sent by the edge function
 `supabase/functions/push` (deployed with verify_jwt off; it checks a secret shared with the database).
+The staff app has its own service worker, `commandes/sw.js` (scope `/commandes/`): on Android a notification
+belongs to the installed app whose scope covers the worker, so with the site's worker (scope `/`) they went to the
+customer app and the phone cancelled the subscription after the first one.
 « Envoyer une notification test » (☰) rings this account's phones at once. Each answer of the push services is kept a
 week in `push_log` (Supabase SQL: `select at, kind, status, detail, device from push_log order by at desc`).
 On Android, also set Settings → Battery → Chrome → No restrictions. On iPhone it needs the app installed from
