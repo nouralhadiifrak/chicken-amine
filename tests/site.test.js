@@ -71,6 +71,7 @@ async function newPage(browser, base, { width, height, lang, time = OPEN_TIME, r
     errors.push(txt);
   });
   await page.clock.setFixedTime(time);
+  await page.route(SUPA + "/rest/v1/orders**", (route) => route.fulfill({ status: 503, body: "unavailable" }));
   await page.addInitScript(() => {
     window.__opened = [];
     window.open = (url) => { window.__opened.push(url); return {}; };
@@ -92,6 +93,15 @@ async function newPage(browser, base, { width, height, lang, time = OPEN_TIME, r
 
 async function waitIntro(page) {
   await page.waitForFunction(() => document.querySelector("#intro").classList.contains("is-done"), null, { timeout: 5000 });
+}
+
+// Orders go to the restaurant's screen (Supabase). The tests below fake an unreachable Supabase, so the order falls
+// back on WhatsApp, whose message they check; « online orders » further down fakes a working one.
+const SUPA = "https://azaimbixispnrwwnuwta.supabase.co";
+async function sendWhatsApp(page) {
+  await page.click("#order-send");
+  await page.waitForFunction(() => !document.querySelector("#send-btn").hidden || document.querySelector("#checkout-error").textContent, null, { timeout: 4000 }).catch(() => {});
+  if (await page.isVisible("#send-btn")) await page.click("#send-btn");
 }
 
 async function sentMessage(page) {
@@ -405,24 +415,24 @@ async function main() {
       await page.fill('input[name="name"]', "Test Client");
       await page.fill('input[name="phone"]', "0600000000");
       await page.fill('textarea[name="notes"]', "Sans oignon");
-      await page.click("#send-btn");
+      await sendWhatsApp(page);
       const m1 = await sentMessage(page);
       check(m1 && m1.to === "/212634385931", `${label}: pickup order opens the Sidi Moumen WhatsApp, +212634385931`);
       const pickupOk = m1 && /(Sidi Moumen|سيدي مومن)/.test(m1.text) && /(Pepsi|بيبسي)/.test(m1.text) && /(Algérienne, Andalouse|جزائرية، أندلسية)/.test(m1.text) && /132/.test(m1.text) && /Sans oignon/.test(m1.text) && !/(Nuggets|ناجتس)/.test(m1.text) && /(Sauce blanche|الصلصة البيضاء)/.test(m1.text) && !/10 (DH|درهم)/.test(m1.text);
       check(pickupOk, `${label}: pickup message names the restaurant, has items, sauces, soda brand, the pâtes choice (no tacos choice), notes, total 132 and no delivery fee`);
 
-      // Delivery: needs a position, refuses beyond 3 km, accepts inside with a 10 DH fee.
+      // Delivery: needs a position, refuses outside the zone, 5 DH up to 1.5 km.
       await pick(page, 'input[name="mode"][value="delivery"]');
       await page.waitForSelector("#delivery-map.leaflet-container", { state: "attached", timeout: 8000 });
       check(await page.evaluate(() => getComputedStyle(document.querySelector("#gps-btn")).backgroundColor === "rgb(225, 6, 15)" && document.querySelectorAll(".mode__opt .mode__icon").length === 2), `${label}: « Utiliser ma position » in red, icons on both modes`);
       check(await page.evaluate(() => document.querySelector(".mode__opt.is-checked input").value === "delivery"), `${label}: the chosen mode is highlighted without :has() (older browsers)`);
       await page.waitForTimeout(300);
       await page.evaluate(() => { window.__opened = []; });
-      await page.click("#send-btn");
+      await sendWhatsApp(page);
       check(!(await sentMessage(page)), `${label}: delivery without a position is not sent`);
       await page.waitForTimeout(700);
       const totalDelivery = await page.textContent("#totals");
-      check(/142/.test(totalDelivery), `${label}: total with 10 DH delivery = 142`);
+      check(/132/.test(totalDelivery) && !/(Livraison|التوصيل)/.test(totalDelivery), `${label}: no delivery fee until the position is known (total 132)`);
       // Tap the map 1 km east of the restaurant.
       const pt = await page.evaluate(() => {
         const map = document.querySelector("#delivery-map");
@@ -432,21 +442,23 @@ async function main() {
       const st = await page.textContent("#delivery-status");
       check(/km|كلم/.test(st) && !(await page.$("#delivery-status.is-error")), `${label}: tapped point accepted ("${st.trim()}")`);
       await page.fill('input[name="address"]', "Rue 12, immeuble 3");
-      await page.click("#send-btn");
+      await sendWhatsApp(page);
       const m2 = await sentMessage(page);
-      const deliveryOk = m2 && /10 (DH|درهم)/.test(m2.text) && /142/.test(m2.text) && /maps\.google\.com\/\?q=33\.\d+,-7\.\d+/.test(m2.text) && /Rue 12/.test(m2.text);
-      check(deliveryOk, `${label}: delivery message has fee, total 142, address and map link`);
+      const fee = await page.textContent("#totals");
+      check(/5 (DH|درهم)/.test(st) && /137/.test(fee), `${label}: under 1.5 km the delivery is 5 DH (total 137)`);
+      const deliveryOk = m2 && /5 (DH|درهم)/.test(m2.text) && /137/.test(m2.text) && /maps\.google\.com\/\?q=33\.\d+,-7\.\d+/.test(m2.text) && /Rue 12/.test(m2.text);
+      check(deliveryOk, `${label}: delivery message has the 5 DH fee, total 137, address and map link`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${s.name}-${lang}-delivery.png` });
 
-      // Far point: GPS position about 7 km away.
-      await context.setGeolocation({ latitude: 33.62, longitude: -7.47 });
+      // Outside the zone: a GPS position in Mohammedia.
+      await context.setGeolocation({ latitude: 33.69, longitude: -7.38 });
       await context.grantPermissions(["geolocation"]);
       await page.click("#gps-btn");
       await page.waitForSelector("#delivery-status.is-error", { timeout: 5000 }).catch(() => {});
       const far = await page.textContent("#delivery-status");
       await page.evaluate(() => { window.__opened = []; });
-      await page.click("#send-btn");
-      check(/3 /.test(far) && !(await sentMessage(page)), `${label}: GPS position beyond 3 km refused ("${far.trim().slice(0, 60)}…")`);
+      await sendWhatsApp(page);
+      check(/(zone|منطقة)/.test(far) && !(await sentMessage(page)), `${label}: GPS position outside the delivery zone refused ("${far.trim().slice(0, 60)}…")`);
 
       // Language toggle updates the address, title and canonical.
       await page.click("#cart-close");
@@ -487,7 +499,7 @@ async function main() {
     check(await page.isVisible("#closed-warning"), "closed warning shown in checkout");
     await page.fill('input[name="name"]', "A");
     await page.fill('input[name="phone"]', "0600000000");
-    await page.click("#send-btn");
+    await sendWhatsApp(page);
     const m = await sentMessage(page);
     check(m && /fermeture/.test(m.text), "order still sent, marked as sent while closed");
     check(errors.length === 0, "no JavaScript errors");
@@ -523,7 +535,7 @@ async function main() {
     await page.click("#cart-next");
     await page.fill('input[name="name"]', "A");
     await page.fill('input[name="phone"]', "0600000000");
-    await page.click("#send-btn");
+    await sendWhatsApp(page);
     const m = await sentMessage(page);
     check(m && /Pizza Test \(L\)/.test(m.text) && /Sauces : Algérienne, Biggy/.test(m.text), "message lists the size and the two sauces");
     check(errors.length === 0, "no JavaScript errors");
@@ -639,9 +651,9 @@ async function main() {
     check(/0[,.]\d (km|كلم)/.test(st), `${label}: the position found for the choice is the delivery point, measured from Bouchaib Doukkali ("${st.trim()}")`);
     await page.fill('input[name="name"]', "A");
     await page.fill('input[name="phone"]', "0600000000");
-    await page.click("#send-btn");
+    await sendWhatsApp(page);
     const m = await sentMessage(page);
-    check(m && m.to === "/212664496296" && /(Bouchaib Doukkali|بوشعيب الدكالي)/.test(m.text) && /35 (DH|درهم)/.test(m.text), `${label}: the order goes to WhatsApp +212664496296, 25 + 10 DH delivery`);
+    check(m && m.to === "/212664496296" && /(Bouchaib Doukkali|بوشعيب الدكالي)/.test(m.text) && /30 (DH|درهم)/.test(m.text), `${label}: the order goes to WhatsApp +212664496296, 25 + 5 DH delivery`);
     // Changing restaurant from the checkout moves the delivery area.
     await page.click("#checkout-form [data-change-site]");
     await page.waitForSelector("#site-dialog[open]");
@@ -649,7 +661,7 @@ async function main() {
     await page.click('#site-list [data-site="sidi-moumen"]');
     await page.waitForTimeout(300);
     const far = await page.textContent("#delivery-status");
-    check(/3 /.test(far) && (await page.$("#delivery-status.is-error")), `${label}: from Sidi Moumen the same point is too far ("${far.trim().slice(0, 50)}…")`);
+    check(/(zone|منطقة)/.test(far) && (await page.$("#delivery-status.is-error")), `${label}: the same point is outside Sidi Moumen's zone ("${far.trim().slice(0, 50)}…")`);
     check((await page.$eval("#ig-float", (a) => a.href)) === "https://www.instagram.com/chicken__amine__1/", `${label}: the Instagram button follows: @chicken__amine__1`);
     // Next visit: no question.
     await page.reload();
@@ -686,7 +698,7 @@ async function main() {
     await page.click("#cart-next");
     await page.fill('input[name="name"]', "A");
     await page.fill('input[name="phone"]', "0600000000");
-    await page.click("#send-btn");
+    await sendWhatsApp(page);
     const err = await page.textContent("#checkout-error");
     check(!(await sentMessage(page)) && /الجمعة/.test(err), `couscous left in the order after 17:00 is not sent ("${err.trim()}")`);
     check(errors.length === 0, "no JavaScript errors");
@@ -852,20 +864,9 @@ async function main() {
     await context.close();
   }
 
-  // Online orders (demo): the customer orders from /demo/ and follows the status; the staff screen answers.
+  // Online orders: the customer orders and follows the status; the staff screen answers.
   // Supabase is faked here (REST, sign-in and the live channel); the real project is never touched.
-  console.log("\nonline orders (demo)");
-  const SUPA = "https://azaimbixispnrwwnuwta.supabase.co";
-  {
-    // The real site still orders on WhatsApp.
-    const { page, context } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
-    await waitIntro(page);
-    await addDish(page, "burgers", "bg-cheese", []);
-    await page.click("#cart-bar");
-    await page.click("#cart-next");
-    check(await page.isVisible("#send-btn") && !(await page.isVisible("#order-send")) && !(await page.isVisible("#demo-notice")), "without /demo/: the order still goes to WhatsApp");
-    await context.close();
-  }
+  console.log("\nonline orders");
   {
     const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
     const posted = [];
@@ -879,38 +880,51 @@ async function main() {
       const ok = posted.length && req.headers()["x-order-token"] === posted[0].body.token;
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ok ? [row] : []) });
     });
-    await page.goto(base + "/demo/");
     await waitIntro(page);
-    check(await page.evaluate(() => location.pathname === "/" && location.search === ""), "/demo/ opens the site in demo mode, address tidied to /");
     await addDish(page, "burgers", "bg-cheese", []);
     await page.click("#cart-bar");
     await page.click("#cart-next");
-    check(await page.isVisible("#order-send") && !(await page.isVisible("#send-btn")) && await page.isVisible("#demo-notice"), "demo: « Commander » replaces the WhatsApp button, with a demo notice");
+    check(await page.isVisible("#order-send") && !(await page.isVisible("#send-btn")), "« Commander » for everyone, no WhatsApp button at first");
+    const burger = await page.evaluate(() => window.MENU.flatMap((c) => c.items).find((i) => i.id === "pl-burger-amine").options[0].choices.map((c) => c.fr).join(", "));
+    check(burger === "Chicken Burger, Cheese Burger", `Chicken Burger Amine: only « ${burger} »`);
     await page.fill('input[name="name"]', "Test Client");
     await page.fill('input[name="phone"]', "0634235350");
     await page.click("#order-send");
     await page.waitForSelector("#track-dialog[open]", { timeout: 4000 }).catch(() => {});
     const b = (posted[0] || {}).body || {};
     check(posted.length === 1 && posted[0].prefer === "return=minimal" && /^sb_publishable_/.test(posted[0].key) && b.location === "sidi-moumen" && b.mode === "pickup"
-      && b.customer_phone === "0634235350" && b.items.length === 1 && b.items[0].qty === 1 && b.total === b.subtotal && b.delivery_fee === 0 && !("status" in b) && /^[0-9a-f-]{36}$/.test(b.token),
-      `demo: the order is sent to the restaurant's screen (${b.items && b.items[0].name}, ${b.total} DH), without a status of its own`);
-    const sent = await page.evaluate(() => ({ cart: document.querySelector("#cart-bar").hidden, bar: !document.querySelector("#track-bar").hidden, text: document.querySelector("#track-status").textContent }));
-    check(sent.cart && sent.bar && /attente/.test(sent.text), `demo: cart emptied, status followed (« ${sent.text} »)`);
+      && b.customer_phone === "0634235350" && b.items.length === 1 && b.items[0].qty === 1 && b.total === b.subtotal && b.delivery_fee === 0 && !("status" in b) && !("demo" in b) && /^[0-9a-f-]{36}$/.test(b.token),
+      `the order is sent to the restaurant's screen (${b.items && b.items[0].name}, ${b.total} DH), without a status of its own`);
+    const sent = await page.evaluate(() => ({ cart: document.querySelector("#cart-bar").hidden, bar: !document.querySelector("#track-bar").hidden, text: document.querySelector("#track-status").textContent, wa: !document.querySelector("#track-wa").hidden }));
+    check(sent.cart && sent.bar && /attente/.test(sent.text) && !sent.wa, `cart emptied, status followed (« ${sent.text} »), no WhatsApp yet`);
+    // No answer after 5 minutes: the same order can go on WhatsApp.
+    await page.evaluate(() => { const o = JSON.parse(localStorage.getItem("chickenamine.order.v1")); o.at -= 6 * 60e3; localStorage.setItem("chickenamine.order.v1", JSON.stringify(o)); });
+    await page.reload();
+    await page.waitForFunction(() => !document.querySelector("#track-bar").hidden, null, { timeout: 5000 }).catch(() => {});
+    await page.click("#track-bar");
+    await page.waitForSelector("#track-wa:not([hidden])", { timeout: 4000 }).catch(() => {});
+    check(await page.isVisible("#track-help") && await page.isVisible("#track-wa") && await page.isVisible("#track-call"), "after 5 minutes without an answer: WhatsApp and call buttons");
+    await page.click("#track-wa");
+    const late = await sentMessage(page);
+    check(late && late.to === "/212634385931" && /Cheese Burger/.test(late.text) && /0634235350/.test(late.text), "the WhatsApp button sends the same order to Sidi Moumen's WhatsApp");
     // The restaurant accepts with 20 minutes; the next check (every 4 s) shows it.
     row = { status: "accepted", eta_minutes: 20, accepted_at: OPEN_TIME.toISOString(), refuse_reason: null };
     await page.waitForFunction(() => /20 min/.test(document.querySelector("#track-status").textContent), null, { timeout: 7000 }).catch(() => {});
-    check(/Prête dans environ 20 min/.test(await page.textContent("#track-status")) && await page.isVisible("#track-call"), "demo: accepted, « prête dans environ 20 min », with a button to call");
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}/demo-track.png` });
+    check(/Prête dans environ 20 min/.test(await page.textContent("#track-status")) && await page.isVisible("#track-call") && !(await page.isVisible("#track-wa")), "accepted: « prête dans environ 20 min », a button to call, the WhatsApp button gone");
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/order-track.png` });
     // Followed after a reload, then refused with a reason.
     await page.reload();
     row = { status: "refused", eta_minutes: null, accepted_at: null, refuse_reason: "trop de commandes en ce moment" };
     await page.waitForFunction(() => !document.querySelector("#track-bar").hidden, null, { timeout: 5000 }).catch(() => {});
     await page.click("#track-bar");
     await page.waitForFunction(() => /trop de commandes/.test(document.querySelector("#track-status").textContent), null, { timeout: 7000 }).catch(() => {});
-    check(/n'a pas pu accepter.*trop de commandes/.test(await page.textContent("#track-status")), "demo: still followed after a reload; a refusal shows its reason");
+    check(/n'a pas pu accepter.*trop de commandes/.test(await page.textContent("#track-status")), "still followed after a reload; a refusal shows its reason");
     await page.click("#track-ok");
-    check(await page.evaluate(() => document.querySelector("#track-bar").hidden && !localStorage.getItem("chickenamine.order.v1")), "demo: once seen, a finished order is no longer followed");
-    check(errors.length === 0, `demo: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
+    check(await page.evaluate(() => document.querySelector("#track-bar").hidden && !localStorage.getItem("chickenamine.order.v1")), "once seen, a finished order is no longer followed");
+    await page.goto(base + "/demo/");
+    await page.waitForURL(base + "/", { timeout: 4000 }).catch(() => {});
+    check(new URL(page.url()).pathname === "/", "the old /demo/ address opens the site");
+    check(errors.length === 0, `online orders: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
     await context.close();
   }
   {
@@ -934,13 +948,23 @@ async function main() {
     const order = (id, min, extra) => ({ id, token: "t", location: "sidi-moumen", created_at: new Date(OPEN_TIME.getTime() - min * 60e3).toISOString(), updated_at: new Date(OPEN_TIME.getTime() - min * 60e3).toISOString(),
       status: "new", eta_minutes: null, accepted_at: null, refuse_reason: null, mode: "pickup", customer_name: "Test Client", customer_phone: "0634235350", address: null, lat: null, lng: null,
       distance_km: null, notes: "Sans oignon", items: [{ name: "Cheese Burger", qty: 2, details: ["Sauce : Algérienne"], size: null, total: 50 }], subtotal: 50, delivery_fee: 0, total: 50, lang: "fr", demo: true, ...extra });
-    const db = new Map([["a1b2c3d4-0000-4000-8000-000000000001", order("a1b2c3d4-0000-4000-8000-000000000001", 2)]]);
+    const ready = order("c3c3c3c3-0000-4000-8000-000000000003", 30, { status: "ready", mode: "delivery", lat: 33.6, lng: -7.49, address: "Bd Al Azhar", distance_km: 3.4, delivery_fee: 15, subtotal: 60, total: 75, notes: null });
+    const db = new Map([["a1b2c3d4-0000-4000-8000-000000000001", order("a1b2c3d4-0000-4000-8000-000000000001", 2)], [ready.id, ready]]);
+    // finished orders of the period, for the statistics
+    const at = new Date(OPEN_TIME.getTime() - 30 * 60e3).toISOString();
+    const statsRows = [
+      { location: "sidi-moumen", status: "done", mode: "pickup", total: 90, delivery_fee: 0, created_at: at, items: [{ name: "Tacos Mixte", qty: 2, total: 80 }, { name: "Coca-Cola", qty: 1, total: 10 }] },
+      { location: "sidi-moumen", status: "done", mode: "delivery", total: 55, delivery_fee: 15, created_at: at, items: [{ name: "Tacos Mixte", qty: 1, total: 40 }] },
+      { location: "sidi-moumen", status: "refused", mode: "pickup", total: 30, delivery_fee: 0, created_at: at, items: [{ name: "Cheese Burger", qty: 1, total: 30 }] },
+    ];
+    const statsQueries = [];
+    let staffRow = { location: "sidi-moumen", role: "staff" };
     const patches = [];
     const reply = (route, rows) => {
       const one = /vnd\.pgrst\.object/.test(route.request().headers()["accept"] || "");
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(one ? rows[0] || null : rows) });
     };
-    await page.route(SUPA + "/rest/v1/staff**", (route) => reply(route, [{ location: "sidi-moumen" }]));
+    await page.route(SUPA + "/rest/v1/staff**", (route) => reply(route, [staffRow]));
     await page.route(SUPA + "/rest/v1/orders**", (route) => {
       const req = route.request();
       const id = (new URL(req.url()).searchParams.get("id") || "").replace("eq.", "");
@@ -952,6 +976,7 @@ async function main() {
         db.set(id, o);
         return reply(route, [o]);
       }
+      if (/status=in\./.test(req.url())) { statsQueries.push(req.url()); return reply(route, statsRows); }
       reply(route, [...db.values()]);
     });
     // The live channel: joins, then delivers one new order.
@@ -1010,6 +1035,50 @@ async function main() {
     check(patches[2] && patches[2].status === "refused" && patches[2].refuse_reason === "trop de commandes en ce moment" && /Refusée : trop de commandes/.test(await page.textContent("#col-past")),
       "staff screen: refused with a reason, listed with the finished orders");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes.png` });
+    // The delivery guy gets the order on WhatsApp, with the customer's exact position; WhatsApp asks which contact.
+    await page.evaluate(() => { window.__opened = []; });
+    await page.click('#col-ready [data-driver="c3c3c3c3-0000-4000-8000-000000000003"]');
+    const drv = await sentMessage(page);
+    check(drv && drv.to === "/" && /maps\.google\.com\/\?q=33\.6,-7\.49/.test(drv.text) && /Bd Al Azhar/.test(drv.text) && /À encaisser : 75 DH/.test(drv.text) && /livraison 15 DH/.test(drv.text) && /0634235350/.test(drv.text),
+      "staff screen: « Envoyer au livreur » opens WhatsApp with the address, the map position and the amount to collect");
+    // The staff app: installable once signed in.
+    const manifest = await page.evaluate(async () => { const l = document.querySelector('link[rel="manifest"]'); return l && (await fetch(l.href)).json(); });
+    check(manifest && manifest.scope === "/commandes/" && manifest.start_url === "/commandes/" && manifest.icons.some((i) => /staff-512/.test(i.src)), "staff app: its own manifest (opens on /commandes/, its own icon)");
+    check(!(await page.isVisible("#install-btn")), "staff app: no install button until the browser offers it");
+    await page.evaluate(() => { const e = new Event("beforeinstallprompt"); e.prompt = () => { window.__prompted = true; }; e.userChoice = Promise.resolve({ outcome: "accepted" }); dispatchEvent(e); });
+    check(await page.isVisible("#install-btn"), "staff app: « Installer l'app » appears in the header once signed in");
+    await page.click("#install-btn");
+    check(await page.evaluate(() => window.__prompted === true), "staff app: the button opens the browser's install prompt");
+    // Statistics: what the app collected and what sold most.
+    await page.click('.tab[data-tab="stats"]');
+    await page.waitForFunction(() => /encaissé/.test(document.querySelector("#stats-body").textContent), null, { timeout: 4000 }).catch(() => {});
+    const st = await page.evaluate(() => ({ cards: [...document.querySelectorAll("#stats-body .stat")].map((x) => x.textContent.replace(/\s+/g, " ").trim()), top: document.querySelector("#stats-body .rank li")?.textContent.replace(/\s+/g, " ").trim(), text: document.querySelector("#stats-body").textContent, board: !document.querySelector("#tab-orders").hidden }));
+    check(/^145 DH\s*encaissé/.test(st.cards[0]) && /^2\s*commandes terminées/.test(st.cards[1]) && /^73 DH\s*panier/.test(st.cards[2]) && /^15 DH\s*frais/.test(st.cards[3]) && /^1\s*refusées/.test(st.cards[4]) && !st.board,
+      `statistics: collected 145 DH from 2 finished orders, average 73 DH, 15 DH of delivery, 1 refused (${st.cards.join(" | ")})`);
+    check(/^1\s*Tacos Mixte\s*3\s*120 DH/.test(st.top) && /Livraison/.test(st.text) && /13:00 – 14:00/.test(st.text), `statistics: best seller « ${st.top} », delivery/takeaway split, busiest hour`);
+    check(statsQueries.length && statsQueries.every((u) => /location=eq\.sidi-moumen/.test(u)), "statistics: a restaurant account only counts its own orders");
+    await page.click('#stats-periods [data-period="month"]');
+    await page.waitForTimeout(500);
+    check(statsQueries.length >= 2 && !(await page.isVisible("#stats-sites")), "statistics: the period can be changed; no restaurant choice for a restaurant account");
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes-stats.png` });
+    // The owner's account sees both restaurants.
+    staffRow = { location: null, role: "owner" };
+    await page.click("#logout-btn");
+    await page.waitForSelector("#login:not([hidden])", { timeout: 5000 });
+    await page.fill('input[name="email"]', "patron@test.ma");
+    await page.fill('input[name="password"]', "bon-mot-de-passe");
+    await page.click("#login-btn");
+    await page.waitForSelector("#start:not([hidden])", { timeout: 4000 }).catch(() => {});
+    check(/les deux restaurants/.test(await page.textContent("#start-place")), "owner: the account opens both restaurants");
+    await page.click("#start-btn");
+    await page.waitForSelector("#col-ready .tag--site", { timeout: 4000 }).catch(() => {});
+    check(/Sidi Moumen/.test(await page.textContent("#col-ready .tag--site").catch(() => "")), "owner: each order shows its restaurant");
+    statsQueries.length = 0;
+    await page.click('.tab[data-tab="stats"]');
+    await page.waitForTimeout(500);
+    await page.click('#stats-sites [data-site="bouchaib-doukkali"]');
+    await page.waitForTimeout(500);
+    check(await page.isVisible("#stats-sites") && !/location=/.test(statsQueries[0] || "x") && /location=eq\.bouchaib-doukkali/.test(statsQueries[statsQueries.length - 1] || ""), "owner: statistics for both restaurants together or one of them");
     check(errors.length === 0, `staff screen: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
     await context.close();
   }

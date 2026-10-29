@@ -8,6 +8,9 @@
   Content-Type: application/manifest+json
   Cache-Control: public, max-age=0, must-revalidate
 
+/commandes/staff.webmanifest
+  Content-Type: application/manifest+json
+
 /css/*
   Cache-Control: public, max-age=0, must-revalidate
 
