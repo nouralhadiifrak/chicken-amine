@@ -175,31 +175,34 @@ html.no-intro .intro { display: none; }
   .site-btn { max-width: none; font-size: 0.95rem; margin-inline-start: 4px; }
   .site-btn span { white-space: nowrap; }
 }
-/* Install as an app: a small download button in the header, shown only where installing is possible. */
+/* Install as an app: the app's own icon (and « Installer l'app » on wider screens), shown only where installing
+   is possible. */
 .install-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 40px;
   min-width: 40px;
   justify-content: center;
-  padding: 0 8px;
-  border: 0;
+  padding: 3px;
+  border: 1.5px solid var(--line);
   border-radius: 999px;
-  background: var(--yellow-soft);
+  background: var(--white);
   color: var(--ink);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
   flex: none;
+  box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.35);
 }
 .install-btn[hidden] { display: none; }
-.install-btn svg { width: 20px; height: 20px; color: var(--red); }
+.install-btn img { width: 30px; height: 30px; border-radius: 8px; display: block; }
 .install-btn span { display: none; }
-.install-btn:hover { background: #ffe9a3; }
+.install-btn:hover { border-color: var(--red); }
 @media (min-width: 760px) {
-  .install-btn { padding: 0 14px; margin-inline-start: 4px; }
+  .install-btn { padding: 3px 14px 3px 4px; margin-inline-start: 4px; }
   .install-btn span { display: inline; }
 }
 /* Phones: the logo, the restaurant, the install button, the language and the cart share one row. */
@@ -877,6 +880,11 @@ body.has-track.has-cart .ig-float { bottom: calc(150px + env(safe-area-inset-bot
 .track-status { margin: 0 0 12px; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
 .track-status.is-error { color: var(--red-dark); }
 .track-wa { width: 100%; margin-top: 10px; }
+#track-dialog .sheet__actions { flex-wrap: wrap; }
+.btn--review { flex: 1 1 100%; --btn-bg: var(--white); --btn-fg: var(--ink); border: 2px solid #dadce0; gap: 8px; }
+.btn--review .g-logo { width: 20px; height: 20px; flex: none; }
+.btn--review .stars { color: var(--yellow); letter-spacing: 1px; }
+.btn--cancel { --btn-bg: var(--white); --btn-fg: var(--red-dark); border: 2px solid var(--red); }
 @media (prefers-reduced-motion: reduce) { .track-bar__dot { animation: none; } }
 
 /* The invitation to install the app, just under the header. */

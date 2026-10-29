@@ -14,9 +14,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/commandes/commandes.css?v=2026102903">
+  <link rel="stylesheet" href="/commandes/commandes.css?v=2026102905">
 </head>
 <body>
+  <!-- The opening animation (follows the phone's own start screen, on the same black). -->
+  <div class="splash" id="splash" aria-hidden="true"><img src="/assets/rooster-clean.png" alt="" width="360" height="452"><span>Commandes</span></div>
+
   <!-- Staff sign-in: each restaurant has its own account. -->
   <main class="login" id="login" hidden>
     <form class="card login__card" id="login-form" novalidate>
@@ -52,11 +55,8 @@
         <button class="tab" type="button" data-tab="stats">Statistiques</button>
       </div>
       <div class="top__actions">
-        <button class="btn btn--small btn--install" id="install-btn" type="button" hidden>⬇ Installer l'app</button>
-        <button class="btn btn--small btn--line btn--print" id="print-btn" type="button">🖨 Impression auto : non</button>
-        <button class="btn btn--small btn--line" id="sound-btn" type="button">Tester le son</button>
-        <button class="btn btn--small btn--line" id="clear-btn" type="button">Effacer les commandes de test</button>
-        <button class="btn btn--small btn--ghost" id="logout-btn" type="button">Se déconnecter</button>
+        <button class="install-pill" id="install-btn" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="28" height="28"><span>Installer l'application</span></button>
+        <button class="burger" id="menu-btn" type="button" aria-label="Menu" aria-controls="menu" aria-expanded="false"><i></i></button>
       </div>
     </header>
     <p class="banner" id="offline" hidden>Connexion perdue. Les commandes s'afficheront dès son retour.</p>
@@ -85,6 +85,39 @@
         <button class="btn btn--line" type="button" data-period="lastmonth">Mois dernier</button>
       </div>
       <div id="stats-body"></div>
+    </div>
+  </div>
+
+  <!-- The menu (☰): everything that is not an order. -->
+  <div class="menu-shade" id="menu-shade" hidden></div>
+  <nav class="menu" id="menu" hidden aria-label="Menu">
+    <div class="menu__head"><strong>Menu</strong><button class="menu__close" id="menu-close" type="button" aria-label="Fermer">✕</button></div>
+    <button class="menu__install" id="menu-install" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="44" height="44"><span><b>Installer l'application</b><small>Accès direct depuis l'écran d'accueil</small></span></button>
+    <button class="menu__item is-on" type="button" data-tab="orders"><span class="menu__ic">📋</span>Commandes</button>
+    <button class="menu__item" type="button" data-tab="stats"><span class="menu__ic">📊</span>Statistiques</button>
+    <hr>
+    <button class="menu__item staff-only" id="notify-btn" type="button"><span class="menu__ic">🔔</span><span><span id="notify-label">Activer les notifications</span><small id="notify-help">Pour être prévenu même téléphone verrouillé</small></span></button>
+    <button class="menu__item staff-only" id="sound-btn" type="button"><span class="menu__ic">🔊</span>Tester le son</button>
+    <button class="menu__item" id="print-btn" type="button" hidden><span class="menu__ic">🖨</span><span id="print-label">Impression auto : non</span></button>
+    <button class="menu__item" id="clear-btn" type="button"><span class="menu__ic">🧹</span>Effacer les commandes de test</button>
+    <hr>
+    <button class="menu__item" id="logout-btn" type="button"><span class="menu__ic">↩</span>Se déconnecter</button>
+  </nav>
+
+  <!-- Cancelling an accepted order (the customer sees the reason). -->
+  <div class="alert" id="cancel-box" hidden role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+    <div class="alert__box alert__box--cancel">
+      <h2 class="alert__title" id="cancel-title">Annuler la commande</h2>
+      <p class="alert__label">Pourquoi ? (le client le verra)</p>
+      <div class="alert__reasons" id="cancel-reasons">
+        <button class="btn btn--line" type="button" data-reason="le client a annulé par téléphone">Le client a annulé par téléphone</button>
+        <button class="btn btn--line" type="button" data-reason="nous n'avons pas pu joindre le client">Client injoignable</button>
+        <button class="btn btn--line" type="button" data-reason="un produit n'est plus disponible">Produit plus disponible</button>
+        <button class="btn btn--line" type="button" data-reason="un problème de livraison">Problème de livraison</button>
+        <button class="btn btn--line" type="button" data-reason="">Autre raison</button>
+      </div>
+      <button class="link-btn" id="cancel-back" type="button">← Ne pas annuler</button>
+      <p class="error" id="cancel-error" role="alert"></p>
     </div>
   </div>
 
@@ -119,8 +152,8 @@
     </div>
   </div>
 
-  <script src="/js/config.js?v=2026102901"></script>
+  <script src="/js/config.js?v=2026102902"></script>
   <script src="/vendor/supabase/supabase-2.117.2.js"></script>
-  <script src="/commandes/commandes.js?v=2026102903"></script>
+  <script src="/commandes/commandes.js?v=2026102904"></script>
 </body>
 </html>
