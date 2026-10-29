@@ -17,6 +17,9 @@ The site lives at https://chickenamine.ma (domain at Capconnect: two A records t
 In Vercel, `www.chickenamine.ma` redirects to it, and `vercel.json` redirects the old `chicken-amine-theta.vercel.app`
 address to it permanently.
 
+Moving to Cloudflare Pages (free, commercial use allowed): `_headers` holds the same caching rules as
+`vercel.json`. Pages settings: production branch `main`, no framework, no build command, output directory `/`.
+
 ## Installable app (PWA)
 
 The site installs as an app (home-screen icon, full screen): `site.webmanifest` (name, colours, icons, maskable
