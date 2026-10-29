@@ -117,13 +117,19 @@ ${C.locations.map((l) => `  <url>
     <loc>${site}/${l.id}/</loc>
     <lastmod>${today}</lastmod>
   </url>
-`).join("")}</urlset>
+`).join("")}  <url>
+    <loc>${site}/confidentialite/</loc>
+    <lastmod>${today}</lastmod>
+  </url>
+</urlset>
 `);
 
 fs.writeFileSync(path.join(root, "robots.txt"), `User-agent: *
 Allow: /
 Disallow: /avis/
 Disallow: /print/
+Disallow: /demo/
+Disallow: /commandes/
 
 Sitemap: ${site}/sitemap.xml
 `);

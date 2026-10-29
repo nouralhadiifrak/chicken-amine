@@ -839,6 +839,22 @@ async function main() {
     await context.close();
   }
 
+  // The privacy page (loi 09-08), linked from the footer and the checkout.
+  console.log("\nprivacy page");
+  {
+    const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
+    await waitIntro(page);
+    const links = await page.evaluate(() => ({ footer: !!document.querySelector('footer a[href="/confidentialite/"]'), checkout: !!document.querySelector('#checkout-form .checkout-privacy a[href="/confidentialite/"]') }));
+    check(links.footer && links.checkout, "privacy: linked from the footer and the checkout");
+    await page.goto(base + "/confidentialite/");
+    const pp = await page.evaluate(() => ({ fr: document.querySelector("#fr").textContent, ar: document.querySelector("#ar").textContent, wide: document.documentElement.scrollWidth > innerWidth + 1, canonical: document.querySelector('link[rel="canonical"]').href }));
+    check(/09-08/.test(pp.fr) && /Supabase/.test(pp.fr) && /2 ans/.test(pp.fr) && /CNDP/.test(pp.fr) && /سياسة الخصوصية/.test(pp.ar) && /سنتين/.test(pp.ar) && !pp.wide && pp.canonical.endsWith("/confidentialite/"),
+      "privacy: French and Arabic, the law, where data is kept, 2 years, the CNDP; fits a phone");
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/privacy.png`, fullPage: true });
+    check(errors.length === 0, `privacy: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
+    await context.close();
+  }
+
   // Each restaurant's own page (the one its Google Business Profile links to).
   console.log("\nrestaurant pages");
   for (const [id, name, phone, address] of [["sidi-moumen", "Chicken Amine", "+212634385931", "Sidi Moumen Al Houda"], ["bouchaib-doukkali", "Chicken Amine 2", "+212664496296", "173 Bd Abou Chouaib Doukkali"]]) {

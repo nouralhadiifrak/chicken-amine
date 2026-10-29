@@ -189,3 +189,9 @@ create index orders_location_status_created_idx on public.orders (location, stat
 -- * private.call_push(): calls the edge function supabase/functions/push (pg_net), at once for each new order
 --   (trigger orders_push_new) and every 30 s while orders wait (pg_cron job "push-reminders"); the function rings
 --   the restaurant's phones, then again about once a minute, for 10 minutes at most.
+
+-- ---------- October 30: orders kept 2 years (as the privacy page /confidentialite/ says) ----------
+-- (applied as the migration "orders_keep_two_years")
+select cron.schedule('orders-keep-two-years', '17 3 * * *', $$
+  delete from public.orders where created_at < now() - interval '2 years'
+$$);

@@ -2,24 +2,28 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://chickenamine.ma/</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-29</lastmod>
     <xhtml:link rel="alternate" hreflang="fr" href="https://chickenamine.ma/"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://chickenamine.ma/?lang=ar"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://chickenamine.ma/"/>
   </url>
   <url>
     <loc>https://chickenamine.ma/?lang=ar</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-29</lastmod>
     <xhtml:link rel="alternate" hreflang="fr" href="https://chickenamine.ma/"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://chickenamine.ma/?lang=ar"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://chickenamine.ma/"/>
   </url>
   <url>
     <loc>https://chickenamine.ma/sidi-moumen/</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-29</lastmod>
   </url>
   <url>
     <loc>https://chickenamine.ma/bouchaib-doukkali/</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-29</lastmod>
+  </url>
+  <url>
+    <loc>https://chickenamine.ma/confidentialite/</loc>
+    <lastmod>2026-10-29</lastmod>
   </url>
 </urlset>
