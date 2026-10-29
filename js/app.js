@@ -1221,7 +1221,7 @@
   async function pollOrder() {
     if (!order) return;
     try {
-      const res = await api(`orders?id=eq.${order.id}&select=status,eta_minutes,accepted_at,refuse_reason`, { headers: { "x-order-token": order.token } });
+      const res = await api(`orders?id=eq.${order.id}&select=status,eta_minutes,accepted_at,refuse_reason,cancelled_by,cancel_reason`, { headers: { "x-order-token": order.token } });
       if (!res.ok) return;
       const rows = await res.json();
       // gone: seen before, then cleared by the staff (test orders)
@@ -1243,6 +1243,10 @@
     if (o.status === "ready") return t(o.mode === "delivery" ? "order.readyDelivery" : "order.readyPickup");
     if (o.status === "on_the_way") return t("order.onTheWay");
     if (o.status === "done") return t("order.done");
+    if (o.status === "cancelled") {
+      if (o.cancelled_by === "customer") return t("order.cancelledByYou");
+      return o.cancel_reason ? t("order.cancelledWhy", { reason: o.cancel_reason }) : t("order.cancelled");
+    }
     if (o.status === "gone") return t("order.gone");
     return t("order.new");
   }
@@ -1253,13 +1257,13 @@
     document.body.classList.toggle("has-track", !!order);
     if (!order) return;
     const site = C.locations.find((l) => l.id === order.site) || S();
-    const final = ["refused", "done", "gone"].includes(order.status);
+    const final = ["refused", "done", "gone", "cancelled"].includes(order.status);
     bar.classList.toggle("is-final", final);
     $("#track-bar-status").textContent = order.status === "new" ? t("order.steps.sent") : order.status === "gone" ? "" : t("order.steps." + (STEP_LABEL[order.status] || "sent"));
     $("#track-place").innerHTML = rich(t("order.place", { name: L(site.name), num: order.id.slice(0, 4).toUpperCase() }));
     const steps = ORDER_STEPS.filter((s) => s !== "on_the_way" || order.mode === "delivery");
     const at = steps.indexOf(order.status);
-    $("#track-steps").hidden = order.status === "refused" || order.status === "gone";
+    $("#track-steps").hidden = ["refused", "gone", "cancelled"].includes(order.status);
     $("#track-steps").innerHTML = steps.map((s, i) =>
       `<li class="${i < at || order.status === "done" ? "is-done" : i === at ? "is-now" : ""}">${esc(t("order.steps." + STEP_LABEL[s]))}</li>`).join("");
     const status = $("#track-status");
@@ -1268,10 +1272,35 @@
     const late = order.status === "new" && Date.now() - order.at > (C.orders.callAfterMinutes || 5) * 60e3;
     $("#track-help").hidden = !late;
     $("#track-wa").hidden = !(late && order.wa);
+    // before the restaurant accepts, the customer can still cancel
+    $("#track-cancel").hidden = order.status !== "new";
+    // once it is delivered or picked up: a review for the restaurant that made it
+    const review = $("#track-review");
+    review.hidden = order.status !== "done";
+    review.href = `https://search.google.com/local/writereview?placeid=${site.placeId}`;
     const call = $("#track-call");
     call.href = `tel:${site.phoneIntl}`;
     call.hidden = !(late || order.status === "refused" || order.status === "accepted" || order.status === "ready");
     if (final) stopPolling(); else startPolling();
+  }
+  async function cancelOrder() {
+    if (!order || order.status !== "new" || !confirm(t("order.cancelConfirm"))) return;
+    const btn = $("#track-cancel");
+    btn.disabled = true;
+    try {
+      // only possible while the order waits (the database refuses it once accepted)
+      const res = await api(`orders?id=eq.${order.id}&select=status`, {
+        method: "PATCH",
+        headers: { "x-order-token": order.token, Prefer: "return=representation" },
+        body: JSON.stringify({ status: "cancelled", cancelled_by: "customer" }),
+      });
+      const rows = res.ok ? await res.json() : [];
+      if (rows.length) Object.assign(order, { status: "cancelled", cancelled_by: "customer" });
+      else alert(t("order.cancelTooLate"));
+      saveOrder();
+    } catch (e) { alert(t("order.failed")); }
+    btn.disabled = false;
+    await pollOrder();
   }
   function startPolling() { if (!orderTimer) orderTimer = setInterval(pollOrder, 4000); }
   function stopPolling() { clearInterval(orderTimer); orderTimer = null; }
@@ -1279,7 +1308,7 @@
   function closeTrack() {
     closeDialog($("#track-dialog"));
     // a finished order is no longer followed once the customer has seen it
-    if (order && ["refused", "done", "gone"].includes(order.status)) { order = null; saveOrder(); renderTrack(); }
+    if (order && ["refused", "done", "gone", "cancelled"].includes(order.status)) { order = null; saveOrder(); renderTrack(); }
   }
   function setupTrack() {
     $("#order-send").addEventListener("click", () => send(false));
@@ -1290,6 +1319,7 @@
     $("#track-bar").addEventListener("click", openTrack);
     $("#track-close").addEventListener("click", closeTrack);
     $("#track-ok").addEventListener("click", closeTrack);
+    $("#track-cancel").addEventListener("click", cancelOrder);
     document.addEventListener("visibilitychange", () => { if (!document.hidden && order) pollOrder(); });
     if (order) { renderTrack(); pollOrder(); }
   }

@@ -869,15 +869,23 @@ async function main() {
   console.log("\nonline orders");
   {
     const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
-    const posted = [];
+    const posted = [], cancels = [];
     let row = { status: "new", eta_minutes: null, accepted_at: null, refuse_reason: null };
+    page.on("dialog", (d) => d.accept());
     await page.route(SUPA + "/rest/v1/orders**", async (route) => {
       const req = route.request();
       if (req.method() === "POST") {
         posted.push({ body: JSON.parse(req.postData()), prefer: req.headers()["prefer"], key: req.headers()["apikey"] });
         return route.fulfill({ status: 201, body: "" });
       }
-      const ok = posted.length && req.headers()["x-order-token"] === posted[0].body.token;
+      if (req.method() === "PATCH") {
+        // the customer cancels: only while the order waits
+        cancels.push({ body: JSON.parse(req.postData()), token: req.headers()["x-order-token"] });
+        if (row.status !== "new") return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+        row = { ...row, status: "cancelled", cancelled_by: "customer" };
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([{ status: "cancelled" }]) });
+      }
+      const ok = posted.some((p) => req.headers()["x-order-token"] === p.body.token);
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ok ? [row] : []) });
     });
     await waitIntro(page);
@@ -896,7 +904,7 @@ async function main() {
       && b.customer_phone === "0634235350" && b.items.length === 1 && b.items[0].qty === 1 && b.total === b.subtotal && b.delivery_fee === 0 && !("status" in b) && !("demo" in b) && /^[0-9a-f-]{36}$/.test(b.token),
       `the order is sent to the restaurant's screen (${b.items && b.items[0].name}, ${b.total} DH), without a status of its own`);
     const sent = await page.evaluate(() => ({ cart: document.querySelector("#cart-bar").hidden, bar: !document.querySelector("#track-bar").hidden, text: document.querySelector("#track-status").textContent, wa: !document.querySelector("#track-wa").hidden }));
-    check(sent.cart && sent.bar && /attente/.test(sent.text) && !sent.wa, `cart emptied, status followed (« ${sent.text} »), no WhatsApp yet`);
+    check(sent.cart && sent.bar && /attente/.test(sent.text) && !sent.wa && await page.isVisible("#track-cancel") && !(await page.isVisible("#track-review")), `cart emptied, status followed (« ${sent.text} »), no WhatsApp yet, « Annuler la commande » offered`);
     // No answer after 5 minutes: the same order can go on WhatsApp.
     await page.evaluate(() => { const o = JSON.parse(localStorage.getItem("chickenamine.order.v1")); o.at -= 6 * 60e3; localStorage.setItem("chickenamine.order.v1", JSON.stringify(o)); });
     await page.reload();
@@ -910,7 +918,7 @@ async function main() {
     // The restaurant accepts with 20 minutes; the next check (every 4 s) shows it.
     row = { status: "accepted", eta_minutes: 20, accepted_at: OPEN_TIME.toISOString(), refuse_reason: null };
     await page.waitForFunction(() => /20 min/.test(document.querySelector("#track-status").textContent), null, { timeout: 7000 }).catch(() => {});
-    check(/Prête dans environ 20 min/.test(await page.textContent("#track-status")) && await page.isVisible("#track-call") && !(await page.isVisible("#track-wa")), "accepted: « prête dans environ 20 min », a button to call, the WhatsApp button gone");
+    check(/Prête dans environ 20 min/.test(await page.textContent("#track-status")) && await page.isVisible("#track-call") && !(await page.isVisible("#track-wa")) && !(await page.isVisible("#track-cancel")), "accepted: « prête dans environ 20 min », a button to call; no more WhatsApp or « Annuler »");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/order-track.png` });
     // Followed after a reload, then refused with a reason.
     await page.reload();
@@ -921,6 +929,30 @@ async function main() {
     check(/n'a pas pu accepter.*trop de commandes/.test(await page.textContent("#track-status")), "still followed after a reload; a refusal shows its reason");
     await page.click("#track-ok");
     check(await page.evaluate(() => document.querySelector("#track-bar").hidden && !localStorage.getItem("chickenamine.order.v1")), "once seen, a finished order is no longer followed");
+    // A second order: the customer cancels it before the restaurant answers.
+    const orderAgain = async () => {
+      row = { status: "new", eta_minutes: null, accepted_at: null, refuse_reason: null };
+      await addDish(page, "burgers", "bg-cheese", []);
+      await page.click("#cart-bar");
+      await page.click("#cart-next");
+      await page.click("#order-send");
+      await page.waitForSelector("#track-dialog[open]", { timeout: 4000 }).catch(() => {});
+    };
+    await orderAgain();
+    await page.click("#track-cancel");
+    await page.waitForFunction(() => /annulé/.test(document.querySelector("#track-status").textContent), null, { timeout: 5000 }).catch(() => {});
+    const cx = cancels[0] || {};
+    check(cx.body && cx.body.status === "cancelled" && cx.body.cancelled_by === "customer" && Object.keys(cx.body).length === 2 && cx.token === posted[posted.length - 1].body.token && /Vous avez annulé/.test(await page.textContent("#track-status")) && !(await page.isVisible("#track-cancel")),
+      "« Annuler la commande » cancels it (with the order's secret), « Vous avez annulé cette commande »");
+    await page.click("#track-ok");
+    // A third one, delivered: the customer is asked for a Google review of that restaurant.
+    await orderAgain();
+    row = { status: "done", eta_minutes: 20, accepted_at: OPEN_TIME.toISOString(), refuse_reason: null };
+    await page.waitForFunction(() => !document.querySelector("#track-review").hidden, null, { timeout: 7000 }).catch(() => {});
+    const rv = await page.evaluate(() => ({ href: document.querySelector("#track-review").href, text: document.querySelector("#track-review").textContent, cancel: !document.querySelector("#track-cancel").hidden }));
+    check(rv.href === "https://search.google.com/local/writereview?placeid=ChIJJUTi5A7Npw0RKclHxm17wbo" && /avis Google/.test(rv.text) && !rv.cancel, "once delivered or picked up: « Laisser un avis Google » for Sidi Moumen");
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/order-review.png` });
+    await page.click("#track-ok");
     await page.goto(base + "/demo/");
     await page.waitForURL(base + "/", { timeout: 4000 }).catch(() => {});
     check(new URL(page.url()).pathname === "/", "the old /demo/ address opens the site");
@@ -935,6 +967,19 @@ async function main() {
       window.__beeps = 0;
       const AC = window.AudioContext;
       window.AudioContext = function () { const a = new AC(); const o = a.createOscillator.bind(a); a.createOscillator = () => { window.__beeps++; return o(); }; return a; };
+      // push: no push service in the test browser, so the subscription is faked
+      // (headless Chrome refuses notifications: the permission is faked too, « default » until asked)
+      if (window.Notification) {
+        let perm = "default";
+        Object.defineProperty(Notification, "permission", { get: () => perm });
+        Notification.requestPermission = async () => { perm = "granted"; return perm; };
+      }
+      if (navigator.serviceWorker) {
+        const reg = { pushManager: { getSubscription: async () => null, subscribe: async () => ({ toJSON: () => ({ endpoint: "https://push.example/abc", keys: { p256dh: "p-key", auth: "a-key" } }) }) } };
+        navigator.serviceWorker.register = async () => reg;
+        navigator.serviceWorker.getRegistration = async () => reg;
+        Object.defineProperty(navigator.serviceWorker, "ready", { get: () => Promise.resolve(reg) });
+      }
       // the receipt printer: keep what would be printed (this runs in the receipt's frame too)
       window.print = () => { window.top.__printed = (window.top.__printed || []).concat(document.body.innerText); };
     });
@@ -951,7 +996,10 @@ async function main() {
       status: "new", eta_minutes: null, accepted_at: null, refuse_reason: null, mode: "pickup", customer_name: "Test Client", customer_phone: "0634235350", address: null, lat: null, lng: null,
       distance_km: null, notes: "Sans oignon", items: [{ name: "Cheese Burger", qty: 2, details: ["Sauce : Algérienne"], size: null, total: 50 }], subtotal: 50, delivery_fee: 0, total: 50, lang: "fr", demo: true, ...extra });
     const ready = order("c3c3c3c3-0000-4000-8000-000000000003", 30, { status: "ready", mode: "delivery", lat: 33.6, lng: -7.49, address: "Bd Al Azhar", distance_km: 3.4, delivery_fee: 15, subtotal: 60, total: 75, notes: null });
-    const db = new Map([["a1b2c3d4-0000-4000-8000-000000000001", order("a1b2c3d4-0000-4000-8000-000000000001", 2)], [ready.id, ready]]);
+    const gone = order("d4d4d4d4-0000-4000-8000-000000000004", 40, { status: "cancelled", cancelled_by: "customer" });
+    const db = new Map([["a1b2c3d4-0000-4000-8000-000000000001", order("a1b2c3d4-0000-4000-8000-000000000001", 2)], [ready.id, ready], [gone.id, gone]]);
+    const subscribed = [];
+    await page.route(SUPA + "/rest/v1/push_subscriptions**", (route) => { subscribed.push(JSON.parse(route.request().postData() || "{}")); route.fulfill({ status: 201, body: "" }); });
     // finished orders of the period, for the statistics
     const at = new Date(OPEN_TIME.getTime() - 30 * 60e3).toISOString();
     const statsRows = [
@@ -997,7 +1045,10 @@ async function main() {
       });
     });
     await page.goto(base + "/commandes/");
+    check(await page.evaluate(() => !document.querySelector("#splash").classList.contains("is-gone")), "staff app: opens on the rooster animation");
     await page.waitForSelector("#login:not([hidden])");
+    await page.waitForTimeout(1300);
+    check(await page.evaluate(() => document.querySelector("#splash").classList.contains("is-gone")), "staff app: the opening animation then makes way for the screen");
     await page.fill('input[name="email"]', "sidi-moumen@test.ma");
     await page.fill('input[name="password"]', "faux");
     await page.click("#login-btn");
@@ -1013,28 +1064,20 @@ async function main() {
     check(/N° A1B2/.test(a.title) && /2 ×\s*Cheese Burger/.test(a.text) && /Algérienne/.test(a.text) && /Sans oignon/.test(a.text) && /0634235350/.test(a.text) && /50 DH/.test(a.text) && a.beeps > 4 && /^\(1\)/.test(a.tab),
       `staff screen: a waiting order fills the screen and rings (${a.title}, ${a.beeps} tones)`);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes-alert.png` });
-    // This screen has the receipt printer: automatic printing on, 80 mm paper.
-    // (normally set once, before the service; here the pop-up is already up)
-    await page.evaluate(() => document.querySelector("#print-btn").click());
-    check(/80 mm/.test(await page.textContent("#print-btn")), "receipts: automatic printing switched on for this screen (80 mm)");
     await page.click('#alert-times [data-eta="20"]');
     await page.waitForSelector("#alert", { state: "hidden", timeout: 4000 }).catch(() => {});
     const card = await page.textContent("#col-accepted").catch(() => "");
     check(patches.length === 1 && patches[0].status === "accepted" && patches[0].eta_minutes === 20 && /Prête dans 20 min/.test(card), "staff screen: accepted with 20 min, moved to « En préparation »");
-    await page.waitForFunction(() => (window.__printed || []).length > 0, null, { timeout: 3000 }).catch(() => {});
-    const receipt = await page.evaluate(() => (window.__printed || []).join("\n---\n"));
-    check((await page.evaluate(() => (window.__printed || []).length)) === 1 && /CHICKEN AMINE/.test(receipt) && /N° A1B2/.test(receipt) && /À EMPORTER/.test(receipt) && /2 ×\s*Cheese Burger/.test(receipt) && /Algérienne/.test(receipt) && /Sans oignon/.test(receipt) && /TOTAL\s*50 DH/.test(receipt) && /prête vers 14:20/.test(receipt),
-      "receipts: accepting prints the receipt at once (number, takeaway, dishes, note, total, ready time)");
-    await page.click('#col-accepted [data-print]');
-    await page.waitForTimeout(500);
-    check((await page.evaluate(() => (window.__printed || []).length)) === 2, "receipts: « Réimprimer » prints it again");
+    // The receipt printer is ready in the code but switched off until the restaurant buys one.
+    await page.waitForTimeout(600);
+    check(!(await page.evaluate(() => window.__printed)) && !(await page.$("#col-accepted [data-print]")) && await page.evaluate(() => document.querySelector("#print-btn").hidden),
+      "receipts: printing switched off for now (nothing printed, no print buttons)");
     const beeps = await page.evaluate(() => window.__beeps);
     await page.waitForTimeout(3000);
     check(await page.evaluate((n) => window.__beeps === n, beeps), "staff screen: the ringing stops once answered");
     await page.click('#col-accepted [data-status="ready"]');
     await page.waitForFunction(() => /Récupérée/.test(document.querySelector("#col-ready").textContent), null, { timeout: 4000 }).catch(() => {});
     check(patches[1] && patches[1].status === "ready", "staff screen: « Prête » moves it on, then « Récupérée » ends a pickup");
-    check((await page.evaluate(() => (window.__printed || []).length)) === 2, "receipts: printed once per order, not again when it moves on");
     // A new order arrives live.
     const live = order("e5f6a7b8-0000-4000-8000-000000000002", 0, { mode: "delivery", lat: 33.59, lng: -7.52, address: "Rue 12", distance_km: 0.8, delivery_fee: 10, total: 60 });
     db.set(live.id, live);
@@ -1055,12 +1098,34 @@ async function main() {
     const drv = await sentMessage(page);
     check(drv && drv.to === "/" && /maps\.google\.com\/\?q=33\.6,-7\.49/.test(drv.text) && /Bd Al Azhar/.test(drv.text) && /À encaisser : 75 DH/.test(drv.text) && /livraison 15 DH/.test(drv.text) && /0634235350/.test(drv.text),
       "staff screen: « Envoyer au livreur » opens WhatsApp with the address, the map position and the amount to collect");
+    // The staff cancel an accepted order, with a reason the customer sees.
+    await page.click('#col-ready [data-cancel="c3c3c3c3-0000-4000-8000-000000000003"]');
+    await page.waitForSelector("#cancel-box:not([hidden])", { timeout: 3000 }).catch(() => {});
+    check(/N° C3C3/.test(await page.textContent("#cancel-title")), "staff screen: « Annuler » on an accepted order asks why");
+    await page.click('#cancel-reasons [data-reason="nous n\'avons pas pu joindre le client"]');
+    await page.waitForSelector("#cancel-box", { state: "hidden", timeout: 3000 }).catch(() => {});
+    const cancelled = patches[patches.length - 1] || {};
+    const past = await page.textContent("#col-past");
+    check(cancelled.status === "cancelled" && cancelled.cancelled_by === "staff" && /joindre le client/.test(cancelled.cancel_reason || "") && /Annulée : nous n'avons pas pu joindre le client/.test(past) && /Annulée par le client/.test(past),
+      "staff screen: cancelled with its reason; an order the customer cancelled shows « Annulée par le client »");
+    // The menu (☰): the tabs, the notifications, the sound, the test orders, the sign-out.
+    check(await page.isVisible("#menu-btn") && !(await page.isVisible("#sound-btn")) && !(await page.isVisible("#logout-btn")), "staff screen: the extra buttons are in the ☰ menu");
+    await page.click("#menu-btn");
+    const menu = await page.textContent("#menu");
+    check(await page.isVisible("#menu") && /Commandes/.test(menu) && /Statistiques/.test(menu) && /Activer les notifications/.test(menu) && /Tester le son/.test(menu) && /Effacer les commandes de test/.test(menu) && /Se déconnecter/.test(menu) && !(await page.isVisible("#print-btn")),
+      "staff screen: the ☰ menu holds Commandes, Statistiques, notifications, sound, test orders and sign-out");
+    // Notifications: this phone subscribes and is saved for its restaurant.
+    await page.click("#notify-btn");
+    await page.waitForFunction(() => /activées/.test(document.querySelector("#notify-label").textContent), null, { timeout: 5000 }).catch(() => {});
+    check(/activées/.test(await page.textContent("#notify-label")) && subscribed.length === 1 && subscribed[0].endpoint === "https://push.example/abc" && subscribed[0].p256dh === "p-key" && !("user_id" in subscribed[0]),
+      `notifications: « Activer les notifications » subscribes this phone and saves it (${await page.textContent("#notify-label")})`);
+    await page.click("#menu-close");
     // The staff app: installable once signed in.
     const manifest = await page.evaluate(async () => { const l = document.querySelector('link[rel="manifest"]'); return l && (await fetch(l.href)).json(); });
     check(manifest && manifest.scope === "/commandes/" && manifest.start_url === "/commandes/" && manifest.icons.some((i) => /staff-512/.test(i.src)), "staff app: its own manifest (opens on /commandes/, its own icon)");
     check(!(await page.isVisible("#install-btn")), "staff app: no install button until the browser offers it");
     await page.evaluate(() => { const e = new Event("beforeinstallprompt"); e.prompt = () => { window.__prompted = true; }; e.userChoice = Promise.resolve({ outcome: "accepted" }); dispatchEvent(e); });
-    check(await page.isVisible("#install-btn"), "staff app: « Installer l'app » appears in the header once signed in");
+    check(await page.isVisible("#install-btn") && /Installer l'application/.test(await page.textContent("#install-btn")) && await page.$("#install-btn img"), "staff app: « Installer l'application », with the app's icon, appears in the header once signed in");
     await page.click("#install-btn");
     check(await page.evaluate(() => window.__prompted === true), "staff app: the button opens the browser's install prompt");
     // Statistics: what the app collected and what sold most.
@@ -1077,15 +1142,22 @@ async function main() {
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes-stats.png` });
     // The owner's account sees both restaurants.
     staffRow = { location: null, role: "owner" };
+    db.set("f0f0f0f0-0000-4000-8000-000000000005", order("f0f0f0f0-0000-4000-8000-000000000005", 1));
+    await page.click("#menu-btn");
     await page.click("#logout-btn");
     await page.waitForSelector("#login:not([hidden])", { timeout: 5000 });
     await page.fill('input[name="email"]', "patron@test.ma");
     await page.fill('input[name="password"]', "bon-mot-de-passe");
     await page.click("#login-btn");
-    await page.waitForSelector("#start:not([hidden])", { timeout: 4000 }).catch(() => {});
-    check(/les deux restaurants/.test(await page.textContent("#start-place")), "owner: the account opens both restaurants");
-    await page.click("#start-btn");
-    await page.waitForSelector("#col-ready .tag--site", { timeout: 4000 }).catch(() => {});
+    await page.waitForSelector("#app:not([hidden])", { timeout: 4000 }).catch(() => {});
+    await page.waitForTimeout(800);
+    const own = await page.evaluate(() => ({ place: document.querySelector("#place").textContent, stats: !document.querySelector("#tab-stats").hidden, start: !document.querySelector("#start").hidden, beeps: window.__beeps }));
+    check(/les deux restaurants/.test(own.place) && own.stats && !own.start, "owner: the account opens both restaurants, straight on the statistics");
+    await page.click('.tab[data-tab="orders"]');
+    await page.waitForSelector("#col-new .order", { timeout: 4000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    const ro = await page.evaluate(() => ({ alert: !document.querySelector("#alert").hidden, buttons: document.querySelectorAll("#tab-orders .order button").length, waiting: document.querySelectorAll("#col-new .order").length, beeps: window.__beeps, notify: getComputedStyle(document.querySelector("#notify-btn")).display }));
+    check(ro.waiting === 1 && !ro.alert && ro.buttons === 0 && ro.beeps === own.beeps && ro.notify === "none", "owner: sees a waiting order without the pop-up, the sound or any button (no notifications either)");
     check(/Sidi Moumen/.test(await page.textContent("#col-ready .tag--site").catch(() => "")), "owner: each order shows its restaurant");
     statsQueries.length = 0;
     await page.click('.tab[data-tab="stats"]');

@@ -3,7 +3,10 @@
  * account (Supabase Auth) and the database only shows it its own orders; the owner's account sees both
  * restaurants (see supabase/schema.sql). New orders arrive live (Realtime), with a check every 20 s in case the
  * live connection drops; each one rings and fills the screen until it is accepted (with a time) or refused
- * (with a reason the customer sees). The « Statistiques » tab adds up what was collected and what sold most.
+ * (with a reason the customer sees); the staff can also cancel an accepted order, with a reason. Phones that
+ * turn notifications on are rung even when locked (push, sent by supabase/functions/push). The « Statistiques »
+ * tab adds up what was collected and what sold most. The owner follows the orders and the statistics, without
+ * the pop-up, the sound or the buttons.
  */
 (function () {
   const C = window.CONFIG;
@@ -31,7 +34,9 @@
   let alertId = null;       // the order shown in the alert
   let channel = null, pollTimer = null, ringTimer = null, audio = null, wakeLock = null, installPrompt = null;
   let statsPeriod = "today", statsSite = "all";
-  // Receipt printer: set on the device the printer is connected to (off, 80 mm or 58 mm paper), kept in this browser.
+  // Receipt printer: ready but switched off until the restaurant has its printer (then set PRINTING to true).
+  // It is set on the device the printer is connected to (off, 80 mm or 58 mm paper), kept in this browser.
+  const PRINTING = false;
   const PRINT_KEY = "chickenamine.print.v1";
   const PRINTED_KEY = "chickenamine.printed.v1";
   let printMode = readStore(PRINT_KEY) || "off";
@@ -72,6 +77,9 @@
     $("#start-place").textContent = placeName();
     $("#place").textContent = placeName();
     $("#stats-sites").hidden = !owner;
+    document.body.classList.toggle("is-owner", owner);
+    // the owner does not answer orders: no sound to unlock, straight to the statistics
+    if (owner) { startService(); showTab("stats"); return; }
     show("start");
   }
 
@@ -82,11 +90,11 @@
 
   /* ---------- Service: sound, screen awake, live orders ---------- */
   async function startService() {
-    unlockAudio();
-    beep();
+    if (!owner) { unlockAudio(); beep(); }
     keepAwake();
     show("app");
     renderInstall();
+    refreshNotifications();
     tick();
     setInterval(tick, 15000);
     await load();
@@ -210,6 +218,22 @@
     $("#alert-error").textContent = ok ? "" : "Échec de l'envoi. Vérifiez la connexion et réessayez.";
   }
 
+  // The staff cancel an order already accepted (any time before it is finished), with a reason.
+  let cancelId = null;
+  function askCancel(id) {
+    cancelId = id;
+    $("#cancel-title").textContent = `Annuler la commande N° ${num(orders.get(id))}`;
+    $("#cancel-error").textContent = "";
+    $("#cancel-box").hidden = false;
+  }
+  async function cancel(reason) {
+    $$("#cancel-box button").forEach((b) => { b.disabled = true; });
+    const ok = await update(cancelId, { status: "cancelled", cancelled_by: "staff", cancel_reason: reason || null });
+    $$("#cancel-box button").forEach((b) => { b.disabled = false; });
+    if (ok) $("#cancel-box").hidden = true;
+    else $("#cancel-error").textContent = "Échec. Vérifiez la connexion et réessayez.";
+  }
+
   async function clearTests() {
     if (!confirm(`Effacer toutes les commandes de test de ${placeName()} ?`)) return;
     const { error } = await scoped(db.from("orders").delete()).eq("demo", true);
@@ -219,7 +243,7 @@
 
   /* ---------- Receipts: printed when the order is accepted (here or on another screen) ---------- */
   function autoPrint(o) {
-    if (printMode === "off" || o.status !== "accepted" || printed.has(o.id) || !o.accepted_at) return;
+    if (!PRINTING || printMode === "off" || o.status !== "accepted" || printed.has(o.id) || !o.accepted_at) return;
     // not the orders accepted long ago (when the screen is opened again later)
     if (minutesSince(o.accepted_at) > 10) return;
     printOrder(o);
@@ -233,7 +257,9 @@
     return `<!doctype html><html><head><meta charset="utf-8"><title>N° ${num(o)}</title><style>
       @page { size: ${width}mm auto; margin: 0; }
       * { box-sizing: border-box; }
-      body { width: ${width}mm; margin: 0; padding: 3mm ${width > 60 ? 4 : 2}mm 6mm; font: ${width > 60 ? 13 : 11}px/1.35 Arial, sans-serif; color: #000; }
+      /* sized on the page's width (vw), so the receipt fills the paper whatever its size */
+      html, body { width: 100%; }
+      body { margin: 0; padding: 4vw 4vw 8vw; font: ${width > 60 ? 4.2 : 4.8}vw/1.35 Arial, sans-serif; color: #000; }
       h1 { font-size: 1.5em; text-align: center; margin: 0; } .c { text-align: center; } .big { font-size: 1.9em; font-weight: 700; text-align: center; margin: 2mm 0; }
       hr { border: 0; border-top: 1px dashed #000; margin: 2mm 0; } .row { display: flex; justify-content: space-between; gap: 2mm; }
       .det { padding-left: 5mm; font-size: 0.9em; } .tot { font-size: 1.3em; font-weight: 700; } .mode { font-size: 1.3em; font-weight: 700; text-align: center; border: 2px solid #000; padding: 1mm; }
@@ -271,9 +297,9 @@
   }
   const PRINT_LABEL = { off: "🖨 Impression auto : non", 80: "🖨 Impression auto : 80 mm", 58: "🖨 Impression auto : 58 mm" };
   function renderPrint() {
-    const b = $("#print-btn");
-    b.textContent = PRINT_LABEL[printMode];
-    b.classList.toggle("is-on", printMode !== "off");
+    $("#print-btn").hidden = !PRINTING;
+    $("#print-label").textContent = PRINT_LABEL[printMode].replace("🖨 ", "");
+    $("#print-btn").classList.toggle("is-on", printMode !== "off");
   }
   function cyclePrint() {
     printMode = printMode === "off" ? "80" : printMode === "80" ? "58" : "off";
@@ -330,17 +356,21 @@
     if (o.status === "ready") return { text: o.mode === "delivery" ? "Prête · en attente du livreur" : "Prête · le client peut venir" };
     if (o.status === "on_the_way") return { text: "En route" };
     if (o.status === "refused") return { text: `Refusée${o.refuse_reason ? " : " + o.refuse_reason : ""}` };
+    if (o.status === "cancelled") return { text: o.cancelled_by === "customer" ? "Annulée par le client" : `Annulée${o.cancel_reason ? " : " + o.cancel_reason : ""}`, late: o.cancelled_by === "customer" };
     return { text: "Terminée" };
   }
 
   function actionsHtml(o) {
     const b = (status, label, cls) => `<button class="btn ${cls}" type="button" data-id="${o.id}" data-status="${status}">${label}</button>`;
     const driver = o.mode === "delivery" ? `<button class="btn btn--wa" type="button" data-driver="${o.id}">Envoyer au livreur</button>` : "";
+    const reprint = PRINTING ? `<button class="btn btn--line" type="button" data-print="${o.id}">🖨 Réimprimer</button>` : "";
+    const cancelBtn = `<button class="btn btn--line" type="button" data-cancel="${o.id}">Annuler</button>`;
+    // the owner follows, he does not answer
+    if (owner) return "";
     if (o.status === "new") return `<button class="btn btn--red" type="button" data-answer="${o.id}">Répondre</button>`;
-    const reprint = `<button class="btn btn--line" type="button" data-print="${o.id}">🖨 Réimprimer</button>`;
-    if (o.status === "accepted") return driver + reprint + b("ready", "Prête", "btn--green");
-    if (o.status === "ready") return o.mode === "delivery" ? driver + b("on_the_way", "En route", "btn--yellow") : b("done", "Récupérée", "btn--green");
-    if (o.status === "on_the_way") return driver + b("done", "Livrée", "btn--green");
+    if (o.status === "accepted") return driver + reprint + b("ready", "Prête", "btn--green") + cancelBtn;
+    if (o.status === "ready") return (o.mode === "delivery" ? driver + b("on_the_way", "En route", "btn--yellow") : b("done", "Récupérée", "btn--green")) + cancelBtn;
+    if (o.status === "on_the_way") return driver + b("done", "Livrée", "btn--green") + cancelBtn;
     return "";
   }
 
@@ -365,7 +395,7 @@
     const pending = all.filter((o) => o.status === "new").sort(byOld);
     const cooking = all.filter((o) => o.status === "accepted").sort(byOld);
     const ready = all.filter((o) => o.status === "ready" || o.status === "on_the_way").sort(byOld);
-    const past = all.filter((o) => o.status === "done" || o.status === "refused").sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 30);
+    const past = all.filter((o) => ["done", "refused", "cancelled"].includes(o.status)).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 30);
     fill("col-new", pending, "Aucune commande en attente.");
     fill("col-accepted", cooking, "Rien en préparation.");
     fill("col-ready", ready, "Rien à remettre.");
@@ -375,17 +405,17 @@
     $("#n-ready").textContent = ready.length;
     $("#n-past").textContent = past.length;
 
-    const kept = all.filter((o) => o.status !== "refused" && o.status !== "new");
+    const kept = all.filter((o) => !["new", "refused", "cancelled"].includes(o.status));
     const stats = [
       [all.length, "commandes (24 h)"],
       [money(kept.reduce((s, o) => s + o.total, 0)), "chiffre des commandes acceptées"],
       [cooking.length + ready.length, "en cours"],
-      [all.filter((o) => o.status === "refused").length, "refusées"],
+      [all.filter((o) => o.status === "refused" || o.status === "cancelled").length, "refusées ou annulées"],
     ];
     $("#summary").innerHTML = stats.map(([v, l]) => `<div class="stat"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("");
 
-    document.title = pending.length ? `(${pending.length}) Nouvelle commande · Chicken Amine` : "Chicken Amine · Commandes";
-    renderAlert(pending);
+    document.title = pending.length && !owner ? `(${pending.length}) Nouvelle commande · Chicken Amine` : "Chicken Amine · Commandes";
+    renderAlert(owner ? [] : pending);
   }
 
   function renderAlert(pending) {
@@ -445,7 +475,7 @@
     for (let page = 0; page < 20; page++) {
       let q = db.from("orders").select("location,status,mode,total,delivery_fee,items,created_at")
         .gte("created_at", from.toISOString()).lt("created_at", to.toISOString())
-        .in("status", ["done", "refused"]).order("created_at").range(page * 1000, page * 1000 + 999);
+        .in("status", ["done", "refused", "cancelled"]).order("created_at").range(page * 1000, page * 1000 + 999);
       if (!owner) q = q.eq("location", site.id);
       else if (statsSite !== "all") q = q.eq("location", statsSite);
       const { data, error } = await q;
@@ -490,7 +520,8 @@
       [done.length, "commandes terminées"],
       [money(done.length ? cashed / done.length : 0), "panier moyen"],
       [money(fees), "frais de livraison (dont)"],
-      [rows.length - done.length, "refusées"],
+      [rows.filter((o) => o.status === "refused").length, "refusées"],
+      [rows.filter((o) => o.status === "cancelled").length, "annulées"],
     ];
     $("#stats-body").innerHTML = `<section class="summary">${cards.map(([v, l, hl]) => `<div class="stat${hl ? " stat--hl" : ""}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("")}</section>
       <div class="panels">
@@ -501,7 +532,7 @@
   }
 
   function showTab(tab) {
-    $$(".tab").forEach((b) => b.classList.toggle("is-on", b.dataset.tab === tab));
+    $$("[data-tab]").forEach((b) => b.classList.toggle("is-on", b.dataset.tab === tab));
     $("#tab-orders").hidden = tab !== "orders";
     $("#tab-stats").hidden = tab !== "stats";
     if (tab === "stats") loadStats();
@@ -510,7 +541,11 @@
   /* ---------- The staff app: installable once signed in ---------- */
   const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  function renderInstall() { $("#install-btn").hidden = isStandalone() || !(installPrompt || isIos()); }
+  function renderInstall() {
+    const off = isStandalone() || !(installPrompt || isIos());
+    $("#install-btn").hidden = off;
+    $("#menu-install").hidden = off;
+  }
   function install() {
     if (installPrompt) {
       const p = installPrompt;
@@ -522,6 +557,57 @@
     }
   }
 
+  /* ---------- The menu (☰) ---------- */
+  function openMenu() { $("#menu").hidden = false; $("#menu-shade").hidden = false; $("#menu-btn").setAttribute("aria-expanded", "true"); }
+  function closeMenu() { $("#menu").hidden = true; $("#menu-shade").hidden = true; $("#menu-btn").setAttribute("aria-expanded", "false"); }
+
+  /* ---------- Push notifications: ring this phone even when it is locked ---------- */
+  const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && window.isSecureContext;
+  function setNotify(state) {
+    const text = {
+      on: ["Notifications activées ✓", "Ce téléphone sonne même verrouillé"],
+      off: ["Activer les notifications", "Pour être prévenu même téléphone verrouillé"],
+      denied: ["Notifications bloquées", "Autorisez-les dans les réglages du téléphone (Chrome → Notifications)"],
+      unsupported: ["Notifications indisponibles", "Installez l'application, puis réessayez"],
+      error: ["Notifications : échec", "Vérifiez la connexion et réessayez"],
+    }[state];
+    $("#notify-label").textContent = text[0];
+    $("#notify-help").textContent = text[1];
+    $("#notify-btn").classList.toggle("is-on", state === "on");
+  }
+  function b64Bytes(b64) {
+    const s = atob((b64 + "===".slice((b64.length + 3) % 4)).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(s, (c) => c.charCodeAt(0));
+  }
+  async function saveSubscription(sub) {
+    const j = sub.toJSON();
+    const { error } = await db.from("push_subscriptions").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: "endpoint" });
+    return !error;
+  }
+  async function enableNotifications() {
+    if (!pushSupported()) { setNotify("unsupported"); return; }
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { setNotify(perm === "denied" ? "denied" : "off"); return; }
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      // (never wait forever for the service worker)
+      await Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(no, 10000))]);
+      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64Bytes(O.vapidPublicKey) }));
+      setNotify((await saveSubscription(sub)) ? "on" : "error");
+    } catch (e) { setNotify("error"); }
+  }
+  // Already on: keep this phone's subscription saved (it can change).
+  async function refreshNotifications() {
+    if (owner || !pushSupported()) return;
+    if (Notification.permission === "denied") { setNotify("denied"); return; }
+    if (Notification.permission !== "granted") { setNotify("off"); return; }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("/");
+      const sub = reg && (await reg.pushManager.getSubscription());
+      if (sub && (await saveSubscription(sub))) setNotify("on"); else setNotify("off");
+    } catch (e) { setNotify("off"); }
+  }
+
   /* ---------- Events ---------- */
   function bind() {
     $("#login-form").addEventListener("submit", signIn);
@@ -529,11 +615,19 @@
     $("#start-logout").addEventListener("click", signOut);
     $("#logout-btn").addEventListener("click", signOut);
     $("#sound-btn").addEventListener("click", () => { unlockAudio(); beep(); });
+    $("#menu-btn").addEventListener("click", openMenu);
+    $("#menu-close").addEventListener("click", closeMenu);
+    $("#menu-shade").addEventListener("click", closeMenu);
+    $("#menu").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && b.id !== "notify-btn" && b.id !== "print-btn") closeMenu(); });
+    $("#menu-install").addEventListener("click", install);
+    $("#notify-btn").addEventListener("click", enableNotifications);
+    $("#cancel-reasons").addEventListener("click", (e) => { const b = e.target.closest("[data-reason]"); if (b) cancel(b.dataset.reason); });
+    $("#cancel-back").addEventListener("click", () => { $("#cancel-box").hidden = true; });
     $("#clear-btn").addEventListener("click", clearTests);
     $("#install-btn").addEventListener("click", install);
     $("#print-btn").addEventListener("click", cyclePrint);
     renderPrint();
-    $$(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+    $$("[data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
     $("#stats-periods").addEventListener("click", (e) => {
       const b = e.target.closest("[data-period]");
       if (!b) return;
@@ -555,6 +649,8 @@
     $(".board").addEventListener("click", async (e) => {
       const ans = e.target.closest("[data-answer]");
       if (ans) { alertId = ans.dataset.answer; $("#alert").dataset.id = ""; render(); return; }
+      const cb = e.target.closest("[data-cancel]");
+      if (cb) { askCancel(cb.dataset.cancel); return; }
       const pr = e.target.closest("[data-print]");
       if (pr) { printOrder(orders.get(pr.dataset.print)); return; }
       const drv = e.target.closest("[data-driver]");
@@ -581,5 +677,7 @@
   }
 
   bind();
+  // the opening animation, then the screen
+  setTimeout(() => $("#splash").classList.add("is-gone"), matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1100);
   db.auth.getSession().then(({ data }) => { if (data.session) afterSignIn(); else show("login"); });
 })();

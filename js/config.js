@@ -77,6 +77,8 @@ window.CONFIG = {
     publishableKey: "sb_publishable_NPJc46YnphSCaTFDyY6Uaw_kAT7KWzR",
     // after this many minutes without an answer, the customer is invited to call the restaurant
     callAfterMinutes: 5,
+    // public key of the push notifications sent to the staff phones (its private half stays in the database)
+    vapidPublicKey: "BFZF0kU1QWpCaY0Ygr1Nchm5UDbKmkgDazEDTlnckO4u896IHQUowo0cK3y70q_UiRXJrFCPFsrye5XQLBS_bXM",
   },
   // Share-preview image (WhatsApp, Facebook): the turning plate and the logo, 1200 x 630.
   shareImage: "assets/share.jpg",

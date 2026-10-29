@@ -4,9 +4,11 @@
  *     network fails or takes more than 4 s
  *   - photos, icons, fonts: the saved copy at once, refreshed in the background
  *   - everything else (maps, WhatsApp, Google) is left alone
+ *   - push notifications of new orders for the staff phones (sent by supabase/functions/push): shown even when
+ *     the phone is locked; a tap opens the staff app
  * Raise VERSION to drop every saved copy (e.g. after removing files).
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = "chickenamine-" + VERSION;
 const NETWORK_TIMEOUT = 4000;
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
@@ -77,4 +79,32 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (FONT_HOSTS.includes(url.hostname)) event.respondWith(savedFirst(request));
+});
+
+// A new order (or one still waiting): ring the staff phone, even locked.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: "Chicken Amine", body: event.data && event.data.text() }; }
+  event.waitUntil(self.registration.showNotification(data.title || "Chicken Amine · nouvelle commande", {
+    body: data.body || "",
+    tag: data.tag || "commande",
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [400, 150, 400, 150, 400],
+    icon: "/assets/icons/staff-192.png",
+    badge: "/assets/icons/staff-192.png",
+    data: { url: data.url || "/commandes/" },
+  }));
+});
+
+// A tap on the notification: back to the staff app (the open window, or a new one).
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/commandes/";
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const open = wins.find((w) => new URL(w.url).pathname.startsWith("/commandes/"));
+    if (open) return open.focus();
+    return self.clients.openWindow(url);
+  })());
 });

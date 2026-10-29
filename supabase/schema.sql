@@ -177,3 +177,15 @@ create index orders_location_status_created_idx on public.orders (location, stat
 
 -- To make an account the owner (after creating it in Authentication → Users):
 --   insert into public.staff (user_id, role) values ('<user id>', 'owner');
+
+-- ---------- October 29 (evening): cancelling, push notifications ----------
+-- (applied as the migration "orders_cancel_and_push"; the push keys are inserted in push_config by hand, never
+-- committed: insert into public.push_config (vapid_public, vapid_private, vapid_subject, call_secret) values (…))
+-- * orders: status 'cancelled', cancelled_by ('customer' | 'staff'), cancel_reason. The customer may cancel his own
+--   order while it waits (policy "customers cancel their own waiting order", with his x-order-token); the staff may
+--   cancel at any time with a reason. A finished order (done, refused, cancelled) cannot be changed any more.
+-- * push_subscriptions: the staff phones that turned notifications on (each account manages its own).
+-- * push_config, push_sent: the sender's keys and what was already sent (no access from the site).
+-- * private.call_push(): calls the edge function supabase/functions/push (pg_net), at once for each new order
+--   (trigger orders_push_new) and every 30 s while orders wait (pg_cron job "push-reminders"); the function rings
+--   the restaurant's phones, then again about once a minute, for 10 minutes at most.

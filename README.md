@@ -52,11 +52,25 @@ address, 📍 map position, amount to collect); the staff pick the delivery guy'
 adds up what was collected (finished orders), the best sellers, delivery vs takeaway and the busiest hours, for
 today, yesterday, 7 days, this month or last month (a service day runs from 06:00 to 06:00).
 
-**Receipt printer:** on the device the printer is connected to, press « 🖨 Impression auto » (off → 80 mm →
-58 mm paper; kept on that device only). Each accepted order then prints its receipt once (even if it was accepted on
-another screen), and « Réimprimer » prints it again. Browsers print through their print window; for printing
-with no window at all, run Chrome on that computer with `--kiosk-printing` (e.g. a shortcut to
-`chrome.exe --kiosk-printing https://chickenamine.ma/commandes/`) and make the receipt printer the default printer.
+**Receipt printer:** ready in the code but switched off until the restaurant buys a printer (`PRINTING` in
+`commandes/commandes.js`). Once on: « Impression auto » in the ☰ menu of the device the printer is connected to
+(off → 80 mm → 58 mm paper); each accepted order prints once, « Réimprimer » prints again. For printing with no
+window at all on a computer, run Chrome with `--kiosk-printing` (e.g. `chrome.exe --kiosk-printing
+https://chickenamine.ma/commandes/`) and make the receipt printer the default printer.
+
+**Cancelling:** the customer can cancel while the order waits (« Annuler la commande »); the staff can cancel an
+accepted order at any time, with a reason the customer sees. After delivery or pickup, the customer is offered
+« Laisser un avis Google » for the restaurant that made the order.
+
+**Push notifications** (phone locked): in the staff app, ☰ → « Activer les notifications » → Autoriser. New orders
+then ring that phone (a notification with sound, again every minute while the order waits, for 10 minutes); a
+tap opens the order. Restaurant accounts only, not the owner's. Sent by the edge function
+`supabase/functions/push` (deployed with verify_jwt off; it checks a secret shared with the database).
+On Android, also set Settings → Battery → Chrome → No restrictions. On iPhone it needs the app installed from
+Safari (iOS 16.4+).
+
+**The owner's account** opens on the statistics and follows the orders without the pop-up, the sound or the
+buttons.
 
 The orders live in a free Supabase project, `chicken-amine-commandes`; `js/config.js` → `orders` holds its URL and
 public key. The tables and access rules are in `supabase/schema.sql`: customers can only add an order and read its
