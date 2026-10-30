@@ -160,6 +160,7 @@ window.I18N = {
       link: "Politique de confidentialité",
       note: "Vos informations servent seulement à préparer et livrer votre commande.",
       more: "En savoir plus",
+      terms: "Conditions de vente",
     },
     install: {
       short: "Installer l'app",
@@ -338,6 +339,7 @@ window.I18N = {
       link: "سياسة الخصوصية",
       note: "تستعمل معلوماتك فقط لتحضير طلبك وتوصيله.",
       more: "اعرف المزيد",
+      terms: "شروط البيع",
     },
     install: {
       short: "ثبّت التطبيق",

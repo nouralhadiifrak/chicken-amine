@@ -1,6 +1,16 @@
 # Cloudflare Pages: the same caching rules as vercel.json.
 # Pages, styles, scripts, the service worker and the manifest are checked on every visit (menu and prices stay
 # fresh; the ?v= number in index.html changes after each code change); photos, videos and libraries are kept 7 days.
+
+# Every page: no framing by other sites, no guessing of file types, no full address sent to other sites, and only
+# the location (the delivery map's « Utiliser ma position ») among the phone's sensors.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self'
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), payment=(), usb=(), geolocation=(self)
+  Strict-Transport-Security: max-age=31536000
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate
 

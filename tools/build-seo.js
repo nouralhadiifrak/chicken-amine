@@ -121,6 +121,10 @@ ${C.locations.map((l) => `  <url>
     <loc>${site}/confidentialite/</loc>
     <lastmod>${today}</lastmod>
   </url>
+  <url>
+    <loc>${site}/conditions/</loc>
+    <lastmod>${today}</lastmod>
+  </url>
 </urlset>
 `);
 

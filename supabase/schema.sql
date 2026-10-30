@@ -214,3 +214,27 @@ create table public.push_log (
 alter table public.push_log enable row level security;
 revoke all on table public.push_log from anon, authenticated;
 select cron.schedule('push-log-week', '23 3 * * *', $$ delete from public.push_log where at < now() - interval '7 days' $$);
+
+-- ---------- October 30: personal details erased after 24 hours (privacy page /confidentialite/) ----------
+-- (applied as the migration "orders_forget_after_24h") Every 15 minutes, orders older than 24 hours lose the
+-- customer's name, phone, address, map point, distance and note; dishes, amounts, date and restaurant stay for the
+-- statistics (still deleted after 2 years by "orders-keep-two-years"). anonymized_at marks the emptied orders; the
+-- site cannot write it, so a new order still needs a name and a phone.
+alter table public.orders add column anonymized_at timestamptz;
+alter table public.orders alter column customer_name drop not null, alter column customer_phone drop not null;
+alter table public.orders add constraint orders_customer_given check ((customer_name is not null and customer_phone is not null) or anonymized_at is not null);
+alter table public.orders drop constraint orders_check;
+alter table public.orders add constraint orders_check check (mode = 'pickup' or (lat is not null and lng is not null) or anonymized_at is not null);
+-- private.orders_touch(): lets the clean-up empty a finished order, without changing updated_at:
+--   if new.anonymized_at is not null and old.anonymized_at is null and current_user not in ('anon', 'authenticated') then
+--     return new;
+--   end if;
+create or replace function private.orders_forget()
+ returns void language sql set search_path to '' as $function$
+  update public.orders
+     set customer_name = null, customer_phone = null, address = null, lat = null, lng = null,
+         distance_km = null, notes = null, anonymized_at = now()
+   where anonymized_at is null and created_at < now() - interval '24 hours';
+$function$;
+revoke all on function private.orders_forget() from public, anon, authenticated;
+select cron.schedule('orders-forget-24h', '*/15 * * * *', 'select private.orders_forget()');
