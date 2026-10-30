@@ -859,10 +859,24 @@ async function main() {
     check(links.footer && links.checkout, "privacy: linked from the footer and the checkout");
     await page.goto(base + "/confidentialite/");
     const pp = await page.evaluate(() => ({ fr: document.querySelector("#fr").textContent, ar: document.querySelector("#ar").textContent, wide: document.documentElement.scrollWidth > innerWidth + 1, canonical: document.querySelector('link[rel="canonical"]').href }));
-    check(/09-08/.test(pp.fr) && /Supabase/.test(pp.fr) && /2 ans/.test(pp.fr) && /CNDP/.test(pp.fr) && /سياسة الخصوصية/.test(pp.ar) && /سنتين/.test(pp.ar) && !pp.wide && pp.canonical.endsWith("/confidentialite/"),
-      "privacy: French and Arabic, the law, where data is kept, 2 years, the CNDP; fits a phone");
+    check(/09-08/.test(pp.fr) && /Supabase/.test(pp.fr) && /24 heures/.test(pp.fr) && /2 ans/.test(pp.fr) && /CNDP/.test(pp.fr) && /سياسة الخصوصية/.test(pp.ar) && /24 ساعة/.test(pp.ar) && !pp.wide && pp.canonical.endsWith("/confidentialite/"),
+      "privacy: French and Arabic, the law, where data is kept, personal details erased after 24 hours, the CNDP; fits a phone");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/privacy.png`, fullPage: true });
     check(errors.length === 0, `privacy: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
+    await context.close();
+  }
+
+  // The conditions of sale (loi 31-08), linked from the footer and the privacy page.
+  console.log("\nconditions of sale");
+  {
+    const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
+    await waitIntro(page);
+    check(await page.evaluate(() => !!document.querySelector('footer a[href="/conditions/"]')), "conditions: linked from the footer");
+    await page.goto(base + "/conditions/");
+    const cg = await page.evaluate(() => ({ fr: document.querySelector("#fr").textContent, ar: document.querySelector("#ar").textContent, wide: document.documentElement.scrollWidth > innerWidth + 1, canonical: document.querySelector('link[rel="canonical"]').href, privacy: !!document.querySelector('a[href="/confidentialite/"]') }));
+    check(/31-08/.test(cg.fr) && /5 DH/.test(cg.fr) && /15 DH/.test(cg.fr) && /annuler/.test(cg.fr) && /شروط البيع/.test(cg.ar) && cg.privacy && !cg.wide && cg.canonical.endsWith("/conditions/"),
+      "conditions: French and Arabic, the law, delivery fees, cancelling, links the privacy page; fits a phone");
+    check(errors.length === 0, `conditions: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
     await context.close();
   }
 

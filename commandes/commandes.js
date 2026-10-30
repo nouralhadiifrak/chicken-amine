@@ -139,7 +139,10 @@
   }
 
   function remember(list) {
+    const since = new Date(Date.now() - 24 * 3600e3).toISOString();
     list.forEach((o) => {
+      // only the last 24 hours (the clean-up that empties older orders also comes in as a change)
+      if (o.created_at < since) { orders.delete(o.id); return; }
       orders.set(o.id, o);
       if (!lastSync || o.updated_at > lastSync) lastSync = o.updated_at;
       autoPrint(o);
