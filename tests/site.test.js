@@ -1152,9 +1152,9 @@ async function main() {
     // The menu (☰): the tabs, the notifications, the sound, the test orders, the sign-out.
     check(await page.isVisible("#menu-btn") && !(await page.isVisible("#sound-btn")) && !(await page.isVisible("#logout-btn")), "staff screen: the extra buttons are in the ☰ menu");
     await page.click("#menu-btn");
-    const menu = await page.textContent("#menu");
-    check(await page.isVisible("#menu") && /Commandes/.test(menu) && /Statistiques/.test(menu) && /Activer les notifications/.test(menu) && /Tester le son/.test(menu) && /Effacer les commandes de test/.test(menu) && /Se déconnecter/.test(menu) && !(await page.isVisible("#print-btn")),
-      "staff screen: the ☰ menu holds Commandes, Statistiques, notifications, sound, test orders and sign-out");
+    const menu = await page.innerText("#menu");
+    check(await page.isVisible("#menu") && /Commandes/.test(menu) && !/Statistiques/.test(menu) && /Activer les notifications/.test(menu) && /Tester le son/.test(menu) && /Effacer les commandes de test/.test(menu) && /Se déconnecter/.test(menu) && !(await page.isVisible("#print-btn")),
+      "staff screen: the ☰ menu holds Commandes (no Statistiques for a restaurant), notifications, sound, test orders and sign-out");
     // Notifications: this phone subscribes and is saved for its restaurant.
     await page.click("#notify-btn");
     await page.waitForFunction(() => /activées/.test(document.querySelector("#notify-label").textContent), null, { timeout: 5000 }).catch(() => {});
@@ -1178,18 +1178,11 @@ async function main() {
     check(await page.isVisible("#install-btn") && /Installer l'application/.test(await page.textContent("#install-btn")) && await page.$("#install-btn img"), "staff app: « Installer l'application », with the app's icon, appears in the header once signed in");
     await page.click("#install-btn");
     check(await page.evaluate(() => window.__prompted === true), "staff app: the button opens the browser's install prompt");
-    // Statistics: what the app collected and what sold most.
-    await page.click('.tab[data-tab="stats"]');
-    await page.waitForFunction(() => /encaissé/.test(document.querySelector("#stats-body").textContent), null, { timeout: 4000 }).catch(() => {});
-    const st = await page.evaluate(() => ({ cards: [...document.querySelectorAll("#stats-body .stat")].map((x) => x.textContent.replace(/\s+/g, " ").trim()), top: document.querySelector("#stats-body .rank li")?.textContent.replace(/\s+/g, " ").trim(), text: document.querySelector("#stats-body").textContent, board: !document.querySelector("#tab-orders").hidden }));
-    check(/^145 DH\s*encaissé/.test(st.cards[0]) && /^2\s*commandes terminées/.test(st.cards[1]) && /^73 DH\s*panier/.test(st.cards[2]) && /^15 DH\s*frais/.test(st.cards[3]) && /^1\s*refusées/.test(st.cards[4]) && !st.board,
-      `statistics: collected 145 DH from 2 finished orders, average 73 DH, 15 DH of delivery, 1 refused (${st.cards.join(" | ")})`);
-    check(/^1\s*Tacos Mixte\s*3\s*120 DH/.test(st.top) && /Livraison/.test(st.text) && /13:00 – 14:00/.test(st.text), `statistics: best seller « ${st.top} », delivery/takeaway split, busiest hour`);
-    check(statsQueries.length && statsQueries.every((u) => /location=eq\.sidi-moumen/.test(u)), "statistics: a restaurant account only counts its own orders");
-    await page.click('#stats-periods [data-period="month"]');
-    await page.waitForTimeout(500);
-    check(statsQueries.length >= 2 && !(await page.isVisible("#stats-sites")), "statistics: the period can be changed; no restaurant choice for a restaurant account");
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes-stats.png` });
+    // Statistics are the owner's only: a restaurant account has no tab for them and never asks for them.
+    await page.click("#menu-btn");
+    const hid = await page.evaluate(() => ({ tabs: [...document.querySelectorAll('[data-tab="stats"]')].every((b) => !b.offsetParent), panel: document.querySelector("#tab-stats").hidden }));
+    await page.click("#menu-close");
+    check(hid.tabs && hid.panel && statsQueries.length === 0, "statistics: hidden from a restaurant account (no tab, no menu item, nothing asked)");
     // The owner's account sees both restaurants.
     staffRow = { location: null, role: "owner" };
     db.set("f0f0f0f0-0000-4000-8000-000000000005", order("f0f0f0f0-0000-4000-8000-000000000005", 1));
@@ -1203,6 +1196,17 @@ async function main() {
     await page.waitForTimeout(800);
     const own = await page.evaluate(() => ({ place: document.querySelector("#place").textContent, stats: !document.querySelector("#tab-stats").hidden, start: !document.querySelector("#start").hidden, beeps: window.__beeps }));
     check(/les deux restaurants/.test(own.place) && own.stats && !own.start, "owner: the account opens both restaurants, straight on the statistics");
+    // Statistics: what the app collected and what sold most.
+    await page.waitForFunction(() => /encaissé/.test(document.querySelector("#stats-body").textContent), null, { timeout: 4000 }).catch(() => {});
+    const st = await page.evaluate(() => ({ cards: [...document.querySelectorAll("#stats-body .stat")].map((x) => x.textContent.replace(/\s+/g, " ").trim()), top: document.querySelector("#stats-body .rank li")?.textContent.replace(/\s+/g, " ").trim(), text: document.querySelector("#stats-body").textContent, board: !document.querySelector("#tab-orders").hidden }));
+    check(/^145 DH\s*encaissé/.test(st.cards[0]) && /^2\s*commandes terminées/.test(st.cards[1]) && /^73 DH\s*panier/.test(st.cards[2]) && /^15 DH\s*frais/.test(st.cards[3]) && /^1\s*refusées/.test(st.cards[4]) && !st.board,
+      `statistics: collected 145 DH from 2 finished orders, average 73 DH, 15 DH of delivery, 1 refused (${st.cards.join(" | ")})`);
+    check(/^1\s*Tacos Mixte\s*3\s*120 DH/.test(st.top) && /Livraison/.test(st.text) && /13:00 – 14:00/.test(st.text), `statistics: best seller « ${st.top} », delivery/takeaway split, busiest hour`);
+    const before = statsQueries.length;
+    await page.click('#stats-periods [data-period="month"]');
+    await page.waitForTimeout(500);
+    check(statsQueries.length > before, "statistics: the period can be changed");
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes-stats.png` });
     await page.click('.tab[data-tab="orders"]');
     await page.waitForSelector("#col-new .order", { timeout: 4000 }).catch(() => {});
     await page.waitForTimeout(500);

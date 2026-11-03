@@ -5,8 +5,9 @@
  * live connection drops; each one rings and fills the screen until it is accepted (with a time) or refused
  * (with a reason the customer sees); the staff can also cancel an accepted order, with a reason. Phones that
  * turn notifications on are rung even when locked (push, sent by supabase/functions/push). The « Statistiques »
- * tab adds up what was collected and what sold most. The owner follows the orders and the statistics, without
- * the pop-up, the sound or the buttons.
+ * tab adds up what was collected and what sold most: it is the owner's only (the restaurant accounts do not see
+ * it, and the database only gives them the last 24 hours). The owner follows the orders and the statistics,
+ * without the pop-up, the sound or the buttons.
  */
 (function () {
   const C = window.CONFIG;
@@ -77,6 +78,8 @@
     $("#start-place").textContent = placeName();
     $("#place").textContent = placeName();
     $("#stats-sites").hidden = !owner;
+    // the statistics are the owner's only
+    $$(".owner-only").forEach((el) => { el.hidden = !owner; });
     document.body.classList.toggle("is-owner", owner);
     // the owner does not answer orders: no sound to unlock, straight to the statistics
     if (owner) { startService(); showTab("stats"); return; }
@@ -470,6 +473,7 @@
   }
 
   async function loadStats() {
+    if (!owner) return;
     const box = $("#stats-body");
     box.innerHTML = '<p class="empty">Calcul…</p>';
     const [from, to] = periodRange(statsPeriod);
@@ -479,8 +483,7 @@
       let q = db.from("orders").select("location,status,mode,total,delivery_fee,items,created_at")
         .gte("created_at", from.toISOString()).lt("created_at", to.toISOString())
         .in("status", ["done", "refused", "cancelled"]).order("created_at").range(page * 1000, page * 1000 + 999);
-      if (!owner) q = q.eq("location", site.id);
-      else if (statsSite !== "all") q = q.eq("location", statsSite);
+      if (statsSite !== "all") q = q.eq("location", statsSite);
       const { data, error } = await q;
       if (error) { box.innerHTML = '<p class="error">Impossible de charger les statistiques. Vérifiez la connexion.</p>'; return; }
       rows.push(...data);
@@ -535,6 +538,7 @@
   }
 
   function showTab(tab) {
+    if (!owner) tab = "orders";
     $$("[data-tab]").forEach((b) => b.classList.toggle("is-on", b.dataset.tab === tab));
     $("#tab-orders").hidden = tab !== "orders";
     $("#tab-stats").hidden = tab !== "stats";
