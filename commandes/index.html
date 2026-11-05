@@ -7,14 +7,14 @@
   <meta name="theme-color" content="#141414">
   <title>Chicken Amine · Commandes</title>
   <link rel="icon" href="/favicon.ico" sizes="48x48">
-  <!-- The staff app (installable from the « Installer l'app » button once signed in). -->
+  <!-- The staff app (installable from the « Installer l'application » buttons, before or after signing in). -->
   <link rel="manifest" href="/commandes/staff.webmanifest">
   <link rel="apple-touch-icon" href="/assets/icons/staff-192.png">
   <meta name="apple-mobile-web-app-title" content="CA Commandes">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/commandes/commandes.css?v=2026102905">
+  <link rel="stylesheet" href="/commandes/commandes.css?v=2026110501">
 </head>
 <body>
   <!-- The opening animation (follows the phone's own start screen, on the same black). -->
@@ -29,6 +29,7 @@
       <label class="field"><span>Mot de passe</span><input name="password" type="password" autocomplete="current-password" required dir="ltr"></label>
       <p class="error" id="login-error" role="alert"></p>
       <button class="btn btn--red" id="login-btn" type="submit">Se connecter</button>
+      <button class="btn btn--install install-cta js-install" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="28" height="28"><span>Installer l'application</span></button>
     </form>
   </main>
 
@@ -39,6 +40,7 @@
       <h1 id="start-place"></h1>
       <p>Gardez cet écran ouvert et le son allumé : chaque nouvelle commande sonne et s'affiche en grand.</p>
       <button class="btn btn--red btn--big" id="start-btn" type="button">Démarrer le service</button>
+      <button class="btn btn--install install-cta js-install" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="28" height="28"><span>Installer l'application</span></button>
       <button class="link-btn" id="start-logout" type="button">Se déconnecter</button>
     </div>
   </main>
@@ -55,7 +57,7 @@
         <button class="tab" type="button" data-tab="stats">Statistiques</button>
       </div>
       <div class="top__actions">
-        <button class="install-pill" id="install-btn" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="28" height="28"><span>Installer l'application</span></button>
+        <button class="install-pill js-install" id="install-btn" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="28" height="28"><span class="install-pill__long">Installer l'application</span><span class="install-pill__short">Installer</span></button>
         <button class="burger" id="menu-btn" type="button" aria-label="Menu" aria-controls="menu" aria-expanded="false"><i></i></button>
       </div>
     </header>
@@ -92,7 +94,7 @@
   <div class="menu-shade" id="menu-shade" hidden></div>
   <nav class="menu" id="menu" hidden aria-label="Menu">
     <div class="menu__head"><strong>Menu</strong><button class="menu__close" id="menu-close" type="button" aria-label="Fermer">✕</button></div>
-    <button class="menu__install" id="menu-install" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="44" height="44"><span><b>Installer l'application</b><small>Accès direct depuis l'écran d'accueil</small></span></button>
+    <button class="menu__install js-install" id="menu-install" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="44" height="44"><span><b>Installer l'application</b><small>Accès direct depuis l'écran d'accueil</small></span></button>
     <button class="menu__item is-on" type="button" data-tab="orders"><span class="menu__ic">📋</span>Commandes</button>
     <button class="menu__item owner-only" type="button" data-tab="stats" hidden><span class="menu__ic">📊</span>Statistiques</button>
     <hr>
@@ -155,6 +157,6 @@
 
   <script src="/js/config.js?v=2026102902"></script>
   <script src="/vendor/supabase/supabase-2.117.2.js"></script>
-  <script src="/commandes/commandes.js?v=2026110301"></script>
+  <script src="/commandes/commandes.js?v=2026110501"></script>
 </body>
 </html>
