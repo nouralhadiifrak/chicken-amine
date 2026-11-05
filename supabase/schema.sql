@@ -238,3 +238,29 @@ create or replace function private.orders_forget()
 $function$;
 revoke all on function private.orders_forget() from public, anon, authenticated;
 select cron.schedule('orders-forget-24h', '*/15 * * * *', 'select private.orders_forget()');
+
+-- ---------- November 3: the statistics are the owner's only ----------
+-- (migration "orders_staff_last_24h")
+-- A restaurant account only needs the orders of the last 24 hours (that is all its screen shows). Older
+-- orders, and so the statistics, stay readable by the owner only, also through the API.
+drop policy "staff see their restaurant's orders" on public.orders;
+drop policy "staff update their restaurant's orders" on public.orders;
+drop policy "staff clear their restaurant's test orders" on public.orders;
+
+create policy "staff see their restaurant's orders" on public.orders
+  for select to authenticated
+  using (exists (select 1 from public.staff s
+                 where s.user_id = (select auth.uid())
+                   and (s.role = 'owner' or (s.location = orders.location and orders.created_at > now() - interval '24 hours'))));
+create policy "staff update their restaurant's orders" on public.orders
+  for update to authenticated
+  using (exists (select 1 from public.staff s
+                 where s.user_id = (select auth.uid())
+                   and (s.role = 'owner' or (s.location = orders.location and orders.created_at > now() - interval '24 hours'))))
+  with check (exists (select 1 from public.staff s
+                      where s.user_id = (select auth.uid()) and (s.role = 'owner' or s.location = orders.location)));
+create policy "staff clear their restaurant's test orders" on public.orders
+  for delete to authenticated
+  using (demo and exists (select 1 from public.staff s
+                          where s.user_id = (select auth.uid())
+                            and (s.role = 'owner' or (s.location = orders.location and orders.created_at > now() - interval '24 hours'))));
