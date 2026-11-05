@@ -545,13 +545,13 @@
     if (tab === "stats") loadStats();
   }
 
-  /* ---------- The staff app: installable once signed in ---------- */
+  /* ---------- The staff app: installable (staff and owner), before or after signing in ---------- */
   const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  // Shown until the app is opened installed; browsers that do not offer the prompt get the steps instead.
   function renderInstall() {
-    const off = isStandalone() || !(installPrompt || isIos());
-    $("#install-btn").hidden = off;
-    $("#menu-install").hidden = off;
+    const off = isStandalone();
+    $$(".js-install").forEach((b) => { b.hidden = off; });
   }
   function install() {
     if (installPrompt) {
@@ -561,6 +561,8 @@
       if (p.userChoice) p.userChoice.then(renderInstall, renderInstall); else renderInstall();
     } else if (isIos()) {
       alert("Pour installer l'application sur iPhone :\n1. Touchez le bouton Partager (le carré avec une flèche) dans Safari\n2. Choisissez « Sur l'écran d'accueil »\n3. Touchez « Ajouter »");
+    } else {
+      alert("Pour installer l'application :\n1. Ouvrez le menu du navigateur (⋮ ou ☰, en haut ou en bas de l'écran)\n2. Choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil »\n3. Confirmez\n\nSur ordinateur (Chrome ou Edge) : l'icône d'installation est à droite de la barre d'adresse.");
     }
   }
 
@@ -675,7 +677,8 @@
     $("#cancel-reasons").addEventListener("click", (e) => { const b = e.target.closest("[data-reason]"); if (b) cancel(b.dataset.reason); });
     $("#cancel-back").addEventListener("click", () => { $("#cancel-box").hidden = true; });
     $("#clear-btn").addEventListener("click", clearTests);
-    $("#install-btn").addEventListener("click", install);
+    $$(".js-install").forEach((b) => { if (b.id !== "menu-install") b.addEventListener("click", install); });
+    renderInstall();
     $("#print-btn").addEventListener("click", cyclePrint);
     renderPrint();
     $$("[data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));

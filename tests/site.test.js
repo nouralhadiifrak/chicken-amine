@@ -1088,6 +1088,7 @@ async function main() {
     await page.goto(base + "/commandes/");
     check(await page.evaluate(() => !document.querySelector("#splash").classList.contains("is-gone")), "staff app: opens on the rooster animation");
     await page.waitForSelector("#login:not([hidden])");
+    check(await page.isVisible("#login .js-install"), "staff app: « Installer l'application » already on the sign-in screen");
     await page.waitForTimeout(1300);
     check(await page.evaluate(() => document.querySelector("#splash").classList.contains("is-gone")), "staff app: the opening animation then makes way for the screen");
     await page.fill('input[name="email"]', "sidi-moumen@test.ma");
@@ -1098,6 +1099,7 @@ async function main() {
     await page.fill('input[name="password"]', "bon-mot-de-passe");
     await page.click("#login-btn");
     await page.waitForSelector("#start:not([hidden])", { timeout: 4000 }).catch(() => {});
+    check(await page.isVisible("#start .js-install"), "staff app: « Installer l'application » on the start screen");
     check(/Sidi Moumen/.test(await page.textContent("#start-place")), "staff screen: the account opens its own restaurant (Sidi Moumen)");
     await page.click("#start-btn");
     await page.waitForSelector("#alert:not([hidden])", { timeout: 4000 }).catch(() => {});
@@ -1173,9 +1175,14 @@ async function main() {
     // The staff app: installable once signed in.
     const manifest = await page.evaluate(async () => { const l = document.querySelector('link[rel="manifest"]'); return l && (await fetch(l.href)).json(); });
     check(manifest && manifest.scope === "/commandes/" && manifest.start_url === "/commandes/" && manifest.icons.some((i) => /staff-512/.test(i.src)), "staff app: its own manifest (opens on /commandes/, its own icon)");
-    check(!(await page.isVisible("#install-btn")), "staff app: no install button until the browser offers it");
+    check(await page.isVisible("#install-btn") && /Installer l'application/.test(await page.innerText("#install-btn")) && await page.$("#install-btn img"), "staff app: « Installer l'application », with the app's icon, in the header once signed in");
+    // A browser that offers no install prompt (older Android browsers, PC): the button explains the steps.
+    let steps = "";
+    page.once("dialog", (d) => { steps = d.message(); d.accept(); });
+    await page.click("#install-btn");
+    await page.waitForTimeout(200);
+    check(/Ajouter à l'écran d'accueil/.test(steps), "staff app: without a browser prompt, the button shows how to install");
     await page.evaluate(() => { const e = new Event("beforeinstallprompt"); e.prompt = () => { window.__prompted = true; }; e.userChoice = Promise.resolve({ outcome: "accepted" }); dispatchEvent(e); });
-    check(await page.isVisible("#install-btn") && /Installer l'application/.test(await page.textContent("#install-btn")) && await page.$("#install-btn img"), "staff app: « Installer l'application », with the app's icon, appears in the header once signed in");
     await page.click("#install-btn");
     check(await page.evaluate(() => window.__prompted === true), "staff app: the button opens the browser's install prompt");
     // Statistics are the owner's only: a restaurant account has no tab for them and never asks for them.
@@ -1196,6 +1203,7 @@ async function main() {
     await page.waitForTimeout(800);
     const own = await page.evaluate(() => ({ place: document.querySelector("#place").textContent, stats: !document.querySelector("#tab-stats").hidden, start: !document.querySelector("#start").hidden, beeps: window.__beeps }));
     check(/les deux restaurants/.test(own.place) && own.stats && !own.start, "owner: the account opens both restaurants, straight on the statistics");
+    check(await page.isVisible("#install-btn"), "owner: the « Installer » button is there for the owner too");
     // Statistics: what the app collected and what sold most.
     await page.waitForFunction(() => /encaissé/.test(document.querySelector("#stats-body").textContent), null, { timeout: 4000 }).catch(() => {});
     const st = await page.evaluate(() => ({ cards: [...document.querySelectorAll("#stats-body .stat")].map((x) => x.textContent.replace(/\s+/g, " ").trim()), top: document.querySelector("#stats-body .rank li")?.textContent.replace(/\s+/g, " ").trim(), text: document.querySelector("#stats-body").textContent, board: !document.querySelector("#tab-orders").hidden }));
