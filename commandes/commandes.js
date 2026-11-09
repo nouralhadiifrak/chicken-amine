@@ -254,6 +254,8 @@
     if (minutesSince(o.accepted_at) > 10) return;
     printOrder(o);
   }
+  // Dirhams taken off an order by the promotions.
+  const saved = (o) => (o.items || []).reduce((n, l) => n + (l.off || 0) * (l.qty || 0), 0);
   function receiptHtml(o, width) {
     const s = siteById(o.location);
     const delivery = o.mode === "delivery";
@@ -276,9 +278,9 @@
       <div class="mode">${delivery ? "LIVRAISON" : "À EMPORTER"}</div><hr>
       <div><b>${esc(o.customer_name)}</b> · ${esc(o.customer_phone)}</div>
       ${delivery && o.address ? `<div>${esc(o.address)}</div>` : ""}${delivery && o.distance_km != null ? `<div>${String(o.distance_km).replace(".", ",")} km</div>` : ""}<hr>
-      ${(o.items || []).map((l) => line(`<b>${esc(l.qty)} ×</b> ${esc(l.name)}${l.size ? ` (${esc(l.size)})` : ""}`, money(l.total || 0)) + (l.details || []).map((d) => `<div class="det">${esc(d)}</div>`).join("")).join("")}
+      ${(o.items || []).map((l) => line(`<b>${esc(l.qty)} ×</b> ${esc(l.name)}${l.size ? ` (${esc(l.size)})` : ""}`, money(l.total || 0)) + (l.details || []).map((d) => `<div class="det">${esc(d)}</div>`).join("") + (l.off ? `<div class="det">Promo ${esc(l.promo_label || "")} : -${money(l.off * l.qty)}</div>` : "")).join("")}
       ${o.notes ? `<div class="note">Note : ${esc(o.notes)}</div>` : ""}<hr>
-      ${line("Sous-total", money(o.subtotal))}${o.delivery_fee ? line("Livraison", money(o.delivery_fee)) : ""}${line("TOTAL", money(o.total), "tot")}
+      ${saved(o) ? line("Sous-total", money(o.subtotal + saved(o))) + line("Réduction promo", "-" + money(saved(o))) : line("Sous-total", money(o.subtotal))}${o.delivery_fee ? line("Livraison", money(o.delivery_fee)) : ""}${line("TOTAL", money(o.total), "tot")}
       <hr><div class="c">Merci et bon appétit !<br>chickenamine.ma</div>
     </body></html>`;
   }
@@ -338,7 +340,7 @@
   /* ---------- Display ---------- */
   function itemsHtml(o) {
     return `<ul class="items">${(o.items || []).map((l) =>
-      `<li><b>${esc(l.qty)} ×</b> ${esc(l.name)}${l.size ? ` (${esc(l.size)})` : ""}${(l.details || []).map((d) => `<small>${esc(d)}</small>`).join("")}</li>`).join("")}</ul>`;
+      `<li><b>${esc(l.qty)} ×</b> ${esc(l.name)}${l.size ? ` (${esc(l.size)})` : ""}${(l.details || []).map((d) => `<small>${esc(d)}</small>`).join("")}${l.off ? `<small class="promo">Promo ${esc(l.promo_label || "")} : −${esc(money(l.off * l.qty))}</small>` : ""}</li>`).join("")}</ul>`;
   }
 
   function detailsHtml(o) {
@@ -528,6 +530,7 @@
       [money(fees), "frais de livraison (dont)"],
       [rows.filter((o) => o.status === "refused").length, "refusées"],
       [rows.filter((o) => o.status === "cancelled").length, "annulées"],
+      [money(done.reduce((n, o) => n + saved(o), 0)), "offerts en promotions"],
     ];
     $("#stats-body").innerHTML = `<section class="summary">${cards.map(([v, l, hl]) => `<div class="stat${hl ? " stat--hl" : ""}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("")}</section>
       <div class="panels">
@@ -537,12 +540,200 @@
       </div>`;
   }
 
+  /* ---------- Promotions (owner): which dishes, which restaurant, how much, when (rules in js/promos.js) ---------- */
+  const MENU = window.MENU || [];
+  const PROMO_FIELDS = "id,name,location,all_items,category_ids,item_ids,kind,value,starts_at,ends_at,daily_from,daily_to,active";
+  let promoList = [], promoEditing = null;
+  // A Casablanca wall-clock time ("2026-11-10T00:00", as typed in the form) ↔ an instant.
+  function casaToIso(v) {
+    const [d, t] = v.split("T");
+    const [y, mo, da] = d.split("-").map(Number), [h, mi] = t.split(":").map(Number);
+    const guess = Date.UTC(y, mo - 1, da, h, mi);
+    return new Date(guess - local(new Date(guess)).offset).toISOString();
+  }
+  function isoToCasa(iso) {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: C.timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+  }
+  const when = (iso) => new Date(iso).toLocaleString("fr-FR", { timeZone: C.timeZone, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const hhmm = (v) => (v ? String(v).slice(0, 5) : "");
+  const placeOf = (p) => (p.location ? siteById(p.location).short.fr : "Les deux restaurants");
+
+  function promoStatus(p) {
+    const now = Date.now();
+    if (Date.parse(p.ends_at) <= now) return ["Terminée", "done"];
+    if (!p.active) return ["En pause", "off"];
+    if (Date.parse(p.starts_at) > now) return ["À venir", "soon"];
+    return [Promos.inWindow(p, new Date()) ? "En cours" : "En cours · hors horaires", "on"];
+  }
+  function promoItemsText(p) {
+    if (p.all_items) return "Tout le menu";
+    const cats = MENU.filter((c) => (p.category_ids || []).indexOf(c.id) !== -1).map((c) => c.fr);
+    const n = (p.item_ids || []).length;
+    return [cats.join(", "), n ? `${n} plat${n > 1 ? "s" : ""}` : ""].filter(Boolean).join(" + ");
+  }
+
+  async function loadPromoList() {
+    if (!owner) return;
+    const box = $("#promo-list");
+    const { data, error } = await db.from("promotions").select(PROMO_FIELDS).order("starts_at", { ascending: false });
+    if (error) { box.innerHTML = '<p class="error">Impossible de charger les promotions. Vérifiez la connexion.</p>'; return; }
+    promoList = data || [];
+    renderPromoList();
+  }
+  function renderPromoList() {
+    const order = { on: 0, soon: 1, off: 2, done: 3 };
+    const list = promoList.slice().sort((a, b) => order[promoStatus(a)[1]] - order[promoStatus(b)[1]]);
+    $("#promo-list").innerHTML = list.length ? list.map((p) => {
+      const [label, cls] = promoStatus(p);
+      const hours = p.daily_from ? ` · chaque jour de ${hhmm(p.daily_from)} à ${hhmm(p.daily_to)}` : "";
+      return `<article class="pcard pcard--${cls}" data-promo="${esc(p.id)}">
+        <div class="pcard__top"><span class="ptag">${esc(Promos.label(p))}</span><b>${esc(p.name)}</b><span class="pstat">${esc(label)}</span></div>
+        <p>${esc(placeOf(p))} · ${esc(promoItemsText(p))}</p>
+        <p>Du ${esc(when(p.starts_at))} au ${esc(when(p.ends_at))}${esc(hours)}</p>
+        <div class="pcard__actions">
+          <button class="btn btn--line" type="button" data-pedit="${esc(p.id)}">Modifier</button>
+          ${cls === "done" ? "" : `<button class="btn btn--line" type="button" data-ptoggle="${esc(p.id)}">${p.active ? "Mettre en pause" : "Reprendre"}</button>`}
+          <button class="btn btn--line" type="button" data-pdel="${esc(p.id)}">Supprimer</button>
+        </div></article>`;
+    }).join("") : '<p class="empty">Aucune promotion pour l\'instant. Touchez « + Nouvelle promotion ».</p>';
+  }
+
+  function renderPromoItems(p) {
+    $("#promo-items").innerHTML = MENU.map((c) => {
+      const whole = !!p && (p.category_ids || []).indexOf(c.id) !== -1;
+      return `<div class="pcat" data-pcat="${esc(c.id)}">
+        <div class="pcat__row"><label><input type="checkbox" data-pcat-box="${esc(c.id)}"${whole ? " checked" : ""}> ${esc(c.fr)}</label>
+          <span class="pcat__n"></span><button class="pcat__more" type="button" data-pmore="${esc(c.id)}">Choisir les plats</button></div>
+        <div class="pcat__items" hidden>${c.items.map((it) => {
+          const on = whole || (!!p && (p.item_ids || []).indexOf(it.id) !== -1);
+          const price = it.prices ? Object.values(it.prices)[0] : it.price;
+          return `<label><input type="checkbox" data-pitem="${esc(it.id)}"${on ? " checked" : ""}> ${esc(it.fr)} · ${esc(money(price))}</label>`;
+        }).join("")}</div></div>`;
+    }).join("");
+    $$("#promo-items .pcat").forEach(countPromoCat);
+  }
+  // "3 / 17" next to each category, and the category box follows its dishes.
+  function countPromoCat(row) {
+    const boxes = $$("[data-pitem]", row), on = boxes.filter((b) => b.checked).length;
+    $(".pcat__n", row).textContent = on ? `${on} / ${boxes.length}` : "";
+    const cat = $("[data-pcat-box]", row);
+    cat.checked = on === boxes.length;
+    cat.indeterminate = on > 0 && on < boxes.length;
+  }
+
+  function openPromo(p) {
+    promoEditing = p || null;
+    const f = $("#promo-form");
+    $("#promo-title").textContent = p ? "Modifier la promotion" : "Nouvelle promotion";
+    const now = new Date();
+    const start = p ? p.starts_at : new Date(Math.floor(now.getTime() / 60e3) * 60e3).toISOString();
+    const end = p ? p.ends_at : casaToIso(isoToCasa(new Date(now.getTime() + 7 * 864e5).toISOString()).slice(0, 10) + "T23:59");
+    f.elements.name.value = p ? p.name : "";
+    f.querySelector(`[name="location"][value="${p && p.location ? p.location : ""}"]`).checked = true;
+    f.querySelector(`[name="kind"][value="${p ? p.kind : "percent"}"]`).checked = true;
+    f.elements.value.value = p ? p.value : 10;
+    f.querySelector(`[name="scope"][value="${p && !p.all_items ? "some" : "all"}"]`).checked = true;
+    f.elements.starts.value = isoToCasa(start);
+    f.elements.ends.value = isoToCasa(end);
+    f.elements.hours.checked = !!(p && p.daily_from);
+    f.elements.from.value = p && p.daily_from ? hhmm(p.daily_from) : "15:00";
+    f.elements.to.value = p && p.daily_to ? hhmm(p.daily_to) : "18:00";
+    f.elements.active.checked = p ? p.active : true;
+    renderPromoItems(p);
+    $("#promo-error").textContent = "";
+    syncPromoForm();
+    $("#promo-box").hidden = false;
+    f.elements.name.focus();
+  }
+  function closePromo() { $("#promo-box").hidden = true; promoEditing = null; }
+
+  // The promotion as typed in the form, ready for the database, or a message saying what is missing.
+  function readPromo() {
+    const f = $("#promo-form");
+    const kind = f.querySelector('[name="kind"]:checked').value;
+    const value = Math.round(Number(f.elements.value.value));
+    const all = f.querySelector('[name="scope"]:checked').value === "all";
+    const cats = [], items = [];
+    if (!all) $$("#promo-items .pcat").forEach((row) => {
+      const boxes = $$("[data-pitem]", row).filter((b) => b.checked);
+      if (boxes.length && boxes.length === $$("[data-pitem]", row).length) cats.push(row.dataset.pcat);
+      else boxes.forEach((b) => items.push(b.dataset.pitem));
+    });
+    const hours = f.elements.hours.checked;
+    const row = {
+      name: f.elements.name.value.trim(), location: f.querySelector('[name="location"]:checked').value || null,
+      kind, value, all_items: all, category_ids: cats, item_ids: items,
+      starts_at: f.elements.starts.value ? casaToIso(f.elements.starts.value) : null,
+      ends_at: f.elements.ends.value ? casaToIso(f.elements.ends.value) : null,
+      daily_from: hours ? f.elements.from.value || null : null, daily_to: hours ? f.elements.to.value || null : null,
+      active: f.elements.active.checked,
+    };
+    if (!row.name) return { error: "Donnez un nom à la promotion." };
+    if (!(value >= 1 && value <= (kind === "percent" ? 90 : 500))) return { error: kind === "percent" ? "La réduction doit être entre 1 et 90 %." : "La réduction doit être entre 1 et 500 DH." };
+    if (!all && !cats.length && !items.length) return { error: "Choisissez au moins un plat (ou « Tout le menu »)." };
+    if (!row.starts_at || !row.ends_at) return { error: "Indiquez le début et la fin." };
+    if (Date.parse(row.ends_at) <= Date.parse(row.starts_at)) return { error: "La fin doit être après le début." };
+    if (hours && (!row.daily_from || !row.daily_to || row.daily_from === row.daily_to)) return { error: "Indiquez des heures différentes pour le début et la fin." };
+    return { row };
+  }
+  // Shows/hides the parts of the form, and an example with a real dish.
+  function syncPromoForm() {
+    const f = $("#promo-form");
+    const percent = f.querySelector('[name="kind"]:checked').value === "percent";
+    f.elements.value.max = percent ? 90 : 500;
+    $("#promo-items").hidden = f.querySelector('[name="scope"]:checked').value === "all";
+    $("#promo-hours").hidden = !f.elements.hours.checked;
+    const r = readPromo().row;
+    const it = r && (MENU.flatMap((c) => c.items.map((x) => ({ ...x, cat: c.id }))).find((x) => r.all_items || r.category_ids.indexOf(x.cat) !== -1 || r.item_ids.indexOf(x.id) !== -1));
+    if (!it) { $("#promo-preview").textContent = ""; return; }
+    const price = it.prices ? Object.values(it.prices)[0] : it.price;
+    $("#promo-preview").textContent = `Exemple : ${it.fr} ${money(price)} → ${money(price - Promos.off(r, price))}`;
+  }
+  async function savePromo(e) {
+    e.preventDefault();
+    const { row, error } = readPromo();
+    const err = $("#promo-error");
+    if (error) { err.textContent = error; return; }
+    $("#promo-save").disabled = true;
+    const q = promoEditing ? db.from("promotions").update(row).eq("id", promoEditing.id) : db.from("promotions").insert(row);
+    const res = await q;
+    $("#promo-save").disabled = false;
+    if (res.error) { err.textContent = "Échec de l'enregistrement. Vérifiez la connexion et réessayez."; return; }
+    closePromo();
+    loadPromoList();
+  }
+  async function onPromoList(e) {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const id = b.dataset.pedit || b.dataset.ptoggle || b.dataset.pdel;
+    const p = promoList.find((x) => x.id === id);
+    if (!p) return;
+    if (b.dataset.pedit) { openPromo(p); return; }
+    if (b.dataset.pdel && !confirm(`Supprimer la promotion « ${p.name} » ?`)) return;
+    b.disabled = true;
+    const res = b.dataset.pdel ? await db.from("promotions").delete().eq("id", id) : await db.from("promotions").update({ active: !p.active }).eq("id", id);
+    if (res.error) { b.disabled = false; alert("Échec. Vérifiez la connexion et réessayez."); return; }
+    loadPromoList();
+  }
+  function onPromoItems(e) {
+    const more = e.target.closest("[data-pmore]");
+    if (more) { const box = $(".pcat__items", more.closest(".pcat")); box.hidden = !box.hidden; more.textContent = box.hidden ? "Choisir les plats" : "Fermer"; return; }
+    const cat = e.target.closest("[data-pcat-box]");
+    const row = e.target.closest(".pcat");
+    if (cat) $$("[data-pitem]", row).forEach((b) => { b.checked = cat.checked; });
+    if (row && e.target.matches("input")) countPromoCat(row);
+  }
+
   function showTab(tab) {
     if (!owner) tab = "orders";
     $$("[data-tab]").forEach((b) => b.classList.toggle("is-on", b.dataset.tab === tab));
     $("#tab-orders").hidden = tab !== "orders";
     $("#tab-stats").hidden = tab !== "stats";
+    $("#tab-promos").hidden = tab !== "promos";
     if (tab === "stats") loadStats();
+    if (tab === "promos") loadPromoList();
   }
 
   /* ---------- The staff app: installable (staff and owner), before or after signing in ---------- */
@@ -682,6 +873,14 @@
     $("#print-btn").addEventListener("click", cyclePrint);
     renderPrint();
     $$("[data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+    $("#promo-new").addEventListener("click", () => openPromo(null));
+    $("#promo-cancel").addEventListener("click", closePromo);
+    $("#promo-form").addEventListener("submit", savePromo);
+    $("#promo-form").addEventListener("input", syncPromoForm);
+    $("#promo-form").addEventListener("change", syncPromoForm);
+    $("#promo-items").addEventListener("change", onPromoItems);
+    $("#promo-items").addEventListener("click", (e) => { if (e.target.closest("[data-pmore]")) onPromoItems(e); });
+    $("#promo-list").addEventListener("click", onPromoList);
     $("#stats-periods").addEventListener("click", (e) => {
       const b = e.target.closest("[data-period]");
       if (!b) return;

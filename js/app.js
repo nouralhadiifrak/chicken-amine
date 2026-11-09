@@ -204,6 +204,7 @@
     site = l;
     try { localStorage.setItem(SITE_KEY, l.id); } catch (e) { /* storage unavailable */ }
     applySite();
+    refreshPromos();
     if (!$("#checkout-form").hidden) renderCheckout();
     closeDialog($("#site-dialog"));
   }
@@ -409,10 +410,44 @@
     return t(key, { ...vars, days: a.days.map((d) => D[d]).join(lang === "ar" ? " و" : ", "), from: a.from, to: a.to });
   }
 
+  /* ---------- The owner's promotions (chosen in the staff app; rules in js/promos.js) ---------- */
+  let promos = [], promoSig = null;
+  const PROMO_COLS = "id,location,all_items,category_ids,item_ids,kind,value,starts_at,ends_at,daily_from,daily_to,active";
+  async function loadPromos() {
+    if (!ONLINE || !window.Promos) return;
+    try {
+      const res = await api(`promotions?select=${PROMO_COLS}&active=eq.true&ends_at=gt.${new Date().toISOString()}`);
+      if (!res.ok) return;
+      promos = await res.json();
+      refreshPromos(true);
+    } catch (e) { /* unreachable: normal prices */ }
+  }
+  // Prices are drawn again when a promotion starts or ends (or the restaurant changes).
+  function refreshPromos(force) {
+    const sig = S().id + ":" + promos.filter((p) => Promos.isOn(p)).map((p) => p.id).join();
+    if (!force && (sig === promoSig || promoSig === null)) { promoSig = sig; return; }
+    promoSig = sig;
+    renderMenu();
+    renderCart();
+  }
+  // The promotion on one unit of a dish at this price, for the chosen restaurant: { promo, off } or null.
+  const promoOf = (it, unit) => (window.Promos && promos.length ? Promos.best(promos, it.id, it.cat.id, S().id, unit) : null);
+  const promoBadge = (d) => (d ? `<span class="promo-badge">${esc(Promos.label(d.promo, C.currency[lang]))}</span>` : "");
+  const nowPrice = (it, unit) => { const d = promoOf(it, unit); return d ? unit - d.off : unit; };
+
+  function priceTag(it, p, size, extra = "") {
+    const d = promoOf(it, p);
+    const s = size ? `${esc(size)} ` : "";
+    return d ? `<span class="price price--promo">${s}<s>${esc(money(p))}</s> ${esc(money(p - d.off))}${extra}</span>`
+      : `<span class="price">${s}${esc(money(p))}${extra}</span>`;
+  }
   function priceLabel(it) {
-    if (it.prices) return Object.entries(it.prices).map(([s, p]) => `<span class="price">${esc(s)} ${esc(money(p))}</span>`).join(" ");
+    it = itemById.get(it.id);
+    const first = it.prices ? Object.values(it.prices)[0] : it.price;
+    const badge = promoBadge(promoOf(it, first));
+    if (it.prices) return badge + Object.entries(it.prices).map(([s, p]) => priceTag(it, p, s)).join(" ");
     const unit = it.unit === "pc" ? ` <small>/ ${esc(t("menu.perPiece"))}</small>` : "";
-    return `<span class="price">${esc(money(it.price))}${unit}</span>`;
+    return badge + priceTag(it, it.price, null, unit);
   }
 
   const PLUS_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M5 12h14M12 5v14"/></svg>';
@@ -447,9 +482,10 @@
   }
   function renderHome() {
     $("#cat-grid").innerHTML = MENU.map((c) => {
-      const from = Math.min(...c.items.map(basePrice));
+      const from = Math.min(...c.items.map((it) => nowPrice(itemById.get(it.id), basePrice(it))));
+      const deal = c.items.map((it) => promoOf(itemById.get(it.id), basePrice(it))).filter(Boolean).sort((a, b) => b.off - a.off)[0];
       return `<button class="cat-tile" type="button" data-open-cat="${c.id}" aria-label="${esc(t("menu.open", { name: L(c) }))}">
-        <span class="cat-tile__media">${c.image ? `<img src="${esc(c.image)}"${smallCover(c.image)} sizes="(max-width: 639px) 50vw, (max-width: 999px) 33vw, 260px" alt="" loading="${coversNow ? "eager" : "lazy"}" width="600" height="400">` : illustration(c.icon)}</span>
+        <span class="cat-tile__media">${deal ? promoBadge(deal).replace('class="promo-badge"', 'class="promo-badge promo-badge--tile"') : ""}${c.image ? `<img src="${esc(c.image)}"${smallCover(c.image)} sizes="(max-width: 639px) 50vw, (max-width: 999px) 33vw, 260px" alt="" loading="${coversNow ? "eager" : "lazy"}" width="600" height="400">` : illustration(c.icon)}</span>
         <span class="cat-tile__text"><span class="cat-tile__name">${rich(L(c))}</span>
         <span class="cat-tile__meta">${esc(t("menu.dishes", { n: c.items.length }))} · ${esc(t("menu.from", { price: money(from) }))}</span></span>
       </button>`;
@@ -588,7 +624,12 @@
   function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) { /* storage unavailable */ } }
   const lineKey = (l) => [l.id, l.size || "", JSON.stringify(l.opts || {}), (l.sauces || []).join("+")].join("|");
   function unitPrice(l) { const it = itemById.get(l.id); return it.prices ? it.prices[l.size] : it.price; }
-  const lineTotal = (l) => unitPrice(l) * l.qty;
+  const linePromo = (l) => promoOf(itemById.get(l.id), unitPrice(l));
+  const lineOff = (l) => { const d = linePromo(l); return d ? d.off : 0; };
+  const lineFull = (l) => unitPrice(l) * l.qty;
+  // what the customer pays for the line (after the promotion)
+  const lineTotal = (l) => (unitPrice(l) - lineOff(l)) * l.qty;
+  const savings = () => cart.reduce((s, l) => s + lineOff(l) * l.qty, 0);
   const subtotal = () => cart.reduce((s, l) => s + lineTotal(l), 0);
   const count = () => cart.reduce((s, l) => s + l.qty, 0);
   const qtyOf = (id) => cart.reduce((n, l) => n + (l.id === id ? l.qty : 0), 0);
@@ -661,6 +702,7 @@
         <p class="cart-line__name">${rich(L(it))}</p>
         ${det.length ? `<p class="cart-line__opts">${det.map(rich).join(" · ")}</p>` : `<span></span>`}
         <div class="cart-line__side">
+          ${lineOff(l) ? `<span class="cart-line__promo">${promoBadge(linePromo(l))}<s>${esc(money(lineFull(l)))}</s></span>` : ""}
           <span class="cart-line__total"></span>
           <span class="stepper">
             ${dec}
@@ -690,14 +732,16 @@
     return st.ok ? st.fee : 0;
   }
   function renderTotals() {
-    const sub = subtotal(), fee = deliveryFee();
+    const sub = subtotal(), fee = deliveryFee(), save = savings();
     const shown = {};
     $$("#totals [data-sum] .roll").forEach((r) => { shown[r.closest("[data-sum]").dataset.sum] = r.dataset.v; });
     let html = `<dt>${esc(t("cart.subtotal"))}</dt><dd data-sum="sub"><span></span></dd>`;
+    if (save) html += `<dt class="is-promo">${esc(t("cart.discount"))}</dt><dd class="is-promo" data-sum="save"><span></span></dd>`;
     if (fee) html += `<dt>${esc(t("cart.deliveryFee"))}</dt><dd data-sum="fee"><span></span></dd>`;
     html += `<dt class="is-total">${esc(t("cart.total"))}</dt><dd class="is-total" data-sum="total"><span></span></dd>`;
     $("#totals").innerHTML = html;
-    const values = { sub, fee, total: sub + fee };
+    // the subtotal before the promotion, the discount, then what is paid
+    const values = { sub: sub + save, save, fee, total: sub + fee };
     $$("#totals [data-sum]").forEach((dd) => Kit.setMoney(dd.firstChild, values[dd.dataset.sum], C.currency[lang], shown[dd.dataset.sum]));
   }
 
@@ -779,7 +823,7 @@
     if (it.prices) {
       const sizes = Object.keys(it.prices);
       html += `<fieldset class="field"><legend class="field__label">${esc(t("options.size"))} ${need}</legend><div class="pills">
-        ${sizes.map((s, i) => pill("radio", "size", s, `${esc(s)} · ${esc(money(it.prices[s]))}`, i === 0)).join("")}</div></fieldset>`;
+        ${sizes.map((s, i) => pill("radio", "size", s, `${esc(s)} · ${esc(money(nowPrice(it, it.prices[s])))}`, i === 0)).join("")}</div></fieldset>`;
     }
     (it.options || []).forEach((o) => {
       html += `<fieldset class="field" data-opt="${o.id}"><legend class="field__label">${rich(L(o))} ${need}</legend><div class="pills">
@@ -811,7 +855,7 @@
   function updateOptionsPrice() {
     const it = optionsItem;
     const size = $('#options-body input[name="size"]:checked');
-    const price = it.prices ? it.prices[size ? size.value : Object.keys(it.prices)[0]] : it.price;
+    const price = nowPrice(it, it.prices ? it.prices[size ? size.value : Object.keys(it.prices)[0]] : it.price);
     Kit.roll($("#options-qty"), optionsQty);
     $('.qty__btn[data-step="-1"]').disabled = optionsQty <= 1;
     Kit.setMoney($("#options-price"), price * optionsQty, C.currency[lang]);
@@ -1097,13 +1141,15 @@
     lines.push("");
     cart.forEach((l) => {
       const it = itemById.get(l.id);
-      lines.push(`${l.qty} × ${L(it)}${l.size ? " (" + l.size + ")" : ""} · ${money(lineTotal(l))}`);
+      const d = linePromo(l);
+      lines.push(`${l.qty} × ${L(it)}${l.size ? " (" + l.size + ")" : ""} · ${money(lineTotal(l))}${d ? ` (${Promos.label(d.promo, C.currency[lang])})` : ""}`);
       lineDetails(l).filter((d) => !l.size || !d.startsWith(t("options.size"))).forEach((d) => lines.push(`   ${d}`));
     });
     lines.push("");
-    const sub = subtotal();
+    const sub = subtotal(), save = savings();
     const fee = data.mode === "delivery" ? st.fee : 0;
-    lines.push(`${t("cart.subtotal")}${sep}${money(sub)}`);
+    lines.push(`${t("cart.subtotal")}${sep}${money(sub + save)}`);
+    if (save) lines.push(`${t("cart.discount")}${sep}-${money(save)}`);
     if (fee) lines.push(`${t("cart.deliveryFee")}${sep}${money(fee)}`);
     lines.push(`*${t("cart.total")}${sep}${money(sub + fee)}*`);
     if (data.mode === "delivery") {
@@ -1187,7 +1233,10 @@
     lang = "fr";
     const items = cart.map((l) => {
       const it = itemById.get(l.id);
-      return { name: L(it), qty: l.qty, details: lineDetails(l).filter((d) => !l.size || !d.startsWith(t("options.size"))), size: l.size || null, total: lineTotal(l) };
+      const d = linePromo(l);
+      const line = { id: l.id, cat: it.cat.id, name: L(it), qty: l.qty, details: lineDetails(l).filter((x) => !l.size || !x.startsWith(t("options.size"))), size: l.size || null, unit: unitPrice(l), total: lineTotal(l) };
+      if (d) Object.assign(line, { promo: d.promo.id, promo_label: Promos.label(d.promo, "DH"), off: d.off });
+      return line;
     });
     lang = was;
     const delivery = data.mode === "delivery";
@@ -1204,7 +1253,7 @@
       const res = await api("orders", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(row) });
       if (!res.ok) {
         const body = await res.text();
-        throw new Error(/Trop de commandes/.test(body) ? "tooMany" : "failed");
+        throw new Error(/Trop de commandes/.test(body) ? "tooMany" : /Promotion/.test(body) ? "promo" : "failed");
       }
       // the same order as a WhatsApp message, offered if the restaurant does not answer
       order = { id: row.id, token: row.token, site: row.location, mode: row.mode, at: Date.now(), status: "new", wa: buildMessage(data, st) };
@@ -1215,9 +1264,11 @@
       showStep("items");
       openTrack();
     } catch (e) {
-      err.textContent = t(e.message === "tooMany" ? "order.tooMany" : "order.failed");
+      err.textContent = t(e.message === "tooMany" ? "order.tooMany" : e.message === "promo" ? "order.promoChanged" : "order.failed");
+      // a promotion that just ended: prices are drawn again, the customer checks and sends again
+      if (e.message === "promo") loadPromos();
       // the restaurant's screen cannot be reached: the order can still go on WhatsApp
-      if (e.message !== "tooMany") $("#send-btn").hidden = false;
+      else if (e.message !== "tooMany") $("#send-btn").hidden = false;
     } finally {
       sending = false;
       $("#order-send").disabled = false;
@@ -1380,7 +1431,8 @@
     });
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", onScroll);
-    setInterval(() => { updateStatus(); refreshControls(); }, 30000);
+    setInterval(() => { updateStatus(); refreshControls(); refreshPromos(); }, 30000);
+    setInterval(loadPromos, 5 * 60e3);
   }
 
   /* ---------- Start ---------- */
@@ -1392,6 +1444,7 @@
   loadCustomer();
   currentCat = catFromHash();
   applyLanguage();
+  loadPromos();
   runIntro();
   updateHeader();
   if (currentCat) requestAnimationFrame(scrollToMenu);

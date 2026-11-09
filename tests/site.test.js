@@ -72,6 +72,8 @@ async function newPage(browser, base, { width, height, lang, time = OPEN_TIME, r
   });
   await page.clock.setFixedTime(time);
   await page.route(SUPA + "/rest/v1/orders**", (route) => route.fulfill({ status: 503, body: "unavailable" }));
+  // no promotion unless a test sets some (the real project is never asked)
+  await page.route(SUPA + "/rest/v1/promotions**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
   await page.addInitScript(() => {
     window.__opened = [];
     window.open = (url) => { window.__opened.push(url); return {}; };
@@ -1000,6 +1002,56 @@ async function main() {
     check(errors.length === 0, `online orders: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
     await context.close();
   }
+
+  // The owner's promotions on the site: crossed-out prices, the discount in the cart, and each line sent with its promotion.
+  console.log("\npromotions");
+  {
+    const { page, context, errors } = await newPage(browser, base, { width: 390, height: 844, lang: "fr" });
+    const h = (n) => new Date(OPEN_TIME.getTime() + n * 3600e3).toISOString();
+    const PROMOS = [
+      { id: "11111111-1111-4111-8111-111111111111", location: null, all_items: true, category_ids: [], item_ids: [], kind: "percent", value: 10, starts_at: h(-1), ends_at: h(24), daily_from: null, daily_to: null, active: true },
+      { id: "22222222-2222-4222-8222-222222222222", location: "bouchaib-doukkali", all_items: false, category_ids: ["tacos"], item_ids: [], kind: "amount", value: 5, starts_at: h(-1), ends_at: h(24), daily_from: null, daily_to: null, active: true },
+      { id: "33333333-3333-4333-8333-333333333333", location: null, all_items: false, category_ids: [], item_ids: ["bs-eau"], kind: "percent", value: 50, starts_at: h(2), ends_at: h(24), daily_from: null, daily_to: null, active: true },
+    ];
+    let promoQuery = "";
+    await page.route(SUPA + "/rest/v1/promotions**", (route) => { promoQuery = route.request().url(); route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(PROMOS) }); });
+    const posted = [];
+    await page.route(SUPA + "/rest/v1/orders**", (route) => {
+      if (route.request().method() === "POST") { posted.push(JSON.parse(route.request().postData())); return route.fulfill({ status: 201, body: "" }); }
+      route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    });
+    await page.reload();
+    await waitIntro(page);
+    await page.waitForFunction(() => document.querySelector(".cat-tile .promo-badge"), null, { timeout: 4000 }).catch(() => {});
+    check(/active=eq\.true/.test(promoQuery) && /ends_at=gt\./.test(promoQuery) && !/name/.test(promoQuery), "the site asks only for the current promotions (not their names)");
+    const tile = await page.evaluate(() => { const t = document.querySelector('.cat-tile[data-open-cat="burgers"]'); return { badge: (t.querySelector(".promo-badge") || {}).textContent, meta: t.querySelector(".cat-tile__meta").textContent }; });
+    check(tile.badge === "-10%" && /dès 22 DH/.test(tile.meta), `category tile: « ${tile.badge} » badge and the lowest price after the promotion (${tile.meta})`);
+    await openCat(page, "burgers");
+    const price = await page.evaluate(() => { const li = document.querySelector('.item[data-item="bg-cheese"]'); return { was: (li.querySelector(".price s") || {}).textContent, text: li.querySelector(".price").textContent.replace(/\s+/g, " ").trim(), badge: (li.querySelector(".promo-badge") || {}).textContent }; });
+    check(price.was === "25 DH" && /22 DH$/.test(price.text) && price.badge === "-10%", `Cheese Burger: 25 DH crossed out, 22 DH (10 % of 25 = 2,5 rounded to 3), « -10% » (${price.text})`);
+    const rules = await page.evaluate((list) => ({
+      bd: Promos.best(list, "tc-poulet", "tacos", "bouchaib-doukkali", 30).off,
+      sm: Promos.best(list, "tc-poulet", "tacos", "sidi-moumen", 30).off,
+      plat: Promos.off(list[0], 37),
+      soon: Promos.best(list, "bs-eau", "boissons", "sidi-moumen", 10).promo.id,
+    }), PROMOS);
+    check(rules.bd === 5 && rules.sm === 3 && rules.plat === 4 && rules.soon === PROMOS[0].id, `rules: the biggest promotion wins (tacos at Bouchaib Doukkali -5 DH, at Sidi Moumen -3 DH), 37 DH → -4 DH, a promotion that has not started is ignored`);
+    await addDish(page, "burgers", "bg-cheese", []);
+    await page.click("#cart-bar");
+    const cart = await page.evaluate(() => ({ lineWas: (document.querySelector(".cart-line__promo s") || {}).textContent, totals: document.querySelector("#totals").textContent.replace(/\s+/g, " ").trim() }));
+    check(cart.lineWas === "25 DH" && /Sous-total\s*25 DH/.test(cart.totals) && /Réduction\s*3 DH/.test(cart.totals) && /Total\s*22 DH/.test(cart.totals), `cart: the old price crossed out, « Réduction 3 DH », total 22 DH (${cart.totals})`);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/promo-cart.png` });
+    await page.click("#cart-next");
+    await page.fill('input[name="name"]', "Test Client");
+    await page.fill('input[name="phone"]', "0634235350");
+    await page.click("#order-send");
+    await page.waitForSelector("#track-dialog[open]", { timeout: 4000 }).catch(() => {});
+    const o = posted[0] || {}, l = (o.items || [])[0] || {};
+    check(l.id === "bg-cheese" && l.cat === "burgers" && l.unit === 25 && l.off === 3 && l.promo === PROMOS[0].id && l.promo_label === "-10%" && l.total === 22 && o.subtotal === 22 && o.total === 22,
+      `the order sends each line with its promotion, for the database to check (${JSON.stringify({ unit: l.unit, off: l.off, total: l.total, subtotal: o.subtotal })})`);
+    check(errors.length === 0, `promotions: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
+    await context.close();
+  }
   {
     // The staff screen.
     const { page, context, errors } = await newPage(browser, base, { width: 1280, height: 860, lang: "fr" });
@@ -1187,9 +1239,9 @@ async function main() {
     check(await page.evaluate(() => window.__prompted === true), "staff app: the button opens the browser's install prompt");
     // Statistics are the owner's only: a restaurant account has no tab for them and never asks for them.
     await page.click("#menu-btn");
-    const hid = await page.evaluate(() => ({ tabs: [...document.querySelectorAll('[data-tab="stats"]')].every((b) => !b.offsetParent), panel: document.querySelector("#tab-stats").hidden }));
+    const hid = await page.evaluate(() => ({ tabs: [...document.querySelectorAll('[data-tab="stats"], [data-tab="promos"]')].every((b) => !b.offsetParent), panel: document.querySelector("#tab-stats").hidden && document.querySelector("#tab-promos").hidden }));
     await page.click("#menu-close");
-    check(hid.tabs && hid.panel && statsQueries.length === 0, "statistics: hidden from a restaurant account (no tab, no menu item, nothing asked)");
+    check(hid.tabs && hid.panel && statsQueries.length === 0, "statistics and promotions: hidden from a restaurant account (no tab, no menu item, nothing asked)");
     // The owner's account sees both restaurants.
     staffRow = { location: null, role: "owner" };
     db.set("f0f0f0f0-0000-4000-8000-000000000005", order("f0f0f0f0-0000-4000-8000-000000000005", 1));
@@ -1227,6 +1279,37 @@ async function main() {
     await page.click('#stats-sites [data-site="bouchaib-doukkali"]');
     await page.waitForTimeout(500);
     check(await page.isVisible("#stats-sites") && !/location=/.test(statsQueries[0] || "x") && /location=eq\.bouchaib-doukkali/.test(statsQueries[statsQueries.length - 1] || ""), "owner: statistics for both restaurants together or one of them");
+    // Promotions: the owner picks the restaurant, the dishes, the amount and the dates.
+    const promoRows = [], promoWrites = [];
+    await page.route(SUPA + "/rest/v1/promotions**", (route) => {
+      const req = route.request();
+      if (req.method() === "POST") { const b = JSON.parse(req.postData()); promoWrites.push(b); promoRows.push({ id: "aaaaaaaa-0000-4000-8000-00000000000" + promoRows.length, ...(Array.isArray(b) ? b[0] : b) }); return route.fulfill({ status: 201, contentType: "application/json", body: "[]" }); }
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(promoRows) });
+    });
+    await page.click('.tab[data-tab="promos"]');
+    await page.waitForSelector("#tab-promos:not([hidden])", { timeout: 3000 }).catch(() => {});
+    await page.waitForFunction(() => document.querySelector("#promo-list").textContent.trim().length > 0, null, { timeout: 3000 }).catch(() => {});
+    check(/Aucune promotion/.test(await page.textContent("#promo-list")), "owner: « Promotions » tab, empty at first");
+    await page.click("#promo-new");
+    await page.fill('#promo-form input[name="name"]', "-15% Tacos Bouchaib");
+    await page.click('#promo-form input[name="location"][value="bouchaib-doukkali"] + span');
+    await page.fill('#promo-form input[name="value"]', "15");
+    await page.click('#promo-form input[name="scope"][value="some"] + span');
+    await page.click('#promo-items [data-pcat-box="tacos"]');
+    await page.fill('#promo-form input[name="starts"]', "2026-11-10T00:00");
+    await page.fill('#promo-form input[name="ends"]', "2026-11-17T23:59");
+    const preview = await page.textContent("#promo-preview");
+    await page.click("#promo-save");
+    await page.waitForFunction(() => document.querySelector("#promo-box").hidden, null, { timeout: 3000 }).catch(() => {});
+    const w = promoWrites[0] ? (Array.isArray(promoWrites[0]) ? promoWrites[0][0] : promoWrites[0]) : {};
+    check(w.name === "-15% Tacos Bouchaib" && w.location === "bouchaib-doukkali" && w.kind === "percent" && w.value === 15 && w.all_items === false && JSON.stringify(w.category_ids) === '["tacos"]' && w.item_ids.length === 0
+      && w.starts_at === "2026-11-09T23:00:00.000Z" && w.ends_at === "2026-11-17T22:59:00.000Z" && w.daily_from === null && w.active === true,
+      `owner: a promotion saved with its restaurant, dishes, amount and dates in Moroccan time (${w.starts_at} → ${w.ends_at})`);
+    check(/Tacos Poulet 30 DH → 25 DH/.test(preview), `owner: the form shows an example (${preview})`);
+    await page.waitForFunction(() => document.querySelector("#promo-list .pcard"), null, { timeout: 3000 }).catch(() => {});
+    const pcard = (await page.textContent("#promo-list").catch(() => "")).replace(/\s+/g, " ");
+    check(/-15%/.test(pcard) && /Bouchaib Doukkali/.test(pcard) && /Tacos/.test(pcard) && /À venir/.test(pcard), `owner: the promotion is listed (${pcard.slice(0, 90)}…)`);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes-promos.png` });
     check(errors.length === 0, `staff screen: no JavaScript errors${errors.length ? " — " + errors.join(" | ") : ""}`);
     await context.close();
   }

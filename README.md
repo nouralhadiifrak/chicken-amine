@@ -77,6 +77,13 @@ Safari (iOS 16.4+).
 **The owner's account** opens on the statistics and follows the orders without the pop-up, the sound or the
 buttons.
 
+**Promotions** (owner only, « Promotions » tab): the owner picks the restaurant (or both), the dishes (the whole
+menu, categories or single dishes), a percentage or an amount in DH, the dates and, if wanted, the same hours every
+day. The site shows the old price crossed out and the discount in the cart; the staff screen, the receipt and the
+statistics show it too. The discount is rounded to the dirham, the biggest promotion wins, and delivery is never
+discounted (rules in `js/promos.js`). The database checks every discounted line against the promotion it names
+(`orders_check_promos` in `supabase/schema.sql`), so a customer cannot invent one.
+
 The orders live in a free Supabase project, `chicken-amine-commandes`; `js/config.js` → `orders` holds its URL and
 public key. The tables and access rules are in `supabase/schema.sql`: customers can only add an order and read its
 status with its secret token, at most 5 orders per phone in 10 minutes. Accounts are made in Supabase →

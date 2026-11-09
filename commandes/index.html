@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/commandes/commandes.css?v=2026110501">
+  <link rel="stylesheet" href="/commandes/commandes.css?v=2026110901">
 </head>
 <body>
   <!-- The opening animation (follows the phone's own start screen, on the same black). -->
@@ -55,6 +55,7 @@
       <div class="tabs owner-only" role="tablist" hidden>
         <button class="tab is-on" type="button" data-tab="orders">Commandes</button>
         <button class="tab" type="button" data-tab="stats">Statistiques</button>
+        <button class="tab" type="button" data-tab="promos">Promotions</button>
       </div>
       <div class="top__actions">
         <button class="install-pill js-install" id="install-btn" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="28" height="28"><span class="install-pill__long">Installer l'application</span><span class="install-pill__short">Installer</span></button>
@@ -88,6 +89,15 @@
       </div>
       <div id="stats-body"></div>
     </div>
+
+    <!-- The owner's promotions: shown on the site and applied to the orders automatically. -->
+    <div id="tab-promos" hidden>
+      <div class="promos-head">
+        <div><h2>Promotions</h2><p>Elles s'affichent sur le site et s'appliquent toutes seules aux commandes. La livraison n'est jamais réduite.</p></div>
+        <button class="btn btn--red" id="promo-new" type="button">+ Nouvelle promotion</button>
+      </div>
+      <div id="promo-list"></div>
+    </div>
   </div>
 
   <!-- The menu (☰): everything that is not an order. -->
@@ -97,6 +107,7 @@
     <button class="menu__install js-install" id="menu-install" type="button" hidden><img src="/assets/icons/staff-192.png" alt="" width="44" height="44"><span><b>Installer l'application</b><small>Accès direct depuis l'écran d'accueil</small></span></button>
     <button class="menu__item is-on" type="button" data-tab="orders"><span class="menu__ic">📋</span>Commandes</button>
     <button class="menu__item owner-only" type="button" data-tab="stats" hidden><span class="menu__ic">📊</span>Statistiques</button>
+    <button class="menu__item owner-only" type="button" data-tab="promos" hidden><span class="menu__ic">🏷️</span>Promotions</button>
     <hr>
     <button class="menu__item staff-only" id="notify-btn" type="button"><span class="menu__ic">🔔</span><span><span id="notify-label">Activer les notifications</span><small id="notify-help">Pour être prévenu même téléphone verrouillé</small></span></button>
     <button class="menu__item staff-only" id="notify-test" type="button"><span class="menu__ic">📨</span><span id="notify-test-label">Envoyer une notification test</span></button>
@@ -122,6 +133,61 @@
       <button class="link-btn" id="cancel-back" type="button">← Ne pas annuler</button>
       <p class="error" id="cancel-error" role="alert"></p>
     </div>
+  </div>
+
+  <!-- Creating or changing a promotion (owner only). -->
+  <div class="alert" id="promo-box" hidden role="dialog" aria-modal="true" aria-labelledby="promo-title">
+    <form class="alert__box promo-form" id="promo-form" novalidate>
+      <h2 class="alert__title" id="promo-title">Nouvelle promotion</h2>
+      <label class="field"><span>Nom (pour vous retrouver)</span><input name="name" maxlength="80" required placeholder="Ex. : -10 % sur le site"></label>
+      <fieldset class="pfield">
+        <legend>Restaurant</legend>
+        <div class="seg">
+          <label><input type="radio" name="location" value="" checked><span>Les deux</span></label>
+          <label><input type="radio" name="location" value="sidi-moumen"><span>Sidi Moumen</span></label>
+          <label><input type="radio" name="location" value="bouchaib-doukkali"><span>Bouchaib Doukkali</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="pfield">
+        <legend>Réduction</legend>
+        <div class="pvalue">
+          <input name="value" type="number" inputmode="numeric" min="1" max="90" value="10" required aria-label="Montant de la réduction">
+          <div class="seg">
+            <label><input type="radio" name="kind" value="percent" checked><span>%</span></label>
+            <label><input type="radio" name="kind" value="amount"><span>DH</span></label>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="pfield">
+        <legend>Plats</legend>
+        <div class="seg">
+          <label><input type="radio" name="scope" value="all" checked><span>Tout le menu</span></label>
+          <label><input type="radio" name="scope" value="some"><span>Choisir</span></label>
+        </div>
+        <div class="pcats" id="promo-items" hidden></div>
+      </fieldset>
+      <fieldset class="pfield">
+        <legend>Dates (heure du Maroc)</legend>
+        <div class="pdates">
+          <label>Début<input name="starts" type="datetime-local" required></label>
+          <label>Fin<input name="ends" type="datetime-local" required></label>
+        </div>
+      </fieldset>
+      <fieldset class="pfield">
+        <label class="pcheck"><input type="checkbox" name="hours"> Seulement certaines heures chaque jour</label>
+        <div class="pdates" id="promo-hours" hidden>
+          <label>De<input name="from" type="time" value="15:00"></label>
+          <label>À<input name="to" type="time" value="18:00"></label>
+        </div>
+      </fieldset>
+      <label class="pcheck"><input type="checkbox" name="active" checked> Active (décochez pour la mettre en pause)</label>
+      <p class="ppreview" id="promo-preview"></p>
+      <p class="error" id="promo-error" role="alert"></p>
+      <div class="pactions">
+        <button class="btn btn--line" id="promo-cancel" type="button">Annuler</button>
+        <button class="btn btn--red" id="promo-save" type="submit">Enregistrer</button>
+      </div>
+    </form>
   </div>
 
   <!-- A new order, full screen, until it is accepted or refused. -->
@@ -156,7 +222,9 @@
   </div>
 
   <script src="/js/config.js?v=2026102902"></script>
+  <script src="/js/menu-data.js?v=2026103002"></script>
+  <script src="/js/promos.js?v=2026110901"></script>
   <script src="/vendor/supabase/supabase-2.117.2.js"></script>
-  <script src="/commandes/commandes.js?v=2026110501"></script>
+  <script src="/commandes/commandes.js?v=2026110901"></script>
 </body>
 </html>

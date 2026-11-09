@@ -264,3 +264,123 @@ create policy "staff clear their restaurant's test orders" on public.orders
   using (demo and exists (select 1 from public.staff s
                           where s.user_id = (select auth.uid())
                             and (s.role = 'owner' or (s.location = orders.location and orders.created_at > now() - interval '24 hours'))));
+-- ---------- November 9: promotions chosen by the owner ----------
+-- (migration "promotions") The owner's account creates them in the staff app (« Promotions »): which restaurant
+-- (or both), which dishes (the whole menu, categories or single dishes), a percentage or an amount in DH, a start and
+-- an end, and optionally the same hours every day. The site shows them and sends each discounted line with its
+-- promotion; the database checks it (orders_check_promos). Rules shared with js/promos.js: the discount is rounded
+-- to the dirham, the biggest promotion wins, delivery is never discounted, and an order is still accepted 10 minutes
+-- after a promotion ends (the customer may have filled the cart just before).
+create table public.promotions (
+  id           uuid primary key default gen_random_uuid(),
+  name         text not null check (char_length(name) between 1 and 80),
+  location     text check (location in ('sidi-moumen', 'bouchaib-doukkali')),  -- null: both restaurants
+  all_items    boolean not null default false,
+  category_ids text[] not null default '{}',
+  item_ids     text[] not null default '{}',
+  kind         text not null check (kind in ('percent', 'amount')),
+  value        int not null,
+  starts_at    timestamptz not null,
+  ends_at      timestamptz not null,
+  daily_from   time,  -- Casablanca time; both or neither
+  daily_to     time,
+  active       boolean not null default true,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  check ((kind = 'percent' and value between 1 and 90) or (kind = 'amount' and value between 1 and 500)),
+  check (ends_at > starts_at),
+  check ((daily_from is null) = (daily_to is null) and (daily_from is null or daily_from <> daily_to)),
+  check (all_items or cardinality(category_ids) + cardinality(item_ids) > 0),
+  check (cardinality(category_ids) <= 50 and cardinality(item_ids) <= 400)
+);
+create index promotions_ends_idx on public.promotions (ends_at);
+alter table public.promotions enable row level security;
+revoke all on table public.promotions from anon, authenticated;
+
+-- Everyone (the site) reads the promotions that are on or just ended, without the owner's name for them.
+grant select (id, location, all_items, category_ids, item_ids, kind, value, starts_at, ends_at, daily_from, daily_to, active)
+  on table public.promotions to anon;
+grant select on table public.promotions to authenticated;
+create policy "everyone sees the current promotions" on public.promotions
+  for select to anon, authenticated
+  using (active and ends_at > now() - interval '10 minutes');
+-- Only the owner's account sees all of them and creates, changes or deletes them.
+grant insert (name, location, all_items, category_ids, item_ids, kind, value, starts_at, ends_at, daily_from, daily_to, active),
+      update (name, location, all_items, category_ids, item_ids, kind, value, starts_at, ends_at, daily_from, daily_to, active),
+      delete
+  on table public.promotions to authenticated;
+create policy "the owner sees every promotion" on public.promotions
+  for select to authenticated
+  using (exists (select 1 from public.staff s where s.user_id = (select auth.uid()) and s.role = 'owner'));
+create policy "the owner adds promotions" on public.promotions
+  for insert to authenticated
+  with check (exists (select 1 from public.staff s where s.user_id = (select auth.uid()) and s.role = 'owner'));
+create policy "the owner changes promotions" on public.promotions
+  for update to authenticated
+  using (exists (select 1 from public.staff s where s.user_id = (select auth.uid()) and s.role = 'owner'))
+  with check (exists (select 1 from public.staff s where s.user_id = (select auth.uid()) and s.role = 'owner'));
+create policy "the owner deletes promotions" on public.promotions
+  for delete to authenticated
+  using (exists (select 1 from public.staff s where s.user_id = (select auth.uid()) and s.role = 'owner'));
+
+create or replace function private.promotions_touch()
+ returns trigger language plpgsql set search_path to '' as $function$
+begin
+  new.updated_at := now();
+  return new;
+end
+$function$;
+revoke all on function private.promotions_touch() from public, anon, authenticated;
+create trigger promotions_touch before update on public.promotions
+  for each row execute function private.promotions_touch();
+
+-- The daily hours of a promotion, in Casablanca time (they may run past midnight: 22:00 – 02:00).
+create or replace function private.promo_in_window(f time, t time, at timestamptz)
+ returns boolean language sql stable set search_path to '' as $function$
+  select f is null or t is null
+      or case when f < t then x >= f and x < t else x >= f or x < t end
+    from (select (at at time zone 'Africa/Casablanca')::time as x) s;
+$function$;
+revoke all on function private.promo_in_window(time, time, timestamptz) from public, anon, authenticated;
+
+-- Each order: a discounted line must name a promotion that is on (for this restaurant, this dish, now, give or
+-- take 10 minutes) and take exactly its discount off; and the totals must add up.
+create or replace function private.orders_check_promos()
+ returns trigger language plpgsql security definer set search_path to '' as $function$
+declare
+  l jsonb;
+  p public.promotions;
+  unit int; qty int; off int; want int; sub int := 0;
+  t timestamptz := now();
+begin
+  for l in select * from jsonb_array_elements(new.items) loop
+    qty := coalesce((l->>'qty')::int, 0);
+    sub := sub + coalesce((l->>'total')::int, 0);
+    if l ? 'promo' then
+      select * into p from public.promotions where id = (l->>'promo')::uuid;
+      if not found or not p.active or t < p.starts_at or t >= p.ends_at + interval '10 minutes'
+         or (p.location is not null and p.location <> new.location)
+         or not (p.all_items or (l->>'id') = any (p.item_ids) or (l->>'cat') = any (p.category_ids))
+         or not (private.promo_in_window(p.daily_from, p.daily_to, t)
+                 or private.promo_in_window(p.daily_from, p.daily_to, t - interval '10 minutes')) then
+        raise exception 'Promotion terminée ou invalide';
+      end if;
+      unit := (l->>'unit')::int;
+      off := (l->>'off')::int;
+      want := least(unit, case when p.kind = 'percent' then round(unit * p.value / 100.0)::int else p.value end);
+      if unit is null or unit < 0 or off is distinct from want or (l->>'total')::int is distinct from (unit - off) * qty then
+        raise exception 'Promotion : montant incorrect';
+      end if;
+    elsif coalesce((l->>'off')::int, 0) <> 0 then
+      raise exception 'Promotion invalide';
+    end if;
+  end loop;
+  if new.subtotal <> sub or new.total <> new.subtotal + new.delivery_fee then
+    raise exception 'Commande invalide : total incorrect';
+  end if;
+  return new;
+end
+$function$;
+revoke all on function private.orders_check_promos() from public, anon, authenticated;
+create trigger orders_check_promos before insert on public.orders
+  for each row execute function private.orders_check_promos();
