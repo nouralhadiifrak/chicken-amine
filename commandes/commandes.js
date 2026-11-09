@@ -35,9 +35,9 @@
   let alertId = null;       // the order shown in the alert
   let channel = null, pollTimer = null, ringTimer = null, audio = null, wakeLock = null, installPrompt = null;
   let statsPeriod = "today", statsSite = "all";
-  // Receipt printer: ready but switched off until the restaurant has its printer (then set PRINTING to true).
-  // It is set on the device the printer is connected to (off, 80 mm or 58 mm paper), kept in this browser.
-  const PRINTING = false;
+  // Receipt printer: switched on in the ☰ menu of the device the printer is part of or connected to (off, 80 mm or
+  // 58 mm paper), kept in that browser only, so the other screens do not print.
+  const PRINTING = true;
   const PRINT_KEY = "chickenamine.print.v1";
   const PRINTED_KEY = "chickenamine.printed.v1";
   let printMode = readStore(PRINT_KEY) || "off";
