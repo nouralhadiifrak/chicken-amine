@@ -676,6 +676,11 @@ html.no-intro .intro { display: none; }
   font-size: 0.95rem;
 }
 .price small { font-weight: 500; font-size: 0.75rem; }
+/* The owner's promotions: the old price crossed out, and a red badge (« -10% ») */
+.price--promo s { font-weight: 500; font-size: 0.8rem; opacity: 0.6; margin-inline-end: 2px; }
+.promo-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--red); color: var(--white); font-weight: 800; font-size: 0.8rem; line-height: 1.5; white-space: nowrap; }
+.promo-badge--tile { position: absolute; top: 8px; left: 8px; z-index: 1; font-size: 0.9rem; padding: 2px 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+[dir="rtl"] .promo-badge--tile { left: auto; right: 8px; }
 .add-btn {
   display: grid;
   place-items: center;
@@ -1119,11 +1124,14 @@ button.band__item:focus-visible { outline: 3px solid var(--red); outline-offset:
 .cart-line__opts { margin: 0; color: var(--muted); font-size: 0.85rem; }
 .cart-line__side { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .cart-line__total { font-weight: 700; white-space: nowrap; }
+.cart-line__promo { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
 .cart-empty { color: var(--muted); text-align: center; padding: 30px 0; margin: 0; }
 .totals { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; margin: 0 0 12px; }
 .totals dt { color: var(--muted); }
 .totals dd { margin: 0; text-align: end; font-weight: 600; }
 .totals .is-total { color: var(--ink); font-weight: 800; font-size: 1.1rem; }
+.totals .is-promo { color: var(--red); font-weight: 700; }
+.totals dd.is-promo::before { content: "−\00a0"; }
 
 .checkout { display: flex; flex-direction: column; gap: 14px; }
 .checkout-site { margin: 0; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
