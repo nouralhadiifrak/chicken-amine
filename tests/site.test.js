@@ -1159,20 +1159,28 @@ async function main() {
     check(/N° A1B2/.test(a.title) && /2 ×\s*Cheese Burger/.test(a.text) && /Algérienne/.test(a.text) && /Sans oignon/.test(a.text) && /0634235350/.test(a.text) && /50 DH/.test(a.text) && a.beeps > 4 && /^\(1\)/.test(a.tab),
       `staff screen: a waiting order fills the screen and rings (${a.title}, ${a.beeps} tones)`);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/commandes-alert.png` });
+    // This screen has the receipt printer: automatic printing on, 80 mm paper.
+    // (normally set once, before the service; here the pop-up is already up)
+    await page.evaluate(() => document.querySelector("#print-btn").click());
+    check(/80 mm/.test(await page.textContent("#print-btn")), "receipts: automatic printing switched on for this screen (80 mm)");
     await page.click('#alert-times [data-eta="20"]');
     await page.waitForSelector("#alert", { state: "hidden", timeout: 4000 }).catch(() => {});
     const card = await page.textContent("#col-accepted").catch(() => "");
     check(patches.length === 1 && patches[0].status === "accepted" && patches[0].eta_minutes === 20 && /Prête dans 20 min/.test(card), "staff screen: accepted with 20 min, moved to « En préparation »");
-    // The receipt printer is ready in the code but switched off until the restaurant buys one.
-    await page.waitForTimeout(600);
-    check(!(await page.evaluate(() => window.__printed)) && !(await page.$("#col-accepted [data-print]")) && await page.evaluate(() => document.querySelector("#print-btn").hidden),
-      "receipts: printing switched off for now (nothing printed, no print buttons)");
+    await page.waitForFunction(() => (window.__printed || []).length > 0, null, { timeout: 3000 }).catch(() => {});
+    const receipt = await page.evaluate(() => (window.__printed || []).join("\n---\n"));
+    check((await page.evaluate(() => (window.__printed || []).length)) === 1 && /CHICKEN AMINE/.test(receipt) && /N° A1B2/.test(receipt) && /À EMPORTER/.test(receipt) && /2 ×\s*Cheese Burger/.test(receipt) && /Algérienne/.test(receipt) && /Sans oignon/.test(receipt) && /TOTAL\s*50 DH/.test(receipt) && /prête vers 14:20/.test(receipt),
+      "receipts: accepting prints the receipt at once (number, takeaway, dishes, note, total, ready time)");
+    await page.click('#col-accepted [data-print]');
+    await page.waitForTimeout(500);
+    check((await page.evaluate(() => (window.__printed || []).length)) === 2, "receipts: « Réimprimer » prints it again");
     const beeps = await page.evaluate(() => window.__beeps);
     await page.waitForTimeout(3000);
     check(await page.evaluate((n) => window.__beeps === n, beeps), "staff screen: the ringing stops once answered");
     await page.click('#col-accepted [data-status="ready"]');
     await page.waitForFunction(() => /Récupérée/.test(document.querySelector("#col-ready").textContent), null, { timeout: 4000 }).catch(() => {});
     check(patches[1] && patches[1].status === "ready", "staff screen: « Prête » moves it on, then « Récupérée » ends a pickup");
+    check((await page.evaluate(() => (window.__printed || []).length)) === 2, "receipts: printed once per order, not again when it moves on");
     // A new order arrives live.
     const live = order("e5f6a7b8-0000-4000-8000-000000000002", 0, { mode: "delivery", lat: 33.59, lng: -7.52, address: "Rue 12", distance_km: 0.8, delivery_fee: 10, total: 60 });
     db.set(live.id, live);
@@ -1207,8 +1215,8 @@ async function main() {
     check(await page.isVisible("#menu-btn") && !(await page.isVisible("#sound-btn")) && !(await page.isVisible("#logout-btn")), "staff screen: the extra buttons are in the ☰ menu");
     await page.click("#menu-btn");
     const menu = await page.innerText("#menu");
-    check(await page.isVisible("#menu") && /Commandes/.test(menu) && !/Statistiques/.test(menu) && /Activer les notifications/.test(menu) && /Tester le son/.test(menu) && /Effacer les commandes de test/.test(menu) && /Se déconnecter/.test(menu) && !(await page.isVisible("#print-btn")),
-      "staff screen: the ☰ menu holds Commandes (no Statistiques for a restaurant), notifications, sound, test orders and sign-out");
+    check(await page.isVisible("#menu") && /Commandes/.test(menu) && !/Statistiques/.test(menu) && /Activer les notifications/.test(menu) && /Tester le son/.test(menu) && /Effacer les commandes de test/.test(menu) && /Se déconnecter/.test(menu) && /Impression auto : 80 mm/.test(menu),
+      "staff screen: the ☰ menu holds Commandes (no Statistiques for a restaurant), notifications, sound, printing, test orders and sign-out");
     // Notifications: this phone subscribes and is saved for its restaurant.
     await page.click("#notify-btn");
     await page.waitForFunction(() => /activées/.test(document.querySelector("#notify-label").textContent), null, { timeout: 5000 }).catch(() => {});

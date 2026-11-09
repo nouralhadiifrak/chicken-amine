@@ -52,9 +52,10 @@ address, 📍 map position, amount to collect); the staff pick the delivery guy'
 adds up what was collected (finished orders), the best sellers, delivery vs takeaway and the busiest hours, for
 today, yesterday, 7 days, this month or last month (a service day runs from 06:00 to 06:00).
 
-**Receipt printer:** ready in the code but switched off until the restaurant buys a printer (`PRINTING` in
-`commandes/commandes.js`). Once on: « Impression auto » in the ☰ menu of the device the printer is connected to
-(off → 80 mm → 58 mm paper); each accepted order prints once, « Réimprimer » prints again. For printing with no
+**Receipt printer:** « Impression auto » in the ☰ menu of the device the printer is part of or connected to
+(off → 80 mm → 58 mm paper; set on that device only, so the other screens do not print; the owner's account has no
+printing). Each accepted order prints once, « Réimprimer » prints again. On an Android device (the Yassir printer)
+the phone's print window opens and one tap on « Imprimer » prints. For printing with no
 window at all on a computer, run Chrome with `--kiosk-printing` (e.g. `chrome.exe --kiosk-printing
 https://chickenamine.ma/commandes/`) and make the receipt printer the default printer.
 
