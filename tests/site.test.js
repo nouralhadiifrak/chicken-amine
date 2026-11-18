@@ -1036,6 +1036,27 @@ async function main() {
       soon: Promos.best(list, "bs-eau", "boissons", "sidi-moumen", 10).promo.id,
     }), PROMOS);
     check(rules.bd === 5 && rules.sm === 3 && rules.plat === 4 && rules.soon === PROMOS[0].id, `rules: the biggest promotion wins (tacos at Bouchaib Doukkali -5 DH, at Sidi Moumen -3 DH), 37 DH → -4 DH, a promotion that has not started is ignored`);
+    // On a phone, every dish keeps its « + » inside its card, whatever the length of its prices (360 and 390 px).
+    for (const w of [390, 360]) {
+      await page.setViewportSize({ width: w, height: 844 });
+      const cut = [];
+      for (const id of await page.evaluate(() => window.MENU.map((c) => c.id))) {
+        await openCat(page, id);
+        cut.push(...await page.evaluate(() => [...document.querySelectorAll("#menu-list .item")].filter((li) => {
+          const b = li.querySelector("[data-add]").getBoundingClientRect(), c = li.getBoundingClientRect();
+          return b.right > c.right + 0.5 || b.left < c.left - 0.5 || b.bottom > c.bottom + 0.5;
+        }).map((li) => li.dataset.item)));
+      }
+      check(cut.length === 0, `${w} px with a promotion: every « + » button fits in its dish card${cut.length ? " — cut: " + cut.slice(0, 8).join(", ") : ""}`);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await addDish(page, "plats", "pl-legumes");
+    await page.waitForTimeout(400);
+    check(await page.evaluate(() => !!document.querySelector("#options-dialog[open], #sauce-dialog[open]") || window.__chickenAmine.cart().length > 0), "a discounted plat (40 → 36 DH) can be added on a phone");
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => { localStorage.removeItem("chickenamine.cart.v1"); });
+    await page.reload();
+    await waitIntro(page);
     await addDish(page, "burgers", "bg-cheese", []);
     await page.click("#cart-bar");
     const cart = await page.evaluate(() => ({ lineWas: (document.querySelector(".cart-line__promo s") || {}).textContent, totals: document.querySelector("#totals").textContent.replace(/\s+/g, " ").trim() }));

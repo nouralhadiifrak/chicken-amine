@@ -678,7 +678,7 @@ html.no-intro .intro { display: none; }
 .price small { font-weight: 500; font-size: 0.75rem; }
 /* The owner's promotions: the old price crossed out, and a red badge (« -10% ») */
 .price--promo s { font-weight: 500; font-size: 0.8rem; opacity: 0.6; margin-inline-end: 2px; }
-.promo-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--red); color: var(--white); font-weight: 800; font-size: 0.8rem; line-height: 1.5; white-space: nowrap; }
+.promo-badge { direction: ltr; unicode-bidi: embed; display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--red); color: var(--white); font-weight: 800; font-size: 0.8rem; line-height: 1.5; white-space: nowrap; }
 .promo-badge--tile { position: absolute; top: 8px; left: 8px; z-index: 1; font-size: 0.9rem; padding: 2px 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
 [dir="rtl"] .promo-badge--tile { left: auto; right: 8px; }
 .add-btn {
@@ -799,6 +799,15 @@ html.no-intro .intro { display: none; }
   }
   .add-btn { width: 40px; height: 40px; }
   .in-cart { margin-inline-end: 4px; }
+  /* promotions: the badge sits on the photo and the old price above the new one, so « + » always fits */
+  .item { position: relative; }
+  .item__side { flex-wrap: wrap; }
+  .item__side .promo-badge { position: absolute; top: 8px; left: 8px; z-index: 1; font-size: 0.85rem; padding: 2px 9px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  [dir="rtl"] .item__side .promo-badge { left: auto; right: 8px; }
+  .item__ctl { flex: none; margin-left: auto; }
+  [dir="rtl"] .item__ctl { margin-left: 0; margin-right: auto; }
+  .price--promo { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.15; padding: 3px 10px; }
+  .price--promo s { font-size: 0.72rem; margin: 0; }
 }
 @media (min-width: 600px) and (max-width: 899px) {
   .items { grid-template-columns: repeat(3, minmax(0, 1fr)); }
